@@ -7,12 +7,36 @@ body {
     min-height: 100vh;
 }
 
-header {
+section {
     background-color: #6FAD6F;
     color: white;
     text-align: left;
     padding: 70px 0;
     font-size: 2em;
+}
+
+header {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    background-color: #548754;
+    color: white;
+    padding: 3px 20px;
+    font-size: 2em;
+}
+
+#login { 
+    margin-right: 0px;
+    border-color: white;
+    color: white;
+    font-weight: bold;
+}
+
+#login:hover {
+    background-color: white;
+    border-color: white;
+    color: #6FAD6F;
+    font-weight: bold;
 }
 
 main {
@@ -24,7 +48,7 @@ footer {
     background-color: #ffffff;
     color: #333;
     text-align: center;
-    padding: 20px 0;
+    padding: 20px;
     border-top: 1px solid #ccc;
 }
 
