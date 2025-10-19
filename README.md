@@ -8,7 +8,7 @@ For faculty, professors, club leadership, GEs, LAs, and students, room reservati
 ### Technologies Used
 
 Frontend: HTML, CSS, Bootstrap<br>
-Backend: Python, Flask<br>
+Backend: Python, Flask, React<br>
 Database/Hosting: Firebase<br>
 
 ---
