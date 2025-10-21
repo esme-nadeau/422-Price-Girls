@@ -47,11 +47,11 @@ body {
 
 /* map widget */
 .carousel-indicators [data-bs-target] {
-    background-color: #333;  /* normal indicator */
+    background-color: grey;  /* normal indicator */
 }
 
 .carousel-indicators .active {
-    background-color: #a3c4a1;  /* highlight color */
+    background-color: #333;  /* highlight color */
 }
 
 .carousel-control-prev-icon {
@@ -62,11 +62,18 @@ body {
     filter: invert(1);
 }
 
-.carousel-item img {
-    transition: transform 0.3s ease;
-    cursor: zoom-in;
+.carousel-inner svg {
+  width: 100%;
+  max-width: 350px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
 }
 
-.carousel-item img:hover {
-    transform: scale(1.5); /* adjust zoom level */
+.carousel-item svg {
+  width: 100%;
+  max-width: 350px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
 }
