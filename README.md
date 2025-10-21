@@ -19,3 +19,9 @@ Kate Spencer<br>
 Katie Trinh <br>
 Lily Spurgat<br>
 
+---
+### How to install
+
+# React
+
+# Flask
