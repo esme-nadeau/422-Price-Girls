@@ -23,4 +23,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # flask
-/flask/_pycache_
+/flask/__pycache__
+__pycache__
+./__pycache__
