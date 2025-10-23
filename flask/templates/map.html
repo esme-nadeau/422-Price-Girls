@@ -39,18 +39,42 @@
                         <input type="date" class="form-control" id="date">
                     </div>
 
-                    <!-- Time input (typed format xx:xx to xx:xx) -->
+                    <!-- Time selection using a multi-select -->
                     <div class="mb-3">
-                        <label class="form-label" for="timeRange">Time</label>
-                        <input 
-                            type="text" 
-                            class="form-control" 
-                            id="timeRange" 
-                            placeholder="e.g. 09:00 to 11:30"
-                            pattern="^([01]\d|2[0-3]):([0-5]\d)\s+to\s+([01]\d|2[0-3]):([0-5]\d)$"
-                            title="Please enter a time range in the format HH:MM to HH:MM (e.g. 09:00 to 11:30)"
-                            required
-                        >
+                        <label for="timeSelect" class="form-label">Select Time Slots</label>
+
+                        <select id="timeSelect" class="form-select form-select-sm" multiple size="12" style="height:auto;">
+                            <option value="08:00-08:30">08:00 AM – 08:30 AM</option>
+                            <option value="08:30-09:00">08:30 AM – 09:00 AM</option>
+                            <option value="09:00-09:30">09:00 AM – 09:30 AM</option>
+                            <option value="09:30-10:00">09:30 AM – 10:00 AM</option>
+                            <option value="10:00-10:30">10:00 AM – 10:30 AM</option>
+                            <option value="10:30-11:00">10:30 AM – 11:00 AM</option>
+                            <option value="11:00-11:30">11:00 AM – 11:30 AM</option>
+                            <option value="11:30-12:00">11:30 AM – 12:00 PM</option>
+                            <option value="12:00-12:30">12:00 PM – 12:30 PM</option>
+                            <option value="12:30-13:00">12:30 PM – 01:00 PM</option>
+                            <option value="13:00-13:30">01:00 PM – 01:30 PM</option>
+                            <option value="13:30-14:00">01:30 PM – 02:00 PM</option>
+                            <option value="14:00-14:30">02:00 PM – 02:30 PM</option>
+                            <option value="14:30-15:00">02:30 PM – 03:00 PM</option>
+                            <option value="15:00-15:30">03:00 PM – 03:30 PM</option>
+                            <option value="15:30-16:00">03:30 PM – 04:00 PM</option>
+                            <option value="16:00-16:30">04:00 PM – 04:30 PM</option>
+                            <option value="16:30-17:00">04:30 PM – 05:00 PM</option>
+                            <option value="17:00-17:30">05:00 PM – 05:30 PM</option>
+                            <option value="17:30-18:00">05:30 PM – 06:00 PM</option>
+                            <option value="18:00-18:30">06:00 PM – 06:30 PM</option>
+                            <option value="18:30-19:00">06:30 PM – 07:00 PM</option>
+                            <option value="19:00-19:30">07:00 PM – 07:30 PM</option>
+                            <option value="19:30-20:00">07:30 PM – 08:00 PM</option>
+                        </select>
+
+                        <small class="form-text text-muted mt-1">
+                            Click a start range, then Shift-click an end range to select all in-between.
+                        </small>
+
+                        <p id="selectedRange" class="mt-2 fw-semibold text-success"></p>
                     </div>
 
 
@@ -110,7 +134,11 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Booking widget time selection -->
+    <script src="{{ url_for('static', filename='js/timeSelect.js') }}"></script>
 </body>
 </html>
