@@ -1,72 +1,171 @@
-/* reservation popup */
+/* ==============================
+   Google Fonts
+============================== */
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Montserrat:wght@500;600;700&display=swap');
+
+/* ==============================
+   General Layout
+============================== */
 body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background-color: #ffffff;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
+  margin: 0;
+  font-family: 'EB Garamond', serif; /* main body text */
+  background-color: #f9f9f9; 
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  color: #333;
 }
 
+/* ==============================
+   Booking Widget Card
+============================== */
 .booking-widget {
-    background: #fff;
-    border: none;
-    border-radius: 16px !important;
-    box-shadow: 0 10px 30px 2px rgba(0, 0, 0, 0.2);
+  background: #ffffff;
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05); 
+  padding: 1.5rem;
+  max-width: 350px;
 }
 
+/* ==============================
+   Input Fields & Dropdowns
+============================== */
 .booking-widget .form-control,
-.booking-widget select {
-    border-radius: 10px;
+.booking-widget select.form-select,
+.booking-widget .dropdown-toggle {
+  border: 1px solid #ccc;          /* same light gray for all boxes */
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  color: #333;
+  background-color: #fff;
+  font-weight: 400;
+  font-family: 'EB Garamond', serif;
+  box-shadow: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.booking-widget .btn {
-    border-radius: 10px;
+/* Focus effect for all fields and dropdowns */
+.booking-widget .form-control:focus,
+.booking-widget select.form-select:focus,
+.booking-widget .dropdown-toggle:focus {
+  border-color: #a3c4a1;           /* subtle highlight */
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(163, 196, 161, 0.2);
 }
 
-.room-dropdown .dropdown-toggle {
-    background: none;
-    border: none;
-    color: #000;
-    font-weight: 600;
-    font-size: 1.1rem;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+/* Ensure dropdown text matches input text (normal weight) */
+.booking-widget .dropdown-toggle {
+  font-weight: 400;
+  color: #333;
+  text-align: left; 
 }
 
-.room-dropdown .dropdown-toggle:focus {
-    box-shadow: none;
+/* Make the time dropdown scrollable */
+#timeDropdown + .dropdown-menu {
+  max-height: 200px; /* adjust height as needed */
+  overflow-y: auto;
 }
 
-.dropdown-menu {
-    border-radius: 10px;
+/* Optional: smooth scrolling for nicer UX */
+#timeDropdown + .dropdown-menu {
+  scrollbar-width: thin; /* Firefox */
+}
+
+#timeDropdown + .dropdown-menu::-webkit-scrollbar {
+  width: 6px; /* Chrome/Safari */
+}
+
+#timeDropdown + .dropdown-menu::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,0.2);
+  border-radius: 3px;
+}
+
+/* ==============================
+   Room Header
+============================== */
+.room-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.room-header span {
+  font-weight: 600;
+  font-size: 1.4rem; 
+  color: #222;
 }
 
 
-/* map widget */
+.edit-icon {
+  cursor: pointer;
+  font-size: 1.1rem;
+  color: #888;
+  transition: color 0.2s ease;
+}
+
+.edit-icon:hover {
+  color: #555;
+}
+
+/* ==============================
+   Repeat & Time Dropdowns
+============================== */
+.mb-3.d-flex label {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+  color: #555;
+  white-space: nowrap; 
+}
+
+.mb-3.d-flex .dropdown {
+  flex-grow: 1; 
+}
+
+/* ==============================
+   Buttons
+============================== */
+.btn-green {
+  background-color: #a3c4a1;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 1rem;
+  padding: 0.65rem;
+  font-family: 'EB Garamond', serif;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-green:hover {
+  background-color: #8db58a;
+  transform: translateY(-1px); 
+}
+
+/* ==============================
+   Carousel (Right-side Map)
+============================== */
 .carousel-indicators [data-bs-target] {
-    background-color: #333;  /* normal indicator */
+  background-color: #bbb;
 }
 
 .carousel-indicators .active {
-    background-color: #a3c4a1;  /* highlight color */
+  background-color: #a3c4a1;
 }
 
-.carousel-control-prev-icon {
-    filter: invert(1); /* makes white arrows black */
-}
-
+.carousel-control-prev-icon,
 .carousel-control-next-icon {
-    filter: invert(1);
+  filter: invert(1);
 }
 
 .carousel-item img {
-    transition: transform 0.3s ease;
-    cursor: zoom-in;
+  transition: transform 0.3s ease;
+  cursor: zoom-in;
+  border-radius: 12px;
 }
 
 .carousel-item img:hover {
-    transform: scale(1.5); /* adjust zoom level */
+  transform: scale(1.3);
 }
