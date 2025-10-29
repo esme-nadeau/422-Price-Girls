@@ -52,3 +52,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // for dropdown menu
+  document.querySelectorAll('.dropdown-item[data-slide]').forEach(item => {
+    item.addEventListener('click', e => {
+      e.preventDefault();
+      const slideIndex = e.target.getAttribute('data-slide');
+      const carousel = bootstrap.Carousel.getOrCreateInstance(document.querySelector('#carouselFloors'));
+      carousel.to(slideIndex);
+
+      // Update button text
+      document.getElementById('floorDropdown').textContent = e.target.textContent;
+    });
+  });
+

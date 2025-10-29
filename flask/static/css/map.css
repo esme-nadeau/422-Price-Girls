@@ -98,7 +98,6 @@ body {
   color: #222;
 }
 
-
 .edit-icon {
   cursor: pointer;
   font-size: 1.1rem;
@@ -128,7 +127,7 @@ body {
    Buttons
 ============================== */
 .btn-green {
-  background-color: #a3c4a1;
+  background-color: #6FAD6F;
   color: #fff;
   border: none;
   border-radius: 12px;
@@ -140,8 +139,9 @@ body {
 }
 
 .btn-green:hover {
-  background-color: #8db58a;
+  background-color: #548754;
   transform: translateY(-1px); 
+  color: #fff;
 }
 
 /* ==============================
@@ -175,6 +175,45 @@ body {
   display: block;
   margin: 0 auto;
 }
+.svg-object {
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.card {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05); 
+  padding: 1.5rem;
+  max-width: 350px;
+}
+.card .dropdown {
+  text-align: right;
+}
+
+#floorDropdown {
+  background-color: #6FAD6F;
+  color: #fff;
+  border-color: white;
+}
+
+#floorDropdown:hover {
+  background-color: #548754;
+  color: #fff;
+  border-color: white;
+}
+
+#floorDropdown + .dropdown-menu .dropdown-item:hover {
+  background-color: #f2f2f2;
+}
+
+/* Target only the Floor dropdown items */
+#floorDropdown + .dropdown-menu .dropdown-item:focus,
+#floorDropdown + .dropdown-menu .dropdown-item:active {
+  background-color: #EBECF0;
+  color: inherit;
+}
+
 
 /* ==============================
    Secondary Calendar (Apple-style)
