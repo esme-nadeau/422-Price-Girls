@@ -15,17 +15,23 @@
     <div class="booking-widget card shadow-sm p-3" style="width: 100%;">
 
         <!-- Room Selector -->
-        <div class="room-header mb-3 dropdown d-flex align-items-center gap-2">
-        <span id="selectedRoom" class="fw-semibold" style="font-size:1.3rem;">Room 120</span>
-        <button class="btn p-0 border-0 bg-transparent edit-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-pencil"></i>
-        </button>
-        <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 120'">Room 120</a></li>
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 130'">Room 130</a></li>
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 140'">Room 140</a></li>
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 150'">Room 150</a></li>
-        </ul>
+        <div class="room-header mb-3 dropdown d-flex align-items-center">
+            <!-- Room label -->
+            <span id="selectedRoom" class="fw-semibold" style="font-size:1.3rem;">Room 120</span>
+            <!-- Pencil icon with small gap -->
+            <button class="btn p-0 border-0 bg-transparent edit-icon ms-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-pencil"></i>
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 120'">Room 120</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 127'">Room 127</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 130'">Room 130</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 140'">Room 140</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 150'">Room 150</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 160'">Room 160</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 200'">Room 200</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 220'">Room 220</a></li>
+            </ul>
         </div>
 
         <!-- Date -->
@@ -34,21 +40,67 @@
         <input type="date" class="form-control" id="date" value="{{ current_date }}">
         </div>
 
-        <!-- Time Dropdown -->
+        <!-- Time Selection (Start - End) -->
         <div class="mb-3">
-        <label class="form-label">Time</label>
-        <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="timeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            Select a time
-            </button>
-            <ul class="dropdown-menu w-100" style="max-height: 300px; overflow-y: auto;">
-            <!-- (Your full list of times unchanged) -->
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('timeDropdown').textContent='8:00 AM - 8:30 AM'">8:00 AM - 8:30 AM</a></li>
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('timeDropdown').textContent='8:30 AM - 9:00 AM'">8:30 AM - 9:00 AM</a></li>
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('timeDropdown').textContent='9:00 AM - 9:30 AM'">9:00 AM - 9:30 AM</a></li>
-            <!-- ... rest of time slots -->
-            </ul>
-        </div>
+          <label class="form-label d-block mb-1">Start Time - End Time</label>
+          <div class="d-flex align-items-center gap-2">
+            
+            <!-- Start Time Dropdown -->
+            <div class="dropdown flex-fill">
+              <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="startTimeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                8:00 AM
+              </button>
+              <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
+                {% for h in range(8, 21) %}
+                  <li>
+                    <a class="dropdown-item" href="#"
+                      onclick="document.getElementById('startTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}'">
+                      {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
+                    </a>
+                  </li>
+                  {% if h < 20 %}
+                  <li>
+                    <a class="dropdown-item" href="#"
+                      onclick="document.getElementById('startTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}'">
+                      {{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}
+                    </a>
+                  </li>
+                  {% endif %}
+                {% endfor %}
+              </ul>
+            </div>
+
+            <!-- Dash -->
+            <div class="d-flex align-items-center">
+              <span class="fw-bold">–</span>
+            </div>
+
+            <!-- End Time Dropdown -->
+            <div class="dropdown flex-fill">
+              <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="endTimeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                8:30 AM
+              </button>
+              <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
+                {% for h in range(8, 21) %}
+                  <li>
+                    <a class="dropdown-item" href="#"
+                      onclick="document.getElementById('endTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}'">
+                      {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
+                    </a>
+                  </li>
+                  {% if h < 20 %}
+                  <li>
+                    <a class="dropdown-item" href="#"
+                      onclick="document.getElementById('endTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}'">
+                      {{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}
+                    </a>
+                  </li>
+                  {% endif %}
+                {% endfor %}
+              </ul>
+            </div>
+
+          </div>
         </div>
 
         <!-- Repeat Dropdown -->
@@ -60,8 +112,8 @@
             </button>
             <ul class="dropdown-menu w-100">
             <li><a class="dropdown-item" href="#" onclick="document.getElementById('repeatDropdown').textContent='Never'">Never</a></li>
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('repeatDropdown').textContent='Weekly'">Weekly</a></li>
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('repeatDropdown').textContent='Monthly'">Monthly</a></li>
+            <li><a class="dropdown-item" href="#" onclick="document.getElementById('repeatDropdown').textContent='Weekly'">Daily</a></li>
+            <li><a class="dropdown-item" href="#" onclick="document.getElementById('repeatDropdown').textContent='Monthly'">Weekly</a></li>
             </ul>
         </div>
         </div>
@@ -143,5 +195,4 @@
 
 
 <!-- JS links -->
-<script src="{{ url_for('static', filename='js/timeSelect.js') }}"></script>
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
