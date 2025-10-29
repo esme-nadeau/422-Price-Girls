@@ -107,13 +107,32 @@
 
             <!-- Right: Carousel -->
             <div class="col-md-8 d-flex justify-content-end">
+                <!-- Floor dropdown -->
+                <!-- <div class="dropdown mb-2 text-end">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                        type="button"
+                        id="floorDropdown"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false">
+                    Select Floor
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="floorDropdown">
+                    <li><a class="dropdown-item carousel-jump" href="#" data-slide="0">Floor 1</a></li>
+                    <a data-target="carousel-item active" data-slide-to="0" href="#">Floor 1</a>
+                    <li><a class="dropdown-item carousel-jump" href="#" data-slide="1">Floor 2</a></li>
+                    <li><a class="dropdown-item carousel-jump" href="#" data-slide="2">Floor 3</a></li>
+                </ul>
+                </div> -->
+
+                <!-- Carousel click through -->
                 <div id="carouselExampleIndicators" class="carousel slide" data-bs-ride="false" style="max-width: 350px;">
                     <div class="carousel-indicators">
                         <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="0" class="active" aria-current="true" aria-label="Slide 1"></button>
                         <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="1" aria-label="Slide 2"></button>
                         <button type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide-to="2" aria-label="Slide 3"></button>
                     </div>
-
+                    
+                    <!-- SVG files -->
                     <div class="carousel-inner">
                         <div class="carousel-item active">
                             <object data="{{ url_for('static', filename='map_images/DESC_1.svg') }}" 
@@ -140,7 +159,8 @@
                             </object>
                         </div>
                     </div>
-
+                    
+                    <!-- Carousel next buttons -->
                     <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
                         <span class="carousel-control-prev-icon" aria-hidden="true"></span>
                         <span class="visually-hidden">Previous</span>

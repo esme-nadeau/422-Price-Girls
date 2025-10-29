@@ -1,5 +1,4 @@
-from flask import Flask, render_template, jsonify, send_from_directory
-import os
+from flask import Flask, render_template, jsonify
 
 app = Flask(__name__)
 
@@ -30,14 +29,3 @@ def get_bookings():
 
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
-
-# # Optional: Serve React app on a different route
-# @app.route('/react')
-# @app.route('/react/<path:path>')
-# def serve_react(path=''):
-#     react_build_path = '../react/build'
-#     if path != "" and os.path.exists(os.path.join(react_build_path, path)):
-#         return send_from_directory(react_build_path, path)
-#     else:
-#         return send_from_directory(react_build_path, 'index.html')
-
