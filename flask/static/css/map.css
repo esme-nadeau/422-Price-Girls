@@ -207,7 +207,6 @@ body {
   background-color: #f2f2f2;
 }
 
-/* Target only the Floor dropdown items */
 #floorDropdown + .dropdown-menu .dropdown-item:focus,
 #floorDropdown + .dropdown-menu .dropdown-item:active {
   background-color: #EBECF0;

@@ -45,13 +45,17 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Wait for each SVG to load
   svgObjects.forEach(svgObject => {
+    // Check if already loaded (for the first/active slide)
+    if (svgObject.contentDocument) {
+      addSVGInteractivity(svgObject);
+    }
+    // Also listen for load event (for lazy-loaded slides)
     svgObject.addEventListener('load', () => {
       addSVGInteractivity(svgObject);
     });
   });
-});
 
-// for dropdown menu
+  // for dropdown menu
   document.querySelectorAll('.dropdown-item[data-slide]').forEach(item => {
     item.addEventListener('click', e => {
       e.preventDefault();
@@ -63,4 +67,15 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('floorDropdown').textContent = e.target.textContent;
     });
   });
+
+  // Update dropdown text when carousel slides (via arrows)
+  const carouselElement = document.querySelector('#carouselFloors');
+  if (carouselElement) {
+    carouselElement.addEventListener('slid.bs.carousel', event => {
+      const activeIndex = event.to; // Index of the active slide
+      const floorText = `Floor ${activeIndex + 1}`;
+      document.getElementById('floorDropdown').textContent = floorText;
+    });
+  }
+});
 
