@@ -44,4 +44,4 @@ def preview_email():
     return render_template('booking_confirmation_email.html', **sample)
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=5000)
