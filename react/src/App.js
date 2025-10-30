@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { analytics } from "./firebase";
 import { createRoom } from "./rooms";
+import BookingForm from "./BookingForm";
 
 function App() {
   useEffect(() => {
@@ -17,6 +18,11 @@ function App() {
       >
         Create Test Room
       </button>
+
+      {/* Render the BookingForm component here */}
+      <div style={{ marginTop: "3rem", padding: "1rem", borderTop: "1px solid #eee" }}>
+        <BookingForm />
+        </div>
     </div>
   );
 }
