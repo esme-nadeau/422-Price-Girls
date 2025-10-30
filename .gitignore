@@ -27,3 +27,4 @@ yarn-error.log*
 flask/__pycache__
 __pycache__
 ./__pycache__
+flask/firebase-credentials.json
