@@ -1,6 +1,13 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 app = Flask(__name__)
+
+# Initialize Firebase Admin
+cred = credentials.Certificate('firebase-credentials.json')
+firebase_admin.initialize_app(cred)
+db = firestore.client()
 
 @app.route('/')
 def index():
@@ -23,9 +30,31 @@ def bookings_tab():
 def api_test():
     return jsonify({"message": "Flask API working!"})
 
-@app.route('/api/bookings')
-def get_bookings():
-    return jsonify({"bookings": []}) # bookings logic
+@app.route('/api/bookings', methods=['GET', 'POST'])
+def bookings():
+    if request.method == 'POST':
+        data = request.json
+        # Add to Firebase
+        booking_ref = db.collection('bookings').add({
+            'roomId': data['room'],
+            'date': data['date'],
+            'timeRange': data['timeRange'],
+            'repeat': data['repeat'],
+            'userId': data['name'],
+            'purpose': data['purpose'],
+            'status': 'confirmed',
+            'email': '',  # Add if you collect email
+        })
+        return jsonify({'success': True, 'id': booking_ref[1].id})
+    else:
+        # GET - return all bookings
+        bookings_ref = db.collection('bookings')
+        bookings = []
+        for doc in bookings_ref.stream():
+            booking = doc.to_dict()
+            booking['id'] = doc.id
+            bookings.append(booking)
+        return jsonify({'bookings': bookings})
 
 @app.route('/preview-email')
 def preview_email():

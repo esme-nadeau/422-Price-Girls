@@ -2,6 +2,7 @@
 
 # dependencies
 react/node_modules
+/node_modules
 /.pnp
 .pnp.js
 
@@ -26,3 +27,4 @@ yarn-error.log*
 flask/__pycache__
 __pycache__
 ./__pycache__
+flask/firebase-credentials.json
