@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500&family=Montserrat:wght@500;600;700&display=swap');
+
+body {
+  background-color: #f9f9f9;
+  font-family: 'EB Garamond', serif;
+  color: #333;
+}
+
+h4, h5, label {
+  font-family: 'Montserrat', sans-serif;
+  color: #222;
+}
+
+/* Main cards */
+.card {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.05);
+  background: #fff;
+}
+
+/* Booking cards */
+.booking-card {
+  background-color: #6FAD6F; /* dark green for all */
+  border-radius: 12px;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  cursor: pointer;
+}
+
+.booking-card.active {
+  background-color: #B8E6B8; /* pale green for selected card */
+}
+
+.booking-card:hover {
+  transform: translateY(-1px);
+}
+
+/* Form controls */
+.form-control,
+.form-select {
+  border-radius: 12px;
+  border: 1px solid #ccc;
+  font-family: 'EB Garamond', serif;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+  border-color: #6FAD6F;
+  box-shadow: 0 0 0 3px rgba(111,173,111,0.2);
+}
+
+/* Buttons */
+.btn-green {
+  background-color: #6FAD6F;
+  color: white;
+  border-radius: 12px;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+}
+
+.btn-green:hover {
+  background-color: #548754;
+  color: white;
+}
+
+.btn-red {
+  background-color: #F8B6B6;
+  color: #222;
+  border-radius: 12px;
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+}
+
+.btn-red:hover {
+  background-color: #F28C8C;
+}
+
+/* Navbar overrides */
+.nav-link {
+  color: white !important;
+  margin-left: 1rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.nav-link.active {
+  text-decoration: underline;
+}

@@ -19,3 +19,16 @@ Kate Spencer<br>
 Katie Trinh <br>
 Lily Spurgat<br>
 
+---
+### How to install
+
+# React
+
+# Flask
+
+# How to use Firebase with Flask
+1. pip install firebase-admin
+2. Firebase -> Project Settings -> Service Accounts -> "Generate New Private Key"
+3. Create in /fask "firebase-credentials.json"
+4. Paste private key information into firebase-credentials.json
+
