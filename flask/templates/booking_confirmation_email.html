@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reservation Confirmation</title>
+    <style>
+      body { margin: 0; padding: 0; background-color: #f5f7fa; }
+      table { border-collapse: collapse; }
+      img { border: 0; line-height: 100%; outline: none; text-decoration: none; }
+      a { text-decoration: none; }
+      * { -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; }
+      @media (prefers-color-scheme: dark) {
+        body { background-color: #121212 !important; }
+      }
+    </style>
+  </head>
+  <body style="margin:0; padding:0; background:#f5f7fa;">
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all;">
+      Your reservation is confirmed. Manage or cancel with the link inside.
+    </div>
+
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fa; padding:24px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px; max-width:600px; background:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,0.06);">
+            <!-- Header / Brand bar -->
+            <tr>
+              <td style="background:#548754; padding:14px 24px;">
+                <table role="presentation" width="100%">
+                  <tr>
+                    <td align="left" style="font-family: Arial, Helvetica, sans-serif; font-size:18px; color:#ffffff; font-weight:bold;">
+                      UO School of Computer & Data Science
+                    </td>
+                    <td align="right" style="font-family: Arial, Helvetica, sans-serif; font-size:14px; color:#dff1df;">
+                      CS Room Reservations
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Banner stripe -->
+            <tr>
+              <td style="background:#6FAD6F; height:10px; line-height:10px; font-size:0;">&nbsp;</td>
+            </tr>
+
+            <!-- Body -->
+            <tr>
+              <td style="padding:24px;">
+                <table role="presentation" width="100%">
+                  <tr>
+                    <td style="font-family: Arial, Helvetica, sans-serif; color:#1f2937;">
+                      <h1 style="margin:0 0 12px; font-size:22px; line-height:28px; font-weight:700; color:#111827;">Reservation Confirmed</h1>
+                      <p style="margin:0 0 16px; font-size:15px; line-height:22px;">Hi {{ user_name }},</p>
+                      <p style="margin:0 0 16px; font-size:15px; line-height:22px;">
+                        Your reservation has been successfully created. The details are below. You can modify or cancel your booking anytime using the button in this email.
+                      </p>
+                    </td>
+                  </tr>
+
+                  <!-- Reservation details card -->
+                  <tr>
+                    <td style="padding:12px 0;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px;">
+                        <tr>
+                          <td style="padding:16px 18px; font-family: Arial, Helvetica, sans-serif; color:#111827;">
+                            <table role="presentation" width="100%">
+                              <tr>
+                                <td style="padding:4px 0; font-size:14px;"><strong>Reservation ID:</strong> {{ reservation_id }}</td>
+                              </tr>
+                              <tr>
+                                <td style="padding:4px 0; font-size:14px;"><strong>Name:</strong> {{ user_name }}</td>
+                              </tr>
+                              <tr>
+                                <td style="padding:4px 0; font-size:14px;"><strong>Room:</strong> {{ room_name }}</td>
+                              </tr>
+                              <tr>
+                                <td style="padding:4px 0; font-size:14px;"><strong>Date:</strong> {{ date }}</td>
+                              </tr>
+                              <tr>
+                                <td style="padding:4px 0; font-size:14px;"><strong>Time:</strong> {{ time_range }}</td>
+                              </tr>
+                              {% if repeat_rule %}
+                              <tr>
+                                <td style="padding:4px 0; font-size:14px;"><strong>Repeats:</strong> {{ repeat_rule }}</td>
+                              </tr>
+                              {% endif %}
+                              {% if purpose %}
+                              <tr>
+                                <td style="padding:4px 0; font-size:14px;"><strong>Purpose:</strong> {{ purpose }}</td>
+                              </tr>
+                              {% endif %}
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+
+                  <!-- CTA button -->
+                  <tr>
+                    <td align="center" style="padding:10px 0 4px;">
+                      <a href="{{ manage_url }}" target="_blank" style="display:inline-block; background:#6FAD6F; color:#ffffff; font-family: Arial, Helvetica, sans-serif; font-size:15px; font-weight:bold; padding:12px 18px; border-radius:8px;">
+                        Manage or Cancel Booking
+                      </a>
+                    </td>
+                  </tr>
+
+                  <!-- Fallback link -->
+                  <tr>
+                    <td style="padding:10px 0 0; font-family: Arial, Helvetica, sans-serif; font-size:12px; color:#6b7280;" align="center">
+                      If the button doesn’t work, copy and paste this link into your browser:<br/>
+                      <a href="{{ manage_url }}" style="color:#548754; word-break:break-all;">{{ manage_url }}</a>
+                    </td>
+                  </tr>
+
+                  <!-- Divider -->
+                  <tr>
+                    <td style="padding:18px 0 0;">
+                      <hr style="border:none; border-top:1px solid #e5e7eb; margin:0;" />
+                    </td>
+                  </tr>
+
+                  <!-- Footer / help -->
+                  <tr>
+                    <td style="padding:14px 0 0; font-family: Arial, Helvetica, sans-serif; font-size:12px; color:#6b7280;">
+                      <p style="margin:0 0 8px;">Need help? Visit <a href="{{ site_url }}" style="color:#548754;">our site</a> or reach out to admin.</p>
+                      <p style="margin:0;">If you didn’t make this reservation, please reach out to admin.</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+
+            <!-- Footer bar -->
+            <tr>
+              <td style="background:#f3f4f6; padding:12px 24px; text-align:center; font-family: Arial, Helvetica, sans-serif; font-size:12px; color:#9ca3af;">
+                © {{ current_year }} CS Room Reservations
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

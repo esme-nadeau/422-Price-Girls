@@ -43,6 +43,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (response.ok) {
                     alert('Room booked successfully!');
+                    // Send confirmation email automatically
+                    try {
+                        const emailResp = await fetch('/api/send-booking-confirmation', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ bookingId: result.id })
+                        });
+                        const emailResult = await emailResp.json();
+                        if (emailResp.ok && emailResult.ok) {
+                            console.log('Confirmation email sent.');
+                        } else {
+                            console.warn('⚠️ Email send failed:', emailResult.error);
+                        }
+                    } catch (emailError) {
+                        console.error('Email send error:', emailError);
+                }
                     // Clear form
                     document.getElementById('name').value = '';
                     document.getElementById('purpose').value = '';
