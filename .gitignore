@@ -28,3 +28,6 @@ flask/__pycache__
 __pycache__
 ./__pycache__
 flask/firebase-credentials.json
+flask/serviceAccount.json
+flask/.env
+.env
