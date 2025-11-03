@@ -2,7 +2,6 @@ import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 import os
 import json
-from flask import jsonify
 import ssl
 import smtplib
 from email.message import EmailMessage
@@ -73,7 +72,7 @@ def send_html_email(to_email: str, subject: str, html: str, text_fallback: str =
         server.send_message(msg)
 
 # ----------------------------
-# UI routes (preserved)
+# UI routes
 # ----------------------------
 @app.route("/")
 def index():
@@ -87,25 +86,27 @@ def map_tab():
 def calendar_tab():
     return render_template("calendar.html")
 
-# NEW FIRESTORE INFO TO MYBOOKINGS
+# My Bookings: dynamic Firestore data
 @app.route("/mybookings")
 def my_bookings():
-    # Query all bookings (replace with filtering by user if needed)
-    bookings_ref = db.collection("bookings")
-    docs = bookings_ref.stream()
+    try:
+        bookings_ref = db.collection("bookings")
+        docs = bookings_ref.stream()
 
-    bookings = []
-    for doc in docs:
-        data = doc.to_dict()
-        data['id'] = doc.id
-        bookings.append(data)
+        bookings = []
+        for doc in docs:
+            data = doc.to_dict()
+            data["id"] = doc.id
+            bookings.append(data)
 
-    return render_template("mybookings.html", bookings=bookings)
+        return render_template("mybookings.html", bookings=bookings)
+    except Exception as e:
+        print(f"Error loading bookings: {e}")
+        return render_template("mybookings.html", bookings=[])
 
 # ----------------------------
-# Esmé's added myBookings functionality
+# MyBookings DELETE endpoint (Esmé's addition)
 # ----------------------------
-
 @app.route("/delete_booking/<booking_id>", methods=["DELETE"])
 def delete_booking(booking_id):
     try:
@@ -115,9 +116,8 @@ def delete_booking(booking_id):
         print(e)
         return jsonify({"success": False, "error": str(e)}), 500
 
-
 # ----------------------------
-# API: test + bookings (preserved)
+# API: test + bookings CRUD
 # ----------------------------
 @app.route("/api/test")
 def api_test():
@@ -127,7 +127,6 @@ def api_test():
 def bookings():
     if request.method == "POST":
         data = request.json or {}
-        # Add to Firestore (matches your schema)
         booking_ref = db.collection("bookings").add({
             "roomId": data.get("room"),
             "date": data.get("date"),
@@ -149,7 +148,7 @@ def bookings():
     return jsonify({"bookings": items})
 
 # ----------------------------
-# NEW: Email confirmation endpoint
+# Email confirmation endpoint
 # ----------------------------
 @app.post("/api/send-booking-confirmation")
 def send_booking_confirmation():
@@ -191,7 +190,6 @@ def send_booking_confirmation():
     site_url = SITE_URL
     current_year = datetime.now().year
 
-    # Render your existing Jinja template
     html = render_template(
         "booking_confirmation_email.html",
         user_name=user_name,
@@ -228,5 +226,27 @@ def send_booking_confirmation():
         doc_ref.update({"emailError": str(e)})
         return jsonify({"ok": False, "error": str(e)}), 500
 
+# ----------------------------
+# Email preview route (from Kate's version)
+# ----------------------------
+@app.route('/preview-email')
+def preview_email():
+    sample = {
+        "user_name": "Test User",
+        "reservation_id": "ABC123",
+        "room_name": "Room 120",
+        "date": "2025-11-01",
+        "time_range": "10:00 AM - 11:00 AM",
+        "repeat_rule": "Never",
+        "purpose": "Study session",
+        "manage_url": "http://127.0.0.1:5000/mybookings",
+        "site_url": "http://127.0.0.1:5000/",
+        "current_year": "2025",
+    }
+    return render_template('booking_confirmation_email.html', **sample)
+
+# ----------------------------
+# Run app
+# ----------------------------
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

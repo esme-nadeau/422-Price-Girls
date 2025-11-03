@@ -29,6 +29,6 @@ Lily Spurgat<br>
 # How to use Firebase with Flask
 1. pip install firebase-admin
 2. Firebase -> Project Settings -> Service Accounts -> "Generate New Private Key"
-3. Create in /fask "firebase-credentials.json"
-4. Paste private key information into firebase-credentials.json
+3. Create in /fask "serviceAccount.json"
+4. Paste private key information into serviceAccount.json
 

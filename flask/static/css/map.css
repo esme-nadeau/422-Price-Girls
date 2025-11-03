@@ -88,9 +88,9 @@ body {
 .room-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 20px;
+
 }
+
 
 .room-header span {
   font-weight: 600;
@@ -178,6 +178,7 @@ body {
 .svg-object {
   border-radius: 6px;
   padding: 8px;
+  pointer-events: auto;
 }
 
 .card {
@@ -261,4 +262,21 @@ body {
 .flatpickr-weekdays {
   color: #9b9b9b;
   font-weight: 500;
+}
+
+/* ==============================
+   Fix dropdown z-index in tabs
+============================== */
+.dropdown-menu {
+  z-index: 1050 !important;
+}
+
+.tab-content {
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure dropdowns work properly inside tab content */
+.tab-pane .dropdown {
+  position: relative;
 }
