@@ -202,5 +202,21 @@ def send_booking_confirmation():
         doc_ref.update({"emailError": str(e)})
         return jsonify({"ok": False, "error": str(e)}), 500
 
+@app.route('/preview-email')
+def preview_email():
+    sample = {
+        "user_name": "Test User",
+        "reservation_id": "ABC123",
+        "room_name": "Room 120",
+        "date": "2025-11-01",
+        "time_range": "10:00 AM - 11:00 AM",
+        "repeat_rule": "Never",
+        "purpose": "Study session",
+        "manage_url": "http://127.0.0.1:5000/mybookings",
+        "site_url": "http://127.0.0.1:5000/",
+        "current_year": "2025",
+    }
+    return render_template('booking_confirmation_email.html', **sample)
+
 if __name__ == "__main__":
     app.run(debug=True, port=5000)

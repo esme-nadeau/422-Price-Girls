@@ -15,17 +15,23 @@
     <div class="booking-widget card shadow-sm p-3" style="width: 100%;">
 
         <!-- Room Selector -->
-        <div class="room-header mb-3 dropdown d-flex align-items-center gap-2">
-        <span id="selectedRoom" class="fw-semibold" style="font-size:1.3rem;">Room 120</span>
-        <button class="btn p-0 border-0 bg-transparent edit-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-pencil"></i>
-        </button>
-        <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 120'">Room 120</a></li>
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 130'">Room 130</a></li>
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 140'">Room 140</a></li>
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 150'">Room 150</a></li>
-        </ul>
+        <div class="room-header mb-3 dropdown d-flex align-items-center">
+            <!-- Room label -->
+            <span id="selectedRoom" class="fw-semibold" style="font-size:1.3rem;">Room 120</span>
+            <!-- Pencil icon with small gap -->
+            <button class="btn p-0 border-0 bg-transparent edit-icon ms-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-pencil"></i>
+            </button>
+            <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 120'">Room 120</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 127'">Room 127</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 130'">Room 130</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 140'">Room 140</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 150'">Room 150</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 160'">Room 160</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 200'">Room 200</a></li>
+                <li><a class="dropdown-item" href="#" onclick="document.getElementById('selectedRoom').textContent='Room 220'">Room 220</a></li>
+            </ul>
         </div>
 
         <!-- Date -->
@@ -34,36 +40,92 @@
         <input type="date" class="form-control" id="date" value="{{ current_date }}">
         </div>
 
-        <!-- Time Dropdown -->
+        <!-- Time Selection (Start - End) -->
         <div class="mb-3">
-        <label class="form-label">Time</label>
-        <div class="dropdown">
-            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="timeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            Select a time
-            </button>
-            <ul class="dropdown-menu w-100" style="max-height: 300px; overflow-y: auto;">
-            <!-- (Your full list of times unchanged) -->
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('timeDropdown').textContent='8:00 AM - 8:30 AM'">8:00 AM - 8:30 AM</a></li>
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('timeDropdown').textContent='8:30 AM - 9:00 AM'">8:30 AM - 9:00 AM</a></li>
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('timeDropdown').textContent='9:00 AM - 9:30 AM'">9:00 AM - 9:30 AM</a></li>
-            <!-- ... rest of time slots -->
-            </ul>
-        </div>
+          <label class="form-label d-block mb-1">Start Time - End Time</label>
+          <div class="d-flex align-items-center gap-2">
+            
+            <!-- Start Time Dropdown -->
+            <div class="dropdown flex-fill">
+              <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="startTimeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                8:00 AM
+              </button>
+              <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
+                {% for h in range(8, 21) %}
+                  <li>
+                    <a class="dropdown-item" href="#"
+                      onclick="document.getElementById('startTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}'">
+                      {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
+                    </a>
+                  </li>
+                  {% if h < 20 %}
+                  <li>
+                    <a class="dropdown-item" href="#"
+                      onclick="document.getElementById('startTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}'">
+                      {{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}
+                    </a>
+                  </li>
+                  {% endif %}
+                {% endfor %}
+              </ul>
+            </div>
+
+            <!-- Dash -->
+            <div class="d-flex align-items-center">
+              <span class="fw-bold">–</span>
+            </div>
+
+            <!-- End Time Dropdown -->
+            <div class="dropdown flex-fill">
+              <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="endTimeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                8:30 AM
+              </button>
+              <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
+                {% for h in range(8, 21) %}
+                  <li>
+                    <a class="dropdown-item" href="#"
+                      onclick="document.getElementById('endTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}'">
+                      {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
+                    </a>
+                  </li>
+                  {% if h < 20 %}
+                  <li>
+                    <a class="dropdown-item" href="#"
+                      onclick="document.getElementById('endTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}'">
+                      {{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}
+                    </a>
+                  </li>
+                  {% endif %}
+                {% endfor %}
+              </ul>
+            </div>
+
+          </div>
         </div>
 
         <!-- Repeat Dropdown -->
-        <div class="mb-3 d-flex align-items-center gap-2">
-        <label class="form-label mb-0">Does this booking repeat?</label>
-        <div class="dropdown flex-grow-1">
+        <div class="mb-3">
+          <label class="form-label mb-1">Does this booking repeat?</label>
+          <div class="dropdown mb-1">
             <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="repeatDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            Never
+              Never
             </button>
             <ul class="dropdown-menu w-100">
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('repeatDropdown').textContent='Never'">Never</a></li>
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('repeatDropdown').textContent='Weekly'">Weekly</a></li>
-            <li><a class="dropdown-item" href="#" onclick="document.getElementById('repeatDropdown').textContent='Monthly'">Monthly</a></li>
+              <li><a class="dropdown-item" href="#" onclick="document.getElementById('repeatDropdown').textContent='Never'">Never</a></li>
+              <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Daily')">Daily</a></li>
+              <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Weekly')">Weekly</a></li>
+              <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Monthly')">Monthly</a></li>
+              <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Custom')">Custom</a></li>
             </ul>
-        </div>
+          </div>
+          
+          <!-- Comment button on its own line -->
+          <div class="text-end">
+            <button id="repeatNotesIcon" class="btn btn-outline-secondary btn-sm d-none" type="button" 
+                    title="View repeat details" onclick="openRepeatModal(document.getElementById('repeatDropdown').dataset.repeatType)">
+              <i class="bi bi-chat-dots"></i>
+            </button>
+          </div>
         </div>
 
         <!-- Name -->
@@ -140,8 +202,79 @@
 </div>
 </div>
 
+<!-- Repeat Options Modal -->
+<div class="modal fade" id="repeatModal" tabindex="-1" aria-labelledby="repeatModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="repeatModalLabel">Repeat Booking Options</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Daily options -->
+        <div id="dailyOptions" class="repeat-option d-none">
+          <label for="dailyEndDate" class="form-label">End Date</label>
+          <input type="date" id="dailyEndDate" class="form-control">
+        </div>
 
+        <!-- Weekly options -->
+        <div id="weeklyOptions" class="repeat-option d-none">
+          <label class="form-label text-center w-100">Days of the Week</label>
+          <div class="d-flex flex-wrap gap-2 mb-2 justify-content-center">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="Mon" id="dayMon">
+              <label class="form-check-label" for="dayMon">Mon</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="Tue" id="dayTue">
+              <label class="form-check-label" for="dayTue">Tue</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="Wed" id="dayWed">
+              <label class="form-check-label" for="dayWed">Wed</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="Thu" id="dayThu">
+              <label class="form-check-label" for="dayThu">Thu</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="Fri" id="dayFri">
+              <label class="form-check-label" for="dayFri">Fri</label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="Sat" id="daySat">
+              <label class="form-check-label" for="daySat">Sat</label>            
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" value="Sun" id="daySun">
+              <label class="form-check-label" for="daySun">Sun</label>
+            </div>
+          </div>
+          <label for="weeklyEndDate" class="form-label w-100 mt-2">End Date</label>
+          <input type="date" id="weeklyEndDate" class="form-control">
+        </div>
+
+        <!-- Monthly options -->
+         
+        <div id="monthlyOptions" class="repeat-option d-none">
+          <label for="monthlyEndDate" class="form-label">End Date</label>
+          <input type="date" id="monthlyEndDate" class="form-control">
+        </div>
+
+        <!-- Custom options -->
+        <div id="customOptions" class="repeat-option d-none">
+          <label for="customText" class="form-label">Custom Repeat Notes</label>
+          <input type="text" id="customText" class="form-control" placeholder="e.g., every 3rd Wednesday">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-green" id="saveRepeatOptions">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- JS links -->
-<script src="{{ url_for('static', filename='js/timeSelect.js') }}"></script>
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/repeat.js') }}"></script>
