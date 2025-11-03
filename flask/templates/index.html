@@ -28,24 +28,21 @@
     <main>
          <nav>
             <div class="nav nav-tabs" id="nav-tab" role="tablist">
-                <button class="nav-link active" id="nav-home-tab" data-bs-toggle="tab" data-bs-target="#nav-home"
-                    type="button" role="tab" aria-controls="nav-home" aria-selected="true">Map</button>
-                <button class="nav-link" id="nav-profile-tab" data-bs-toggle="tab" data-bs-target="#nav-profile"
-                    type="button" role="tab" aria-controls="nav-profile" aria-selected="false">Calendar</button>
-                <button class="nav-link" id="nav-contact-tab" data-bs-toggle="tab" data-bs-target="#nav-contact"
-                    type="button" role="tab" aria-controls="nav-contact" aria-selected="false">My Bookings</button>
+                <button class="nav-link active" id="nav-map-tab" data-bs-toggle="tab" data-bs-target="#nav-map"
+                    type="button" role="tab" aria-controls="nav-map" aria-selected="true">Map</button>
+                <button class="nav-link" id="nav-calendar-tab" data-bs-toggle="tab" data-bs-target="#nav-calendar"
+                    type="button" role="tab" aria-controls="nav-calendar" aria-selected="false">Calendar</button>
+                <button class="nav-link" id="nav-bookings-tab" data-bs-toggle="tab" data-bs-target="#nav-bookings"
+                    type="button" role="tab" aria-controls="nav-bookings" aria-selected="false">My Bookings</button>
             </div>
         </nav>
 
         <div class="tab-content" id="nav-tabContent">
-            <div class="tab-pane fade show active p-3" id="nav-home" role="tabpanel" aria-labelledby="nav-home-tab">
-                {% include 'map.html' %}
+            <div class="tab-pane fade show active p-3" id="nav-map" role="tabpanel" aria-labelledby="nav-map-tab">
             </div>
-            <div class="tab-pane fade p-3" id="nav-profile" role="tabpanel" aria-labelledby="nav-profile-tab">
-                {% include 'calendar.html' %}
+            <div class="tab-pane fade p-3" id="nav-calendar" role="tabpanel" aria-labelledby="nav-calendar-tab">
             </div>
-            <div class="tab-pane fade p-3" id="nav-contact" role="tabpanel" aria-labelledby="nav-contact-tab">
-                {% include 'mybookings.html' %}
+            <div class="tab-pane fade p-3" id="nav-bookings" role="tabpanel" aria-labelledby="nav-bookings-tab">
             </div>
     </main>
 

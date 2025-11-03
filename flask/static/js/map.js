@@ -1,47 +1,48 @@
-document.addEventListener('DOMContentLoaded', () => {
-  const svgObjects = document.querySelectorAll('.svg-object');
+// Function to add interactivity to an SVG
+function addSVGInteractivity(svgObject) {
+  // Access the SVG document inside the object tag
+  const svgDoc = svgObject.contentDocument;
+  if (!svgDoc) return;
   
-  // Function to add interactivity to an SVG
-  function addSVGInteractivity(svgObject) {
-    // Access the SVG document inside the object tag
-    const svgDoc = svgObject.contentDocument;
-    if (!svgDoc) return;
+  const svgEl = svgDoc.querySelector('svg');
+  if (!svgEl) return;
+  
+  // Now you can manipulate SVG elements
+  const rooms = svgDoc.querySelectorAll('[id^="room"]');
+  
+  rooms.forEach(room => {
+    room.style.cursor = 'pointer';
     
-    const svgEl = svgDoc.querySelector('svg');
-    if (!svgEl) return;
-    
-    // Now you can manipulate SVG elements
-    const rooms = svgDoc.querySelectorAll('[id^="room"]');
-    
-    rooms.forEach(room => {
-      room.style.cursor = 'pointer';
+    room.addEventListener('click', (e) => {
+      const roomId = room.id;
+      console.log('Clicked room:', roomId);
       
-      room.addEventListener('click', (e) => {
-        const roomId = room.id;
-        console.log('Clicked room:', roomId);
-        
-        // Example: highlight the clicked room
-        rooms.forEach(r => {
-          const path = r.querySelector('path');
-          if (path) path.style.opacity = '0.7';
-        });
-        
-        const clickedPath = room.querySelector('path');
-        if (clickedPath) clickedPath.style.opacity = '1';
-      });
-      
-      // Optional: hover effects
-      room.addEventListener('mouseenter', (e) => {
-        const path = room.querySelector('path');
-        if (path) path.style.opacity = '0.9';
-      });
-      
-      room.addEventListener('mouseleave', (e) => {
-        const path = room.querySelector('path');
+      // Example: highlight the clicked room
+      rooms.forEach(r => {
+        const path = r.querySelector('path');
         if (path) path.style.opacity = '0.7';
       });
+      
+      const clickedPath = room.querySelector('path');
+      if (clickedPath) clickedPath.style.opacity = '1';
     });
-  }
+    
+    // Optional: hover effects
+    room.addEventListener('mouseenter', (e) => {
+      const path = room.querySelector('path');
+      if (path) path.style.opacity = '0.9';
+    });
+    
+    room.addEventListener('mouseleave', (e) => {
+      const path = room.querySelector('path');
+      if (path) path.style.opacity = '0.7';
+    });
+  });
+}
+
+// Initialize map - called after map content is loaded
+window.initMap = function() {
+  const svgObjects = document.querySelectorAll('.svg-object');
   
   // Wait for each SVG to load
   svgObjects.forEach(svgObject => {
@@ -77,5 +78,5 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('floorDropdown').textContent = floorText;
     });
   }
-});
+};
 
