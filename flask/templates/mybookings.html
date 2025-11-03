@@ -1,1 +1,84 @@
-Booking information goes here!
+<!-- My Bookings Content -->
+<div class="row g-4 align-items-start">
+
+  <!-- LEFT: My Bookings List -->
+  <div class="col-md-5">
+    <div class="card shadow-sm p-3">
+      <h4 class="fw-semibold mb-3">My Bookings</h4>
+      <div id="bookingsList">
+        {% for booking in bookings %}
+        <div class="booking-card mb-3 p-3 rounded" 
+             data-id="{{ booking.id }}"
+             data-date="{{ booking.date }}"
+             data-time="{{ booking.timeRange }}"
+             data-repeat="{{ booking.repeat }}"
+             data-name="{{ booking.userId }}"
+             data-email="{{ booking.email }}"
+             data-purpose="{{ booking.purpose }}"
+             data-roomid="{{ booking.roomId }}">
+          <h5 class="fw-bold mb-1">{{ booking.purpose }}</h5>
+          <p class="mb-0">{{ booking.roomId }}</p>
+          <p class="mb-0">{{ booking.timeRange }}</p>
+          <p class="text-muted small mb-0">{{ booking.date }}</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Booking Information -->
+  <div class="col-md-7">
+    <div class="card shadow-sm p-4">
+      <h4 class="fw-semibold mb-3">Booking Information</h4>
+      <form id="bookingForm" data-id="">
+
+        <div class="mb-3">
+          <label class="form-label">Date</label>
+          <input type="date" id="date" class="form-control">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Time</label>
+          <input type="text" id="time" class="form-control">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Does this booking repeat?</label>
+          <select id="repeat" class="form-select">
+            <option>Never</option>
+            <option>Weekly</option>
+            <option>Monthly</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Name</label>
+          <input type="text" id="name" class="form-control">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input type="email" id="email" class="form-control">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Booking Purpose</label>
+          <input type="text" id="purpose" class="form-control">
+        </div>
+
+        <!-- NEW: Room ID -->
+        <div class="mb-3">
+          <label class="form-label">Room ID</label>
+          <input type="text" id="roomId" class="form-control" readonly>
+        </div>
+
+        <div class="d-flex gap-3">
+          <button type="button" class="btn btn-green flex-grow-1">Edit Reservation</button>
+          <button type="button" id="cancelBookingBtn" class="btn btn-red flex-grow-1">Cancel Reservation</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/mybookings.js') }}"></script>
