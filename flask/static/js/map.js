@@ -19,23 +19,23 @@ function addSVGInteractivity(svgObject) {
       
       // Example: highlight the clicked room
       rooms.forEach(r => {
-        const path = r.querySelector('path');
-        if (path) path.style.opacity = '0.7';
+        const shape = r.querySelector('path, rect');
+        if (shape) shape.style.opacity = '0.7';
       });
       
-      const clickedPath = room.querySelector('path');
-      if (clickedPath) clickedPath.style.opacity = '1';
+      const clickedShape = room.querySelector('path, rect');
+      if (clickedShape) clickedShape.style.opacity = '1';
     });
     
     // Optional: hover effects
     room.addEventListener('mouseenter', (e) => {
-      const path = room.querySelector('path');
-      if (path) path.style.opacity = '0.9';
+      const shape = room.querySelector('path, rect');
+      if (shape) shape.style.opacity = '0.9';
     });
     
     room.addEventListener('mouseleave', (e) => {
-      const path = room.querySelector('path');
-      if (path) path.style.opacity = '0.7';
+      const shape = room.querySelector('path, rect');
+      if (shape) shape.style.opacity = '0.7';
     });
   });
 }

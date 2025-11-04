@@ -13,7 +13,7 @@
 .mybookings-container h4,
 .mybookings-container h5,
 .mybookings-container label {
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'EB Garamond', serif;
   color: #222;
 }
 
@@ -62,7 +62,7 @@
   background-color: #6FAD6F;
   color: white;
   border-radius: 12px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'EB Garamond', serif;
   font-weight: 500;
 }
 
@@ -80,7 +80,7 @@
   background-color: #F8B6B6;
   color: #222;
   border-radius: 12px;
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'EB Garamond', serif;
   font-weight: 500;
 }
 
