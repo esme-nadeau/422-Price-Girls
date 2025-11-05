@@ -227,7 +227,7 @@ def send_booking_confirmation():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 # ----------------------------
-# Email preview route (from Kate's version)
+# Email preview route (from Katie's version)
 # ----------------------------
 @app.route('/preview-email')
 def preview_email():
