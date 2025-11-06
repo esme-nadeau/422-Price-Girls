@@ -113,7 +113,7 @@ body {
    Repeat & Time Dropdowns
 ============================== */
 .mb-3.d-flex label {
-  font-family: 'Montserrat', sans-serif;
+  font-family: 'EB Garamond', serif;
   font-weight: 500;
   color: #555;
   white-space: nowrap; 
@@ -279,4 +279,85 @@ body {
 /* Ensure dropdowns work properly inside tab content */
 .tab-pane .dropdown {
   position: relative;
+}
+
+/* ==============================
+   Calendar Widget (Light Theme)
+============================== */
+.calendar-widget {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+  padding: 1.25rem;
+  max-width: 350px;
+  font-family: 'EB Garamond', serif;
+  color: #333;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.cal-month-year {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 600;
+  color: #222;
+  font-size: 1.05rem;
+}
+
+.cal-nav-btn {
+  background: none;
+  border: none;
+  color: #777;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.cal-nav-btn:hover {
+  background-color: #f1f3f2;
+  color: #333;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+
+.day-name {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 500;
+  color: #888;
+  font-size: 0.8rem;
+  margin-bottom: 0.3rem;
+}
+
+.day {
+  padding: 0.6rem 0;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.day:hover {
+  background-color: #eaf3ea; /* soft green highlight */
+  color: #333;
+}
+
+.prev-month,
+.next-month {
+  color: #ccc;
+}
+
+.selected {
+  background-color: #88b04b; /* matches your green accent */
+  color: #fff;
+  font-weight: 600;
 }
