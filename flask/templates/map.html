@@ -2,13 +2,13 @@
 <div class="row g-4 align-items-start">
   <!-- LEFT: Calendar -->
   <div class="col">
-    <div class="card shadow-sm p-3 mb-4" style="width: 100%;">
+    <div class="booking-widget card shadow-sm p-3 mb-4" style="width: 100%;">
       <!-- <div class="d-flex justify-content-between align-items-center mb-3"> -->
       
-        <!-- Date -->
+      <!-- Date -->
       <div class="mb-3">
-      <label for="date" class="form-label">Date</label>
-      <input type="date" class="form-control" id="date" value="{{ current_date }}">
+      <label for="date_left" class="form-label">Date</label>
+      <input type="date" class="form-control" id="date_left" value="{{ current_date }}" min="">
       </div>
 
       <!-- Time Selection (Start - End) -->
@@ -18,21 +18,21 @@
           
           <!-- Start Time Dropdown -->
           <div class="dropdown flex-fill">
-            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="startTimeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="start_time_left" data-bs-toggle="dropdown" aria-expanded="false">
               8:00 AM
             </button>
             <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
               {% for h in range(8, 21) %}
                 <li>
                   <a class="dropdown-item" href="#"
-                    onclick="document.getElementById('startTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}'">
+                    onclick="updateStartTime('{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}')">
                     {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
                   </a>
                 </li>
                 {% if h < 20 %}
                 <li>
                   <a class="dropdown-item" href="#"
-                    onclick="document.getElementById('startTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}'">
+                    onclick="updateStartTime('{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}')">
                     {{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}
                   </a>
                 </li>
@@ -48,21 +48,21 @@
 
           <!-- End Time Dropdown -->
           <div class="dropdown flex-fill">
-            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="endTimeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="end_time_left" data-bs-toggle="dropdown" aria-expanded="false">
               8:30 AM
             </button>
             <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
               {% for h in range(8, 21) %}
                 <li>
                   <a class="dropdown-item" href="#"
-                    onclick="document.getElementById('endTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}'">
+                    onclick="updateEndTime('{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}')">
                     {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
                   </a>
                 </li>
                 {% if h < 20 %}
                 <li>
                   <a class="dropdown-item" href="#"
-                    onclick="document.getElementById('endTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}'">
+                    onclick="updateEndTime('{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}')">
                     {{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}
                   </a>
                 </li>
@@ -187,8 +187,8 @@
 
       <!-- Date -->
       <div class="mb-3">
-      <label for="date" class="form-label">Date</label>
-      <input type="date" class="form-control" id="date" value="{{ current_date }}">
+      <label for="date_right" class="form-label">Date</label>
+      <input type="date" class="form-control" id="date_right" value="{{ current_date }}" min="">
       </div>
 
       <!-- Time Selection (Start - End) -->
@@ -198,21 +198,21 @@
           
           <!-- Start Time Dropdown -->
           <div class="dropdown flex-fill">
-            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="startTimeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="start_time_right" data-bs-toggle="dropdown" aria-expanded="false">
               8:00 AM
             </button>
             <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
               {% for h in range(8, 21) %}
                 <li>
                   <a class="dropdown-item" href="#"
-                    onclick="document.getElementById('startTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}'">
+                    onclick="updateStartTime('{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}')">
                     {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
                   </a>
                 </li>
                 {% if h < 20 %}
                 <li>
                   <a class="dropdown-item" href="#"
-                    onclick="document.getElementById('startTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}'">
+                    onclick="updateStartTime('{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}')">
                     {{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}
                   </a>
                 </li>
@@ -228,21 +228,21 @@
 
           <!-- End Time Dropdown -->
           <div class="dropdown flex-fill">
-            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="endTimeDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="end_time_right" data-bs-toggle="dropdown" aria-expanded="false">
               8:30 AM
             </button>
             <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
               {% for h in range(8, 21) %}
                 <li>
                   <a class="dropdown-item" href="#"
-                    onclick="document.getElementById('endTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}'">
+                    onclick="updateEndTime('{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}')">
                     {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
                   </a>
                 </li>
                 {% if h < 20 %}
                 <li>
                   <a class="dropdown-item" href="#"
-                    onclick="document.getElementById('endTimeDropdown').textContent='{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}'">
+                    onclick="updateEndTime('{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}')">
                     {{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}
                   </a>
                 </li>
@@ -292,7 +292,7 @@
       </div>
 
       <!-- Submit -->
-      <button class="btn btn-green w-100">Book Room</button>
+      <button id="bookRoomBtn" class="btn btn-green w-100">Book Room</button>
   </div>
   </div>
 </div>
@@ -371,3 +371,4 @@
 
 <!-- JS links -->
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+<script src="{{ url_for('static', filename='js/bookings.js') }}"></script>

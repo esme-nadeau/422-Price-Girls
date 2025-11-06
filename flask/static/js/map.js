@@ -1,4 +1,4 @@
-// Function to add interactivity to an SVG
+// Add interactivity to the SVGs
 function addSVGInteractivity(svgObject) {
   // Access the SVG document inside the object tag
   const svgDoc = svgObject.contentDocument;
@@ -7,7 +7,7 @@ function addSVGInteractivity(svgObject) {
   const svgEl = svgDoc.querySelector('svg');
   if (!svgEl) return;
   
-  // Now you can manipulate SVG elements
+  // To manipulate SVG elements
   const rooms = svgDoc.querySelectorAll('[id^="room"]');
   
   rooms.forEach(room => {
@@ -17,7 +17,14 @@ function addSVGInteractivity(svgObject) {
       const roomId = room.id;
       console.log('Clicked room:', roomId);
       
-      // Example: highlight the clicked room
+      // Update selected room label so bookings.js validation passes
+      const labelEl = document.getElementById('selectedRoom');
+      if (labelEl) {
+        const num = (roomId && roomId.match(/\d+/)) ? roomId.match(/\d+/)[0] : null;
+        labelEl.textContent = num ? `Room ${num}` : roomId;
+      }
+
+      // Highlight the clicked room
       rooms.forEach(r => {
         const shape = r.querySelector('path, rect');
         if (shape) shape.style.opacity = '0.7';
@@ -27,7 +34,7 @@ function addSVGInteractivity(svgObject) {
       if (clickedShape) clickedShape.style.opacity = '1';
     });
     
-    // Optional: hover effects
+    // Hover effects
     room.addEventListener('mouseenter', (e) => {
       const shape = room.querySelector('path, rect');
       if (shape) shape.style.opacity = '0.9';
@@ -50,7 +57,7 @@ window.initMap = function() {
     if (svgObject.contentDocument) {
       addSVGInteractivity(svgObject);
     }
-    // Also listen for load event (for lazy-loaded slides)
+    // Listen for load event (for lazy-loaded slides)
     svgObject.addEventListener('load', () => {
       addSVGInteractivity(svgObject);
     });
@@ -78,5 +85,86 @@ window.initMap = function() {
       document.getElementById('floorDropdown').textContent = floorText;
     });
   }
+
+  // Sync date inputs between left and right sections
+  const dateLeft = document.getElementById('date_left');
+  const dateRight = document.getElementById('date_right');
+  
+  // Set minimum date to today (prevents selecting past dates)
+  const today = new Date().toISOString().split('T')[0];
+  if (dateLeft) {
+    dateLeft.setAttribute('min', today);
+    if (!dateLeft.value) dateLeft.value = today;
+  }
+  if (dateRight) {
+    dateRight.setAttribute('min', today);
+    if (!dateRight.value) dateRight.value = today;
+  }
+  
+  if (dateLeft && dateRight) {
+    // Sync from left to right
+    dateLeft.addEventListener('change', function() {
+      dateRight.value = this.value;
+    });
+    
+    // Sync from right to left
+    dateRight.addEventListener('change', function() {
+      dateLeft.value = this.value;
+    });
+  }
 };
+
+// Sync date inputs on page load (runs independently of initMap)
+document.addEventListener('DOMContentLoaded', function() {
+  const dateLeft = document.getElementById('date_left');
+  const dateRight = document.getElementById('date_right');
+  
+  // Set minimum date to today (prevents selecting past dates)
+  const today = new Date().toISOString().split('T')[0];
+  if (dateLeft) {
+    dateLeft.setAttribute('min', today);
+    if (!dateLeft.value) dateLeft.value = today;
+  }
+  if (dateRight) {
+    dateRight.setAttribute('min', today);
+    if (!dateRight.value) dateRight.value = today;
+  }
+  
+  if (dateLeft && dateRight) {
+    // Sync from left to right
+    dateLeft.addEventListener('change', function() {
+      dateRight.value = this.value;
+    });
+    
+    // Sync from right to left
+    dateRight.addEventListener('change', function() {
+      dateLeft.value = this.value;
+    });
+  }
+});
+
+// Functions to sync start and end times between left and right sections
+function updateStartTime(time) {
+  const startTimeLeft = document.getElementById('start_time_left');
+  const startTimeRight = document.getElementById('start_time_right');
+  
+  if (startTimeLeft) {
+    startTimeLeft.textContent = time;
+  }
+  if (startTimeRight) {
+    startTimeRight.textContent = time;
+  }
+}
+
+function updateEndTime(time) {
+  const endTimeLeft = document.getElementById('end_time_left');
+  const endTimeRight = document.getElementById('end_time_right');
+  
+  if (endTimeLeft) {
+    endTimeLeft.textContent = time;
+  }
+  if (endTimeRight) {
+    endTimeRight.textContent = time;
+  }
+}
 
