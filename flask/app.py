@@ -41,8 +41,13 @@ def init_firebase():
 if not firebase_admin._apps:
     init_firebase()
 
-# Firestore client (uses FIREBASE_PROJECT_ID if provided)
-db = firestore.Client(project=os.getenv("FIREBASE_PROJECT_ID"))
+# Firestore client (uses FIREBASE_PROJECT_ID if provided, otherwise infers from credentials)
+project_id = os.getenv("FIREBASE_PROJECT_ID")
+if project_id:
+    db = firestore.Client(project=project_id)
+else:
+    db = firestore.Client()  # Will infer project from credentials
+    print(f"[firebase] Firestore client initialized (project inferred from credentials)")
 
 # ----------------------------
 # SMTP / Email configuration
@@ -126,26 +131,40 @@ def api_test():
 @app.route("/api/bookings", methods=["GET", "POST"])
 def bookings():
     if request.method == "POST":
-        data = request.json or {}
-        booking_ref = db.collection("bookings").add({
-            "roomId": data.get("room"),
-            "date": data.get("date"),
-            "timeRange": data.get("timeRange"),
-            "repeat": data.get("repeat"),
-            "userId": data.get("name"),
-            "purpose": data.get("purpose"),
-            "status": "confirmed",
-            "email": data.get("email", ""),
-        })
-        return jsonify({"success": True, "id": booking_ref[1].id})
+        try:
+            data = request.json or {}
+            print(f"[bookings] Received booking data: {data}")
+            
+            booking_ref = db.collection("bookings").add({
+                "roomId": data.get("room"),
+                "date": data.get("date"),
+                "timeRange": data.get("timeRange"),
+                "repeat": data.get("repeat"),
+                "userId": data.get("name"),
+                "purpose": data.get("purpose"),
+                "status": "confirmed",
+                "email": data.get("email", ""),
+            })
+            booking_id = booking_ref[1].id
+            print(f"[bookings] Successfully created booking with ID: {booking_id}")
+            return jsonify({"success": True, "id": booking_id})
+        except Exception as e:
+            print(f"[bookings] Error creating booking: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({"success": False, "error": str(e)}), 500
 
     # GET all bookings
-    items = []
-    for doc in db.collection("bookings").stream():
-        b = doc.to_dict()
-        b["id"] = doc.id
-        items.append(b)
-    return jsonify({"bookings": items})
+    try:
+        items = []
+        for doc in db.collection("bookings").stream():
+            b = doc.to_dict()
+            b["id"] = doc.id
+            items.append(b)
+        return jsonify({"bookings": items})
+    except Exception as e:
+        print(f"[bookings] Error fetching bookings: {e}")
+        return jsonify({"bookings": [], "error": str(e)}), 500
 
 # ----------------------------
 # Email confirmation endpoint
