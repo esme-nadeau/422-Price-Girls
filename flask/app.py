@@ -6,7 +6,6 @@ import ssl
 import smtplib
 from email.message import EmailMessage
 from datetime import datetime, time
-import re
 
 from flask import Flask, render_template, jsonify, request
 from dotenv import load_dotenv
@@ -126,53 +125,33 @@ def delete_booking(booking_id):
 # Helper functions for time overlap checking
 # ----------------------------
 def parse_time_string(time_str):
-    """Parse time string like '8:00 AM' or '8:00 AM - 9:00 AM' into time objects."""
-    # Handle time range string
-    if ' - ' in time_str:
-        parts = time_str.split(' - ')
-        start_time = parse_single_time(parts[0].strip())
-        end_time = parse_single_time(parts[1].strip())
-        return start_time, end_time
-    # Single time
-    return parse_single_time(time_str.strip())
-
-def parse_single_time(time_str):
-    """Parse a single time string like '8:00 AM' into a time object."""
-    # Remove extra spaces and normalize
-    time_str = time_str.strip()
+    """Parse time string like '8:00 AM - 9:00 AM' into (start_time, end_time) tuples."""
+    if ' - ' not in time_str:
+        raise ValueError(f"Expected time range format 'HH:MM AM/PM - HH:MM AM/PM', got: {time_str}")
     
-    # Pattern to match "H:MM AM/PM" or "HH:MM AM/PM"
-    pattern = r'(\d{1,2}):(\d{2})\s*(AM|PM)'
-    match = re.match(pattern, time_str, re.IGNORECASE)
+    parts = time_str.split(' - ')
+    start_str = parts[0].strip()
+    end_str = parts[1].strip()
     
-    if not match:
-        raise ValueError(f"Invalid time format: {time_str}")
-    
-    hour = int(match.group(1))
-    minute = int(match.group(2))
-    period = match.group(3).upper()
-    
-    # Convert to 24-hour format
-    if period == 'PM' and hour != 12:
-        hour += 12
-    elif period == 'AM' and hour == 12:
-        hour = 0
-    
-    return time(hour, minute)
+    # Parse using datetime.strptime (simpler than regex)
+    try:
+        start_dt = datetime.strptime(start_str, "%I:%M %p")  # %I = 12-hour, %p = AM/PM
+        end_dt = datetime.strptime(end_str, "%I:%M %p")
+        return start_dt.time(), end_dt.time()
+    except ValueError as e:
+        raise ValueError(f"Invalid time format in '{time_str}': {e}")
 
 def times_overlap(start1, end1, start2, end2):
-    """Check if two time ranges overlap."""
-    # Convert times to minutes since midnight for easier comparison
-    def time_to_minutes(t):
+    """Check if two time ranges overlap. Returns True if they overlap."""
+    # Convert to minutes for easy comparison
+    def to_minutes(t):
         return t.hour * 60 + t.minute
     
-    start1_min = time_to_minutes(start1)
-    end1_min = time_to_minutes(end1)
-    start2_min = time_to_minutes(start2)
-    end2_min = time_to_minutes(end2)
+    s1, e1 = to_minutes(start1), to_minutes(end1)
+    s2, e2 = to_minutes(start2), to_minutes(end2)
     
-    # Two ranges overlap if: start1 < end2 AND start2 < end1
-    return start1_min < end2_min and start2_min < end1_min
+    # Overlap occurs when: start1 < end2 AND start2 < end1
+    return s1 < e2 and s2 < e1
 
 def check_booking_overlap(db, room_id, date, time_range_str):
     """Check if a new booking would overlap with existing bookings."""
