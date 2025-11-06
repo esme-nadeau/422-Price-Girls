@@ -83,9 +83,16 @@ window.initBookingButton = function() {
                     document.getElementById('name').value = '';
                     document.getElementById('purpose').value = '';
                 } else {
+                    // Handle different error types
                     const errorMsg = result.error || 'Failed to book room. Please try again.';
                     console.error('Booking failed:', errorMsg);
-                    alert('Error: ' + errorMsg);
+                    
+                    // Special handling for overlap conflicts (409)
+                    if (response.status === 409) {
+                        alert('Booking Conflict:\n\n' + errorMsg + '\n\nPlease select a different time slot.');
+                    } else {
+                        alert('Error: ' + errorMsg);
+                    }
                 }
             } catch (error) {
                 console.error('Network error:', error);

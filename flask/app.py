@@ -5,7 +5,8 @@ import json
 import ssl
 import smtplib
 from email.message import EmailMessage
-from datetime import datetime
+from datetime import datetime, time
+import re
 
 from flask import Flask, render_template, jsonify, request
 from dotenv import load_dotenv
@@ -122,6 +123,97 @@ def delete_booking(booking_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ----------------------------
+# Helper functions for time overlap checking
+# ----------------------------
+def parse_time_string(time_str):
+    """Parse time string like '8:00 AM' or '8:00 AM - 9:00 AM' into time objects."""
+    # Handle time range string
+    if ' - ' in time_str:
+        parts = time_str.split(' - ')
+        start_time = parse_single_time(parts[0].strip())
+        end_time = parse_single_time(parts[1].strip())
+        return start_time, end_time
+    # Single time
+    return parse_single_time(time_str.strip())
+
+def parse_single_time(time_str):
+    """Parse a single time string like '8:00 AM' into a time object."""
+    # Remove extra spaces and normalize
+    time_str = time_str.strip()
+    
+    # Pattern to match "H:MM AM/PM" or "HH:MM AM/PM"
+    pattern = r'(\d{1,2}):(\d{2})\s*(AM|PM)'
+    match = re.match(pattern, time_str, re.IGNORECASE)
+    
+    if not match:
+        raise ValueError(f"Invalid time format: {time_str}")
+    
+    hour = int(match.group(1))
+    minute = int(match.group(2))
+    period = match.group(3).upper()
+    
+    # Convert to 24-hour format
+    if period == 'PM' and hour != 12:
+        hour += 12
+    elif period == 'AM' and hour == 12:
+        hour = 0
+    
+    return time(hour, minute)
+
+def times_overlap(start1, end1, start2, end2):
+    """Check if two time ranges overlap."""
+    # Convert times to minutes since midnight for easier comparison
+    def time_to_minutes(t):
+        return t.hour * 60 + t.minute
+    
+    start1_min = time_to_minutes(start1)
+    end1_min = time_to_minutes(end1)
+    start2_min = time_to_minutes(start2)
+    end2_min = time_to_minutes(end2)
+    
+    # Two ranges overlap if: start1 < end2 AND start2 < end1
+    return start1_min < end2_min and start2_min < end1_min
+
+def check_booking_overlap(db, room_id, date, time_range_str):
+    """Check if a new booking would overlap with existing bookings."""
+    try:
+        # Parse the new booking's time range
+        new_start, new_end = parse_time_string(time_range_str)
+        
+        # Query existing bookings for the same room and date
+        existing_bookings = db.collection("bookings").where("roomId", "==", room_id).where("date", "==", date).stream()
+        
+        for booking_doc in existing_bookings:
+            booking = booking_doc.to_dict()
+            existing_time_range = booking.get("timeRange", "")
+            
+            if not existing_time_range:
+                continue
+            
+            try:
+                existing_start, existing_end = parse_time_string(existing_time_range)
+                
+                # Check for overlap
+                if times_overlap(new_start, new_end, existing_start, existing_end):
+                    return {
+                        "overlap": True,
+                        "conflicting_booking_id": booking_doc.id,
+                        "conflicting_time": existing_time_range
+                    }
+            except (ValueError, AttributeError) as e:
+                print(f"[overlap] Error parsing existing booking time: {e}")
+                continue
+        
+        return {"overlap": False}
+    
+    except Exception as e:
+        print(f"[overlap] Error checking overlap: {e}")
+        import traceback
+        traceback.print_exc()
+        # If we can't check, allow the booking (fail open)
+        return {"overlap": False, "error": str(e)}
+
+# ----------------------------
 # API: test + bookings CRUD
 # ----------------------------
 @app.route("/api/test")
@@ -135,10 +227,32 @@ def bookings():
             data = request.json or {}
             print(f"[bookings] Received booking data: {data}")
             
+            # Extract booking details
+            room_id = data.get("room")
+            date = data.get("date")
+            time_range = data.get("timeRange")
+            
+            # Validate required fields
+            if not room_id or not date or not time_range:
+                return jsonify({
+                    "success": False,
+                    "error": "Missing required fields: room, date, or timeRange"
+                }), 400
+            
+            # Check for overlapping bookings
+            overlap_check = check_booking_overlap(db, room_id, date, time_range)
+            if overlap_check.get("overlap"):
+                conflicting_time = overlap_check.get("conflicting_time", "unknown time")
+                return jsonify({
+                    "success": False,
+                    "error": f"This room is already booked for {conflicting_time} on {date}. Please choose a different time."
+                }), 409  # 409 Conflict status code
+            
+            # Create the booking if no overlap
             booking_ref = db.collection("bookings").add({
-                "roomId": data.get("room"),
-                "date": data.get("date"),
-                "timeRange": data.get("timeRange"),
+                "roomId": room_id,
+                "date": date,
+                "timeRange": time_range,
                 "repeat": data.get("repeat"),
                 "userId": data.get("name"),
                 "purpose": data.get("purpose"),
