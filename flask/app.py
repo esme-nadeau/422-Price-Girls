@@ -1,5 +1,6 @@
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
+
 import os
 import json
 import ssl
@@ -12,7 +13,7 @@ from dotenv import load_dotenv
 
 import firebase_admin
 from firebase_admin import credentials
-from google.cloud import firestore
+from firebase_admin import firestore
 
 load_dotenv()
 
@@ -32,22 +33,53 @@ def init_firebase():
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
         print(f"[firebase] Initialized with service account at {cred_path}")
+        return cred  # return credentials for Firestore
     except Exception as e:
         raise RuntimeError(
             "Firebase Admin initialization failed. "
             "Check GOOGLE_APPLICATION_CREDENTIALS in .env and verify serviceAccount.json exists and is valid."
         ) from e
 
+# Initialize Firebase Admin
 if not firebase_admin._apps:
-    init_firebase()
+    # Ensure env var points to bundled serviceAccount.json if not already set
+    if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.join(os.path.dirname(__file__), "serviceAccount.json")
+    cred = init_firebase()
 
-# Firestore client (uses FIREBASE_PROJECT_ID if provided, otherwise infers from credentials)
-project_id = os.getenv("FIREBASE_PROJECT_ID")
-if project_id:
-    db = firestore.Client(project=project_id)
-else:
-    db = firestore.Client()  # Will infer project from credentials
-    print(f"[firebase] Firestore client initialized (project inferred from credentials)")
+# ----------------------------
+# Firestore client (robust initialization with fallback)
+# ----------------------------
+db = None
+try:
+    # Ensure firebase_admin app is initialized
+    if not firebase_admin._apps:
+        init_firebase()
+
+    # Preferred: use firebase_admin's firestore client
+    db = firestore.client()
+    print("[firestore] Admin Firestore client initialized")
+except Exception as e:
+    print(f"[firestore] Admin client init failed: {e}")
+    # Fallback: try google.cloud firestore client with service account credentials
+    try:
+        from google.cloud import firestore as gc_firestore
+        from google.oauth2 import service_account as ga_service_account
+
+        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "serviceAccount.json")
+        if not os.path.exists(cred_path):
+            raise FileNotFoundError(f"Service account file not found: {cred_path}")
+
+        sa_creds = ga_service_account.Credentials.from_service_account_file(cred_path)
+        project_id = os.getenv("FIREBASE_PROJECT_ID") or None
+        if project_id:
+            db = gc_firestore.Client(project=project_id, credentials=sa_creds)
+        else:
+            db = gc_firestore.Client(credentials=sa_creds)
+        print("[firestore] Fallback google.cloud Firestore client initialized")
+    except Exception as e2:
+        print(f"[firestore] Fallback initialization failed: {e2}")
+        db = None
 
 # ----------------------------
 # SMTP / Email configuration

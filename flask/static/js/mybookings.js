@@ -29,42 +29,64 @@ bookingCards.forEach(card => {
     document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
 
+    // Parse structured booking data (preferred) with fallback to individual data-* attributes
+    let bookingData = {};
+    try {
+      if (card.dataset.booking) bookingData = JSON.parse(card.dataset.booking);
+    } catch (err) {
+      console.warn('⚠️ Could not parse data-booking JSON, falling back to data-* attributes', err);
+      bookingData = {};
+    }
+
     // Save the ID
-    bookingForm.dataset.id = card.dataset.id;
+    bookingForm.dataset.id = bookingData.id || card.dataset.id || '';
 
     // Handle the date format safely
-    let dateValue = card.dataset.date || '';
+    let dateValue = bookingData.date || card.dataset.date || '';
     if (dateValue) {
-      // Convert YYYY-MM-DD or other formats to JS Date
       const parsed = new Date(dateValue);
-      if (!isNaN(parsed)) {
-        dateValue = parsed;
-      } else {
-        console.warn("⚠️ Could not parse date:", card.dataset.date);
+      if (!isNaN(parsed)) dateValue = parsed;
+      else {
+        console.warn('⚠️ Could not parse date:', bookingData.date || card.dataset.date);
         dateValue = null;
       }
     }
 
-    // Populate form fields
+    // Populate form fields (use bookingData when available), scope to bookingForm to avoid collisions
     if (datePicker && dateValue) {
-      datePicker.setDate(dateValue, true, "Y-m-d"); // update Flatpickr UI
+      datePicker.setDate(dateValue, true, 'Y-m-d'); // update Flatpickr UI
+    } else if (!datePicker) {
+      const dateEl = bookingForm.querySelector('#date') || document.getElementById('date');
+      if (dateEl) dateEl.value = bookingData.date || card.dataset.date || '';
     }
 
-    document.getElementById('time').value = card.dataset.time || '';
-    document.getElementById('repeat').value = card.dataset.repeat || 'Never';
-    document.getElementById('name').value = card.dataset.name || '';
-    document.getElementById('email').value = card.dataset.email || '';
-    document.getElementById('purpose').value = card.dataset.purpose || '';
-    document.getElementById('roomId').value = card.dataset.roomid || '';
+    const timeEl = bookingForm.querySelector('#time') || document.getElementById('time');
+    if (timeEl) timeEl.value = bookingData.time || card.dataset.time || '';
 
-    console.log("📋 Form populated with:", {
-      date: card.dataset.date,
-      time: card.dataset.time,
-      repeat: card.dataset.repeat,
-      name: card.dataset.name,
-      email: card.dataset.email,
-      purpose: card.dataset.purpose,
-      roomId: card.dataset.roomid
+    const repeatEl = bookingForm.querySelector('#repeat') || document.getElementById('repeat');
+    if (repeatEl) repeatEl.value = bookingData.repeat || card.dataset.repeat || 'Never';
+
+    const nameEl = bookingForm.querySelector('#name') || document.getElementById('name');
+    if (nameEl) nameEl.value = bookingData.name || card.dataset.name || '';
+
+    const emailEl = bookingForm.querySelector('#email') || document.getElementById('email');
+    if (emailEl) emailEl.value = bookingData.email || card.dataset.email || '';
+
+    const purposeEl = bookingForm.querySelector('#purpose') || document.getElementById('purpose');
+    if (purposeEl) purposeEl.value = bookingData.purpose || card.dataset.purpose || '';
+
+    const roomEl = bookingForm.querySelector('#roomId') || document.getElementById('roomId');
+    if (roomEl) roomEl.value = bookingData.roomId || card.dataset.roomid || '';
+
+    console.log('📋 Form populated with:', {
+      id: bookingForm.dataset.id,
+      date: bookingData.date || card.dataset.date,
+      time: bookingData.time || card.dataset.time,
+      repeat: bookingData.repeat || card.dataset.repeat,
+      name: bookingData.name || card.dataset.name,
+      email: bookingData.email || card.dataset.email,
+      purpose: bookingData.purpose || card.dataset.purpose,
+      roomId: bookingData.roomId || card.dataset.roomid
     });
   });
 });

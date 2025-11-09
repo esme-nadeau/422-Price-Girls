@@ -7,15 +7,25 @@
         <h4 class="fw-semibold mb-3">My Bookings</h4>
         <div id="bookingsList">
           {% for booking in bookings %}
-          <div class="booking-card mb-3 p-3 rounded" 
-              data-id="{{ booking.id }}"
-              data-date="{{ booking.date }}"
-              data-time="{{ booking.timeRange }}"
-              data-repeat="{{ booking.repeat }}"
-              data-name="{{ booking.userId }}"
-              data-email="{{ booking.email }}"
-              data-purpose="{{ booking.purpose }}"
-              data-roomid="{{ booking.roomId }}">
+      <div class="booking-card mb-3 p-3 rounded" 
+        data-id="{{ booking.id }}"
+        data-date="{{ booking.date }}"
+        data-time="{{ booking.timeRange }}"
+        data-repeat="{{ booking.repeat }}"
+        data-name="{{ booking.userId or booking.displayName }}"
+        data-email="{{ booking.email or booking.userEmail }}"
+        data-purpose="{{ booking.purpose }}"
+        data-roomid="{{ booking.roomId }}"
+        data-booking='{{ {
+          "id": booking.id,
+          "date": booking.date,
+          "time": booking.timeRange,
+          "repeat": booking.repeat,
+          "name": (booking.userId or booking.displayName) ,
+          "email": (booking.email or booking.userEmail) ,
+          "purpose": booking.purpose,
+          "roomId": booking.roomId
+        } | tojson }}'>
             <h5 class="fw-bold mb-1">{{ booking.purpose }}</h5>
             <p class="mb-0">{{ booking.roomId }}</p>
             <p class="mb-0">{{ booking.timeRange }}</p>
