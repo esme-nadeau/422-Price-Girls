@@ -139,6 +139,9 @@ def my_bookings():
                 data = doc.to_dict()
                 data["id"] = doc.id
                 bookings.append(data)
+            if not bookings:
+                error_message = "No bookings found in Firestore."
+                print(f"[mybookings] {error_message}")
     except Exception as e:
         error_message = f"Error loading bookings: {e}"
         print(f"[mybookings] {error_message}")
