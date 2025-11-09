@@ -1,0 +1,79 @@
+/* Calendar page layout overrides (make grid take ~2/3 width) */
+.calendar-page #weekCalendarCard { max-width: none !important; width: 100%; }
+.calendar-page .booking-widget { max-width: 360px; }
+
+/* Week calendar grid styles */
+.week-grid {
+  display: grid;
+  grid-template-columns: 90px repeat(5, 1fr); /* time column + Mon-Fri */
+  /* header row + 24 half-hour rows */
+  grid-template-rows: 48px repeat(24, 40px);
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* Header cells */
+.week-grid .header-time {
+  background: #f7faf7;
+  border-bottom: 1px solid #e5e7eb;
+}
+.week-grid .day-header {
+  background: #f7faf7;
+  border-left: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #548754;
+}
+.week-grid .day-sub {
+  display: block;
+  color: #6c757d;
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+/* Time label cells */
+.week-grid .time-label {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 10px;
+  border-top: 1px solid #eef2ef;
+  color: #4a7a4a;
+  font-weight: 700;
+}
+
+/* Grid cells */
+.week-grid .cell {
+  position: relative;
+  z-index: 1;
+  border-top: 1px solid #eef2ef;
+  border-left: 1px solid #eef2ef;
+  cursor: pointer;
+  background: #e9f6ea; /* light green */
+  transition: background 0.1s ease;
+}
+.week-grid .cell:hover { background: #dbefdc; }
+.week-grid .cell.booked { background: #cfd4d1; cursor: not-allowed; }
+.week-grid .cell.selected { outline: 2px solid #6FAD6F; outline-offset: -2px; }
+.week-grid .cell.in-range { background: #dcefe0; }
+
+/* Nice vertical day separators */
+.week-grid .day-divider { border-left: 2px solid #e5e7eb; }
+
+/* Event blocks that span multiple rows */
+.week-grid .event {
+  z-index: 2;
+  background: #9e9e9e;
+  color: #ffffff;
+  border-radius: 10px;
+  padding: 6px 8px;
+  margin: 3px;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+}
+.week-grid .event .time { opacity: 0.9; font-size: 0.75rem; margin-top: 2px; display:block; }
