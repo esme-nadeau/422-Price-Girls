@@ -20,6 +20,11 @@ async function loadTabContent(targetId, url, initFunction = null) {
         if (typeof initFunction === "function") {
             initFunction();
         }
+        
+        // Initialize booking button if it exists (for map tab)
+        if (targetId === 'nav-map' && typeof window.initBookingButton === "function") {
+            setTimeout(() => window.initBookingButton(), 50);
+        }
 
     } catch (err) {
         console.error(`Failed to load content for ${targetId}:`, err);

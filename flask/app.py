@@ -5,7 +5,7 @@ import json
 import ssl
 import smtplib
 from email.message import EmailMessage
-from datetime import datetime
+from datetime import datetime, time
 
 from flask import Flask, render_template, jsonify, request
 from dotenv import load_dotenv
@@ -41,8 +41,13 @@ def init_firebase():
 if not firebase_admin._apps:
     init_firebase()
 
-# Firestore client (uses FIREBASE_PROJECT_ID if provided)
-db = firestore.Client(project=os.getenv("FIREBASE_PROJECT_ID"))
+# Firestore client (uses FIREBASE_PROJECT_ID if provided, otherwise infers from credentials)
+project_id = os.getenv("FIREBASE_PROJECT_ID")
+if project_id:
+    db = firestore.Client(project=project_id)
+else:
+    db = firestore.Client()  # Will infer project from credentials
+    print(f"[firebase] Firestore client initialized (project inferred from credentials)")
 
 # ----------------------------
 # SMTP / Email configuration
@@ -117,6 +122,77 @@ def delete_booking(booking_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ----------------------------
+# Helper functions for time overlap checking
+# ----------------------------
+def parse_time_string(time_str):
+    """Parse time string like '8:00 AM - 9:00 AM' into (start_time, end_time) tuples."""
+    if ' - ' not in time_str:
+        raise ValueError(f"Expected time range format 'HH:MM AM/PM - HH:MM AM/PM', got: {time_str}")
+    
+    parts = time_str.split(' - ')
+    start_str = parts[0].strip()
+    end_str = parts[1].strip()
+    
+    # Parse using datetime.strptime (simpler than regex)
+    try:
+        start_dt = datetime.strptime(start_str, "%I:%M %p")  # %I = 12-hour, %p = AM/PM
+        end_dt = datetime.strptime(end_str, "%I:%M %p")
+        return start_dt.time(), end_dt.time()
+    except ValueError as e:
+        raise ValueError(f"Invalid time format in '{time_str}': {e}")
+
+def times_overlap(start1, end1, start2, end2):
+    """Check if two time ranges overlap. Returns True if they overlap."""
+    # Convert to minutes for easy comparison
+    def to_minutes(t):
+        return t.hour * 60 + t.minute
+    
+    s1, e1 = to_minutes(start1), to_minutes(end1)
+    s2, e2 = to_minutes(start2), to_minutes(end2)
+    
+    # Overlap occurs when: start1 < end2 AND start2 < end1
+    return s1 < e2 and s2 < e1
+
+def check_booking_overlap(db, room_id, date, time_range_str):
+    """Check if a new booking would overlap with existing bookings."""
+    try:
+        # Parse the new booking's time range
+        new_start, new_end = parse_time_string(time_range_str)
+        
+        # Query existing bookings for the same room and date
+        existing_bookings = db.collection("bookings").where("roomId", "==", room_id).where("date", "==", date).stream()
+        
+        for booking_doc in existing_bookings:
+            booking = booking_doc.to_dict()
+            existing_time_range = booking.get("timeRange", "")
+            
+            if not existing_time_range:
+                continue
+            
+            try:
+                existing_start, existing_end = parse_time_string(existing_time_range)
+                
+                # Check for overlap
+                if times_overlap(new_start, new_end, existing_start, existing_end):
+                    return {
+                        "overlap": True,
+                        "conflicting_booking_id": booking_doc.id,
+                        "conflicting_time": existing_time_range
+                    }
+            except (ValueError, AttributeError) as e:
+                print(f"[overlap] Error parsing existing booking time: {e}")
+                continue
+        
+        return {"overlap": False}
+    
+    except Exception as e:
+        print(f"[overlap] Error checking overlap: {e}")
+        import traceback
+        traceback.print_exc()
+        # If we can't check, allow the booking (fail open)
+        return {"overlap": False, "error": str(e)}
+
+# ----------------------------
 # API: test + bookings CRUD
 # ----------------------------
 @app.route("/api/test")
@@ -126,26 +202,62 @@ def api_test():
 @app.route("/api/bookings", methods=["GET", "POST"])
 def bookings():
     if request.method == "POST":
-        data = request.json or {}
-        booking_ref = db.collection("bookings").add({
-            "roomId": data.get("room"),
-            "date": data.get("date"),
-            "timeRange": data.get("timeRange"),
-            "repeat": data.get("repeat"),
-            "userId": data.get("name"),
-            "purpose": data.get("purpose"),
-            "status": "confirmed",
-            "email": data.get("email", ""),
-        })
-        return jsonify({"success": True, "id": booking_ref[1].id})
+        try:
+            data = request.json or {}
+            print(f"[bookings] Received booking data: {data}")
+            
+            # Extract booking details
+            room_id = data.get("room")
+            date = data.get("date")
+            time_range = data.get("timeRange")
+            
+            # Validate required fields
+            if not room_id or not date or not time_range:
+                return jsonify({
+                    "success": False,
+                    "error": "Missing required fields: room, date, or timeRange"
+                }), 400
+            
+            # Check for overlapping bookings
+            overlap_check = check_booking_overlap(db, room_id, date, time_range)
+            if overlap_check.get("overlap"):
+                conflicting_time = overlap_check.get("conflicting_time", "unknown time")
+                return jsonify({
+                    "success": False,
+                    "error": f"This room is already booked for {conflicting_time} on {date}. Please choose a different time."
+                }), 409  # 409 Conflict status code
+            
+            # Create the booking if no overlap
+            booking_ref = db.collection("bookings").add({
+                "roomId": room_id,
+                "date": date,
+                "timeRange": time_range,
+                "repeat": data.get("repeat"),
+                "userId": data.get("name"),
+                "purpose": data.get("purpose"),
+                "status": "confirmed",
+                "email": data.get("email", ""),
+            })
+            booking_id = booking_ref[1].id
+            print(f"[bookings] Successfully created booking with ID: {booking_id}")
+            return jsonify({"success": True, "id": booking_id})
+        except Exception as e:
+            print(f"[bookings] Error creating booking: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({"success": False, "error": str(e)}), 500
 
     # GET all bookings
-    items = []
-    for doc in db.collection("bookings").stream():
-        b = doc.to_dict()
-        b["id"] = doc.id
-        items.append(b)
-    return jsonify({"bookings": items})
+    try:
+        items = []
+        for doc in db.collection("bookings").stream():
+            b = doc.to_dict()
+            b["id"] = doc.id
+            items.append(b)
+        return jsonify({"bookings": items})
+    except Exception as e:
+        print(f"[bookings] Error fetching bookings: {e}")
+        return jsonify({"bookings": [], "error": str(e)}), 500
 
 # ----------------------------
 # Email confirmation endpoint

@@ -1,21 +1,37 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const bookButton = document.querySelector('.btn-green');
+// Function to initialize booking button - can be called after content loads
+window.initBookingButton = function() {
+    const bookButton = document.getElementById('bookRoomBtn');
     
-    if (bookButton) {
-        bookButton.addEventListener('click', async function(e) {
+    if (!bookButton) {
+        console.warn('Book Room button not found');
+        return;
+    }
+    
+    // Remove any existing listeners by cloning the button
+    const newButton = bookButton.cloneNode(true);
+    bookButton.parentNode.replaceChild(newButton, bookButton);
+    
+    newButton.addEventListener('click', async function(e) {
             e.preventDefault();
             
             // Get form values
-            const room = document.getElementById('selectedRoom').textContent;
-            const date = document.getElementById('date').value;
-            const timeRange = document.getElementById('timeDropdown').textContent;
-            const repeat = document.getElementById('repeatDropdown').textContent;
-            const name = document.getElementById('name').value;
-            const purpose = document.getElementById('purpose').value;
+            const room = document.getElementById('selectedRoom').textContent.trim();
+            const date = document.getElementById('date_right').value;
+            const startTime = document.getElementById('start_time_right').textContent.trim();
+            const endTime = document.getElementById('end_time_right').textContent.trim();
+            const timeRange = `${startTime} - ${endTime}`;
+            const repeat = document.getElementById('repeatDropdown').textContent.trim();
+            const name = document.getElementById('name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const purpose = document.getElementById('purpose').value.trim();
             // TODO: add email here
             
             // Validate
-            if (!date || timeRange === 'Select a time' || !name || !purpose) {
+            if (room === 'Select Room' || !room) {
+                alert('Please select a room');
+                return;
+            }
+            if (!date || !startTime || !endTime || !name || !email || !purpose) {
                 alert('Please fill in all required fields');
                 return;
             }
@@ -27,8 +43,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 timeRange: timeRange,
                 repeat: repeat,
                 name: name,
+                email: email,
                 purpose: purpose
             };
+            
+            console.log('Sending booking data:', bookingData);
             
             try {
                 const response = await fetch('/api/bookings', {
@@ -39,9 +58,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     body: JSON.stringify(bookingData)
                 });
                 
-                const result = await response.json();
+                console.log('Response status:', response.status);
                 
-                if (response.ok) {
+                const result = await response.json();
+                console.log('Response data:', result);
+                
+                if (response.ok && result.success) {
                     alert('Room booked successfully!');
                     // Send confirmation email automatically
                     try {
@@ -58,17 +80,38 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     } catch (emailError) {
                         console.error('Email send error:', emailError);
-                }
+                    }
                     // Clear form
                     document.getElementById('name').value = '';
+                    document.getElementById('email').value = '';
                     document.getElementById('purpose').value = '';
                 } else {
-                    alert('Error: ' + result.error);
+                    // Handle different error types
+                    const errorMsg = result.error || 'Failed to book room. Please try again.';
+                    console.error('Booking failed:', errorMsg);
+                    
+                    // Special handling for overlap conflicts (409)
+                    if (response.status === 409) {
+                        alert('Booking Conflict:\n\n' + errorMsg + '\n\nPlease select a different time slot.');
+                    } else {
+                        alert('Error: ' + errorMsg);
+                    }
                 }
-            } catch (error) { // TODO: add more functionality to display what the error is
-                console.error('Error:', error);
-                alert('There is an overlap in bookings');
+            } catch (error) {
+                console.error('Network error:', error);
+                alert('Network error: ' + error.message + '. Please check your connection and try again.');
             }
-        });
-    }
-});
+    });
+};
+
+// Try to initialize immediately (for static pages)
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.initBookingButton);
+} else {
+    // DOM already loaded, try immediately
+    window.initBookingButton();
+}
+
+// Also try after a short delay (for dynamically loaded content)
+setTimeout(window.initBookingButton, 100);
+setTimeout(window.initBookingButton, 500);
