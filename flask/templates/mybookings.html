@@ -5,6 +5,11 @@
     <div class="col-md-5">
       <div class="card shadow-sm p-3">
         <h4 class="fw-semibold mb-3">My Bookings</h4>
+        {% if error_message %}
+        <div style="color: #b00020; background: #fff3f3; border: 1px solid #f8b6b6; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">
+          <strong>Error:</strong> {{ error_message }}
+        </div>
+        {% endif %}
         <div id="bookingsList">
           {% for booking in bookings %}
       <div class="booking-card mb-3 p-3 rounded" 
@@ -17,14 +22,14 @@
         data-purpose="{{ booking.purpose }}"
         data-roomid="{{ booking.roomId }}"
         data-booking='{{ {
-          "id": booking.id,
-          "date": booking.date,
-          "time": booking.timeRange,
-          "repeat": booking.repeat,
-          "name": (booking.userId or booking.displayName) ,
-          "email": (booking.email or booking.userEmail) ,
-          "purpose": booking.purpose,
-          "roomId": booking.roomId
+          "id": booking.id or '',
+          "date": booking.date or '',
+          "time": booking.timeRange or '',
+          "repeat": booking.repeat or '',
+          "name": (booking.userId or booking.displayName or ''),
+          "email": (booking.email or booking.userEmail or ''),
+          "purpose": booking.purpose or '',
+          "roomId": booking.roomId or ''
         } | tojson }}'>
             <h5 class="fw-bold mb-1">{{ booking.purpose }}</h5>
             <p class="mb-0">{{ booking.roomId }}</p>

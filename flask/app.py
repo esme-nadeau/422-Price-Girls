@@ -126,20 +126,23 @@ def calendar_tab():
 # My Bookings: dynamic Firestore data
 @app.route("/mybookings")
 def my_bookings():
+    error_message = None
+    bookings = []
     try:
-        bookings_ref = db.collection("bookings")
-        docs = bookings_ref.stream()
-
-        bookings = []
-        for doc in docs:
-            data = doc.to_dict()
-            data["id"] = doc.id
-            bookings.append(data)
-
-        return render_template("mybookings.html", bookings=bookings)
+        if db is None:
+            error_message = "Firestore is not initialized. Please check your service account and environment variables."
+            print(f"[mybookings] {error_message}")
+        else:
+            bookings_ref = db.collection("bookings")
+            docs = bookings_ref.stream()
+            for doc in docs:
+                data = doc.to_dict()
+                data["id"] = doc.id
+                bookings.append(data)
     except Exception as e:
-        print(f"Error loading bookings: {e}")
-        return render_template("mybookings.html", bookings=[])
+        error_message = f"Error loading bookings: {e}"
+        print(f"[mybookings] {error_message}")
+    return render_template("mybookings.html", bookings=bookings, error_message=error_message)
 
 # ----------------------------
 # MyBookings DELETE endpoint (Esmé's addition)
