@@ -5,17 +5,32 @@
     <div class="col-md-5">
       <div class="card shadow-sm p-3">
         <h4 class="fw-semibold mb-3">My Bookings</h4>
+        {% if error_message %}
+        <div style="color: #b00020; background: #fff3f3; border: 1px solid #f8b6b6; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">
+          <strong>Error:</strong> {{ error_message }}
+        </div>
+        {% endif %}
         <div id="bookingsList">
           {% for booking in bookings %}
-          <div class="booking-card mb-3 p-3 rounded" 
-              data-id="{{ booking.id }}"
-              data-date="{{ booking.date }}"
-              data-time="{{ booking.timeRange }}"
-              data-repeat="{{ booking.repeat }}"
-              data-name="{{ booking.userId }}"
-              data-email="{{ booking.email }}"
-              data-purpose="{{ booking.purpose }}"
-              data-roomid="{{ booking.roomId }}">
+      <div class="booking-card mb-3 p-3 rounded" 
+        data-id="{{ booking.id }}"
+        data-date="{{ booking.date }}"
+        data-time="{{ booking.timeRange }}"
+        data-repeat="{{ booking.repeat }}"
+        data-name="{{ booking.userId or booking.displayName }}"
+        data-email="{{ booking.email or booking.userEmail }}"
+        data-purpose="{{ booking.purpose }}"
+        data-roomid="{{ booking.roomId }}"
+        data-booking='{{ {
+          "id": booking.id or '',
+          "date": booking.date or '',
+          "time": booking.timeRange or '',
+          "repeat": booking.repeat or '',
+          "name": (booking.userId or booking.displayName or ''),
+          "email": (booking.email or booking.userEmail or ''),
+          "purpose": booking.purpose or '',
+          "roomId": booking.roomId or ''
+        } | tojson }}'>
             <h5 class="fw-bold mb-1">{{ booking.purpose }}</h5>
             <p class="mb-0">{{ booking.roomId }}</p>
             <p class="mb-0">{{ booking.timeRange }}</p>
@@ -34,46 +49,42 @@
 
           <div class="mb-3">
             <label class="form-label">Date</label>
-            <input type="date" id="date" class="form-control">
+            <span id="date" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
           <div class="mb-3">
             <label class="form-label">Time</label>
-            <input type="text" id="time" class="form-control">
+            <span id="time" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
           <div class="mb-3">
             <label class="form-label">Does this booking repeat?</label>
-            <select id="repeat" class="form-select">
-              <option>Never</option>
-              <option>Weekly</option>
-              <option>Monthly</option>
-            </select>
+            <span id="repeat" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
           <div class="mb-3">
             <label class="form-label">Name</label>
-            <input type="text" id="name" class="form-control">
+            <span id="name" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
           <div class="mb-3">
             <label class="form-label">Email</label>
-            <input type="email" id="email" class="form-control">
+            <span id="email" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
           <div class="mb-3">
             <label class="form-label">Booking Purpose</label>
-            <input type="text" id="purpose" class="form-control">
+            <span id="purpose" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
           <!-- NEW: Room ID -->
           <div class="mb-3">
             <label class="form-label">Room ID</label>
-            <input type="text" id="roomId" class="form-control" readonly>
+            <span id="roomId" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
           <div class="d-flex gap-3">
-            <button type="button" class="btn btn-green flex-grow-1">Edit Reservation</button>
+            <button type="button" id="editBookingBtn" class="btn btn-green flex-grow-1">Edit Reservation</button>
             <button type="button" id="cancelBookingBtn" class="btn btn-red flex-grow-1">Cancel Reservation</button>
           </div>
         </form>

@@ -1,5 +1,6 @@
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
+
 import os
 import json
 import ssl
@@ -12,7 +13,7 @@ from dotenv import load_dotenv
 
 import firebase_admin
 from firebase_admin import credentials
-from google.cloud import firestore
+from firebase_admin import firestore
 
 load_dotenv()
 
@@ -32,22 +33,53 @@ def init_firebase():
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
         print(f"[firebase] Initialized with service account at {cred_path}")
+        return cred  # return credentials for Firestore
     except Exception as e:
         raise RuntimeError(
             "Firebase Admin initialization failed. "
             "Check GOOGLE_APPLICATION_CREDENTIALS in .env and verify serviceAccount.json exists and is valid."
         ) from e
 
+# Initialize Firebase Admin
 if not firebase_admin._apps:
-    init_firebase()
+    # Ensure env var points to bundled serviceAccount.json if not already set
+    if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.join(os.path.dirname(__file__), "serviceAccount.json")
+    cred = init_firebase()
 
-# Firestore client (uses FIREBASE_PROJECT_ID if provided, otherwise infers from credentials)
-project_id = os.getenv("FIREBASE_PROJECT_ID")
-if project_id:
-    db = firestore.Client(project=project_id)
-else:
-    db = firestore.Client()  # Will infer project from credentials
-    print(f"[firebase] Firestore client initialized (project inferred from credentials)")
+# ----------------------------
+# Firestore client (robust initialization with fallback)
+# ----------------------------
+db = None
+try:
+    # Ensure firebase_admin app is initialized
+    if not firebase_admin._apps:
+        init_firebase()
+
+    # Preferred: use firebase_admin's firestore client
+    db = firestore.client()
+    print("[firestore] Admin Firestore client initialized")
+except Exception as e:
+    print(f"[firestore] Admin client init failed: {e}")
+    # Fallback: try google.cloud firestore client with service account credentials
+    try:
+        from google.cloud import firestore as gc_firestore
+        from google.oauth2 import service_account as ga_service_account
+
+        cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "serviceAccount.json")
+        if not os.path.exists(cred_path):
+            raise FileNotFoundError(f"Service account file not found: {cred_path}")
+
+        sa_creds = ga_service_account.Credentials.from_service_account_file(cred_path)
+        project_id = os.getenv("FIREBASE_PROJECT_ID") or None
+        if project_id:
+            db = gc_firestore.Client(project=project_id, credentials=sa_creds)
+        else:
+            db = gc_firestore.Client(credentials=sa_creds)
+        print("[firestore] Fallback google.cloud Firestore client initialized")
+    except Exception as e2:
+        print(f"[firestore] Fallback initialization failed: {e2}")
+        db = None
 
 # ----------------------------
 # SMTP / Email configuration
@@ -94,20 +126,26 @@ def calendar_tab():
 # My Bookings: dynamic Firestore data
 @app.route("/mybookings")
 def my_bookings():
+    error_message = None
+    bookings = []
     try:
-        bookings_ref = db.collection("bookings")
-        docs = bookings_ref.stream()
-
-        bookings = []
-        for doc in docs:
-            data = doc.to_dict()
-            data["id"] = doc.id
-            bookings.append(data)
-
-        return render_template("mybookings.html", bookings=bookings)
+        if db is None:
+            error_message = "Firestore is not initialized. Please check your service account and environment variables."
+            print(f"[mybookings] {error_message}")
+        else:
+            bookings_ref = db.collection("bookings")
+            docs = bookings_ref.stream()
+            for doc in docs:
+                data = doc.to_dict()
+                data["id"] = doc.id
+                bookings.append(data)
+            if not bookings:
+                error_message = "No bookings found in Firestore."
+                print(f"[mybookings] {error_message}")
     except Exception as e:
-        print(f"Error loading bookings: {e}")
-        return render_template("mybookings.html", bookings=[])
+        error_message = f"Error loading bookings: {e}"
+        print(f"[mybookings] {error_message}")
+    return render_template("mybookings.html", bookings=bookings, error_message=error_message)
 
 # ----------------------------
 # MyBookings DELETE endpoint (Esmé's addition)
@@ -120,6 +158,48 @@ def delete_booking(booking_id):
     except Exception as e:
         print(e)
         return jsonify({"success": False, "error": str(e)}), 500
+
+# ----------------------------
+# MyBookings UPDATE endpoint (for Save functionality)
+# ----------------------------
+@app.route("/update_booking/<booking_id>", methods=["POST"])
+def update_booking(booking_id):
+    try:
+        data = request.get_json(force=True) or {}
+        # Only allow updating editable fields
+        update_fields = {
+            "date": data.get("date", ""),
+            "timeRange": data.get("timeRange", ""),
+            "repeat": data.get("repeat", "Never"),
+            "userId": data.get("userId", ""),
+            "email": data.get("email", ""),
+            "purpose": data.get("purpose", ""),
+            # roomId is included for completeness, but you may want to restrict editing this
+            "roomId": data.get("roomId", "")
+        }
+        db.collection("bookings").document(booking_id).update(update_fields)
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[update_booking] Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ----------------------------
+# API endpoint to get available rooms for dropdown
+# ----------------------------
+@app.route("/api/rooms")
+def api_rooms():
+    try:
+        rooms_ref = db.collection("rooms")
+        docs = rooms_ref.stream()
+        rooms = []
+        for doc in docs:
+            r = doc.to_dict()
+            r["id"] = doc.id
+            rooms.append(r)
+        return jsonify({"rooms": rooms})
+    except Exception as e:
+        print(f"[api_rooms] Error: {e}")
+        return jsonify({"rooms": [], "error": str(e)}), 500
 
 # ----------------------------
 # Helper functions for time overlap checking
