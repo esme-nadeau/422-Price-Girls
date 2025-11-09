@@ -160,6 +160,48 @@ def delete_booking(booking_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ----------------------------
+# MyBookings UPDATE endpoint (for Save functionality)
+# ----------------------------
+@app.route("/update_booking/<booking_id>", methods=["POST"])
+def update_booking(booking_id):
+    try:
+        data = request.get_json(force=True) or {}
+        # Only allow updating editable fields
+        update_fields = {
+            "date": data.get("date", ""),
+            "timeRange": data.get("timeRange", ""),
+            "repeat": data.get("repeat", "Never"),
+            "userId": data.get("userId", ""),
+            "email": data.get("email", ""),
+            "purpose": data.get("purpose", ""),
+            # roomId is included for completeness, but you may want to restrict editing this
+            "roomId": data.get("roomId", "")
+        }
+        db.collection("bookings").document(booking_id).update(update_fields)
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[update_booking] Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ----------------------------
+# API endpoint to get available rooms for dropdown
+# ----------------------------
+@app.route("/api/rooms")
+def api_rooms():
+    try:
+        rooms_ref = db.collection("rooms")
+        docs = rooms_ref.stream()
+        rooms = []
+        for doc in docs:
+            r = doc.to_dict()
+            r["id"] = doc.id
+            rooms.append(r)
+        return jsonify({"rooms": rooms})
+    except Exception as e:
+        print(f"[api_rooms] Error: {e}")
+        return jsonify({"rooms": [], "error": str(e)}), 500
+
+# ----------------------------
 # Helper functions for time overlap checking
 # ----------------------------
 def parse_time_string(time_str):
