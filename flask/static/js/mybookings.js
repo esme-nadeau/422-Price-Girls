@@ -52,31 +52,20 @@ bookingCards.forEach(card => {
       }
     }
 
-    // Populate form fields (use bookingData when available), scope to bookingForm to avoid collisions
-    if (datePicker && dateValue) {
-      datePicker.setDate(dateValue, true, 'Y-m-d'); // update Flatpickr UI
-    } else if (!datePicker) {
-      const dateEl = bookingForm.querySelector('#date') || document.getElementById('date');
-      if (dateEl) dateEl.value = bookingData.date || card.dataset.date || '';
-    }
 
-    const timeEl = bookingForm.querySelector('#time') || document.getElementById('time');
-    if (timeEl) timeEl.value = bookingData.time || card.dataset.time || '';
+    // Populate <span> fields for non-editable display
+    const setSpan = (id, value) => {
+      const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
+      if (el) el.textContent = value || '';
+    };
 
-    const repeatEl = bookingForm.querySelector('#repeat') || document.getElementById('repeat');
-    if (repeatEl) repeatEl.value = bookingData.repeat || card.dataset.repeat || 'Never';
-
-    const nameEl = bookingForm.querySelector('#name') || document.getElementById('name');
-    if (nameEl) nameEl.value = bookingData.name || card.dataset.name || '';
-
-    const emailEl = bookingForm.querySelector('#email') || document.getElementById('email');
-    if (emailEl) emailEl.value = bookingData.email || card.dataset.email || '';
-
-    const purposeEl = bookingForm.querySelector('#purpose') || document.getElementById('purpose');
-    if (purposeEl) purposeEl.value = bookingData.purpose || card.dataset.purpose || '';
-
-    const roomEl = bookingForm.querySelector('#roomId') || document.getElementById('roomId');
-    if (roomEl) roomEl.value = bookingData.roomId || card.dataset.roomid || '';
+    setSpan('date', bookingData.date || card.dataset.date || '');
+    setSpan('time', bookingData.time || card.dataset.time || '');
+    setSpan('repeat', bookingData.repeat || card.dataset.repeat || 'Never');
+    setSpan('name', bookingData.name || card.dataset.name || '');
+    setSpan('email', bookingData.email || card.dataset.email || '');
+    setSpan('purpose', bookingData.purpose || card.dataset.purpose || '');
+    setSpan('roomId', bookingData.roomId || card.dataset.roomid || '');
 
     console.log('📋 Form populated with:', {
       id: bookingForm.dataset.id,
