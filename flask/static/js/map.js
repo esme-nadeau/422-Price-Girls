@@ -1,3 +1,5 @@
+const bookable_rooms = ["Room 127", "Room 160", "Room 200", "Room 220", "Room 258", "Room 260", "Room 360"]; // FIXME should update from the booking database
+
 // Add interactivity to the SVGs
 function addSVGInteractivity(svgObject) {
   // Access the SVG document inside the object tag
@@ -11,39 +13,52 @@ function addSVGInteractivity(svgObject) {
   const rooms = svgDoc.querySelectorAll('[id^="room"]');
   
   rooms.forEach(room => {
-    room.style.cursor = 'pointer';
+    const roomId = room.id;
+    const num = (roomId && roomId.match(/^\D*(\d+)\D*$/)) ? roomId.match(/^\D*(\d+)\D*$/)[1] : null;
+    const hasSuffix = /[A-Za-z]$/.test(roomId); // exclude rooms like 220A
+    const roomName = (num && !hasSuffix) ? `Room ${num}` : roomId;
+    const isBookable = bookable_rooms.includes(roomName);
     
-    room.addEventListener('click', (e) => {
-      const roomId = room.id;
-      console.log('Clicked room:', roomId);
+    // Only make bookable rooms interactive (clickable and hoverable)
+    if (isBookable) {
+      room.style.cursor = 'pointer';
       
-      // Update selected room label so bookings.js validation passes
-      const labelEl = document.getElementById('selectedRoom');
-      if (labelEl) {
-        const num = (roomId && roomId.match(/\d+/)) ? roomId.match(/\d+/)[0] : null;
-        labelEl.textContent = num ? `Room ${num}` : roomId;
+      // Set bookable room color
+      const shape = room.querySelector('path, rect');
+      if (shape) {
+        shape.style.fill = '#6FAD6F';
       }
+      
+      room.addEventListener('click', (e) => {
+        console.log('Clicked room:', roomId);
+        
+        // Update selected room label so bookings.js validation passes
+        const labelEl = document.getElementById('selectedRoom');
+        if (labelEl) {
+          labelEl.textContent = roomName;
+        }
 
-      // Highlight the clicked room
-      rooms.forEach(r => {
-        const shape = r.querySelector('path, rect');
-        if (shape) shape.style.opacity = '0.7';
+        // Highlight the clicked room
+        rooms.forEach(r => {
+          const shape = r.querySelector('path, rect');
+          if (shape) shape.style.opacity = '0.7';
+        });
+        
+        const clickedShape = room.querySelector('path, rect');
+        if (clickedShape) clickedShape.style.opacity = '1';
       });
       
-      const clickedShape = room.querySelector('path, rect');
-      if (clickedShape) clickedShape.style.opacity = '1';
-    });
-    
-    // Hover effects
-    room.addEventListener('mouseenter', (e) => {
-      const shape = room.querySelector('path, rect');
-      if (shape) shape.style.opacity = '0.9';
-    });
-    
-    room.addEventListener('mouseleave', (e) => {
-      const shape = room.querySelector('path, rect');
-      if (shape) shape.style.opacity = '0.7';
-    });
+      // Hover effects
+      room.addEventListener('mouseenter', (e) => {
+        const shape = room.querySelector('path, rect');
+        if (shape) shape.style.opacity = '0.9';
+      });
+      
+      room.addEventListener('mouseleave', (e) => {
+        const shape = room.querySelector('path, rect');
+        if (shape) shape.style.opacity = '0.7';
+      });
+    };
   });
 }
 
