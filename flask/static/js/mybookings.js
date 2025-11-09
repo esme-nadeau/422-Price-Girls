@@ -21,7 +21,6 @@ function setBookingFormEditable(editable) {
     { id: 'date', type: 'date' },
     { id: 'time', type: 'custom-time' },
     { id: 'repeat', type: 'select' },
-    { id: 'name', type: 'text' },
     { id: 'email', type: 'email' },
     { id: 'purpose', type: 'text' },
     { id: 'roomId', type: 'dropdown' }
@@ -220,7 +219,6 @@ if (editBtn) {
         date: getVal('date'),
         timeRange: getVal('time'),
         repeat: getVal('repeat'),
-        userId: getVal('name'),
         email: getVal('email'),
         purpose: getVal('purpose'),
         roomId: getVal('roomId')
@@ -263,7 +261,6 @@ if (editBtn) {
             card.dataset.date = updated.date;
             card.dataset.time = updated.timeRange;
             card.dataset.repeat = updated.repeat;
-            card.dataset.name = updated.userId;
             card.dataset.email = updated.email;
             card.dataset.purpose = updated.purpose;
             card.dataset.roomid = updated.roomId;
@@ -272,7 +269,6 @@ if (editBtn) {
               date: updated.date,
               time: updated.timeRange,
               repeat: updated.repeat,
-              name: updated.userId,
               email: updated.email,
               purpose: updated.purpose,
               roomId: updated.roomId
@@ -341,7 +337,6 @@ bookingCards.forEach(card => {
     setSpan('date', bookingData.date || card.dataset.date || '');
     setSpan('time', bookingData.time || card.dataset.time || '');
     setSpan('repeat', bookingData.repeat || card.dataset.repeat || 'Never');
-    setSpan('name', bookingData.name || card.dataset.name || '');
     setSpan('email', bookingData.email || card.dataset.email || '');
     setSpan('purpose', bookingData.purpose || card.dataset.purpose || '');
     setSpan('roomId', bookingData.roomId || card.dataset.roomid || '');
@@ -351,7 +346,6 @@ bookingCards.forEach(card => {
       date: bookingData.date || card.dataset.date,
       time: bookingData.time || card.dataset.time,
       repeat: bookingData.repeat || card.dataset.repeat,
-      name: bookingData.name || card.dataset.name,
       email: bookingData.email || card.dataset.email,
       purpose: bookingData.purpose || card.dataset.purpose,
       roomId: bookingData.roomId || card.dataset.roomid

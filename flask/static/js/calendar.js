@@ -86,6 +86,7 @@
     // Room label hint
     const labelEl = dom('#calendarRoomLabel');
     if(labelEl) labelEl.textContent = state.room ? `Showing availability for ${state.room}` : 'Select a room';
+    scheduleSyncHeights();
   }
 
   function clearGridClasses(){
@@ -111,8 +112,9 @@
       return diff; // 0..6
     };
 
-    // Clear old event blocks
+    // Clear old artifacts
     grid.querySelectorAll('.event').forEach(e => e.remove());
+    grid.querySelectorAll('.booked-label').forEach(e => e.remove());
 
     state.bookings
       .filter(b => b.roomId === state.room)
@@ -133,15 +135,13 @@
           if(cell){ cell.classList.add('booked'); }
         }
 
-        // Render a single event block spanning rows
-        const colStart = 2 + di; // time column = 1, days start at 2
-        const rowStart = 2 + sIdx; // header row = 1
-        const rowEnd = 2 + eIdx;
-        const event = createEl('div','event');
-        event.style.gridColumn = `${colStart} / ${colStart+1}`;
-        event.style.gridRow = `${rowStart} / ${rowEnd}`;
-        event.innerHTML = `${b.purpose || 'Booked'}<span class=\"time\">${b.timeRange}</span>`;
-        grid.appendChild(event);
+        // Show purpose in the first booked cell only (no spanning block)
+        const firstCell = cellMap[`${b.date}-${sIdx}`];
+        if(firstCell){
+          const label = createEl('div','booked-label');
+          label.textContent = b.purpose || 'Booked';
+          firstCell.appendChild(label);
+        }
       });
   }
 
@@ -227,6 +227,7 @@
   async function update(){
     await fetchBookings();
     renderGrid();
+    scheduleSyncHeights();
   }
 
   function changeWeek(deltaDays){
@@ -264,6 +265,17 @@
     state.room = roomName;
     const labelEl = dom('#calendarRoomLabel');
     if(labelEl) labelEl.textContent = state.room ? `Showing availability for ${state.room}` : '';
+
+    // Update room description widget
+    const root = getRoot();
+    const roomNameEl = root.querySelector('#roomDescriptionRoom');
+    const roomTextEl = root.querySelector('#roomDescriptionText');
+    if(roomNameEl) roomNameEl.textContent = roomName || 'Select Room';
+    if(roomTextEl) {
+      const desc = (window.ROOM_DESCRIPTIONS && window.ROOM_DESCRIPTIONS[roomName]) || 'Description coming soon.';
+      roomTextEl.textContent = desc;
+    }
+
     state.selection = null;
     update();
   };
@@ -285,10 +297,35 @@
     if(dateRight){ dateRight.setAttribute('min', iso); if(!dateRight.value) dateRight.value = iso; }
   }
 
+  // Make the room description widget fill the remaining height of the left column
+  function syncHeights(){
+    const root = getRoot();
+    const calCard = root.querySelector('#weekCalendarCard');
+    const bookingCard = root.querySelector('.booking-widget');
+    const descCard = root.querySelector('#roomDescCard');
+    if(!calCard || !bookingCard || !descCard) return;
+    const calH = calCard.getBoundingClientRect().height;
+    const bookH = bookingCard.getBoundingClientRect().height;
+    const mt = parseFloat(getComputedStyle(descCard).marginTop || '0') || 0;
+    const target = Math.max(0, calH - bookH - mt);
+    descCard.style.minHeight = `${target}px`;
+  }
+  function scheduleSyncHeights(){
+    if(typeof requestAnimationFrame === 'function') requestAnimationFrame(syncHeights);
+    else setTimeout(syncHeights, 0);
+  }
+
   async function init(){
     // Initial room from label
     const roomLabel = getRoot().querySelector('#selectedRoom');
     state.room = roomLabel ? roomLabel.textContent.trim() : null;
+
+    // Seed description widget
+    const root = getRoot();
+    const roomNameEl = root.querySelector('#roomDescriptionRoom');
+    const roomTextEl = root.querySelector('#roomDescriptionText');
+    if(roomNameEl) roomNameEl.textContent = state.room || 'Select Room';
+    if(roomTextEl) roomTextEl.textContent = 'Description coming soon.';
 
     // Set current week to Monday
     const now = new Date();
@@ -302,6 +339,8 @@
     if(picker) picker.value = toISODate(state.weekStart);
 
     await update();
+    scheduleSyncHeights();
+    window.addEventListener('resize', scheduleSyncHeights);
   }
 
   // Expose for dynamic loader

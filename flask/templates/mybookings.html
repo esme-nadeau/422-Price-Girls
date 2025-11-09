@@ -17,7 +17,6 @@
         data-date="{{ booking.date }}"
         data-time="{{ booking.timeRange }}"
         data-repeat="{{ booking.repeat }}"
-        data-name="{{ booking.userId or booking.displayName }}"
         data-email="{{ booking.email or booking.userEmail }}"
         data-purpose="{{ booking.purpose }}"
         data-roomid="{{ booking.roomId }}"
@@ -26,7 +25,6 @@
           "date": booking.date or '',
           "time": booking.timeRange or '',
           "repeat": booking.repeat or '',
-          "name": (booking.userId or booking.displayName or ''),
           "email": (booking.email or booking.userEmail or ''),
           "purpose": booking.purpose or '',
           "roomId": booking.roomId or ''
@@ -60,11 +58,6 @@
           <div class="mb-3">
             <label class="form-label">Does this booking repeat?</label>
             <span id="repeat" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Name</label>
-            <span id="name" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
           <div class="mb-3">

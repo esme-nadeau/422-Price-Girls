@@ -21,17 +21,15 @@ window.initBookingButton = function() {
             const endTime = document.getElementById('end_time_right').textContent.trim();
             const timeRange = `${startTime} - ${endTime}`;
             const repeat = document.getElementById('repeatDropdown').textContent.trim();
-            const name = document.getElementById('name').value.trim();
             const email = document.getElementById('email').value.trim();
             const purpose = document.getElementById('purpose').value.trim();
-            // TODO: add email here
             
             // Validate
             if (room === 'Select Room' || !room) {
                 alert('Please select a room');
                 return;
             }
-            if (!date || !startTime || !endTime || !name || !email || !purpose) {
+            if (!date || !startTime || !endTime || !email || !purpose) {
                 alert('Please fill in all required fields');
                 return;
             }
@@ -42,7 +40,6 @@ window.initBookingButton = function() {
                 date: date,
                 timeRange: timeRange,
                 repeat: repeat,
-                name: name,
                 email: email,
                 purpose: purpose
             };
@@ -82,7 +79,6 @@ window.initBookingButton = function() {
                         console.error('Email send error:', emailError);
                     }
                     // Clear form
-                    document.getElementById('name').value = '';
                     document.getElementById('email').value = '';
                     document.getElementById('purpose').value = '';
                 } else {

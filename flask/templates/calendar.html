@@ -109,12 +109,6 @@
           </div>
         </div>
 
-        <!-- Name -->
-        <div class="mb-3">
-          <label for="name" class="form-label">Name</label>
-          <input type="text" class="form-control" id="name" placeholder="Enter your name">
-        </div>
-
         <!-- Email -->
         <div class="mb-3">
           <label for="email" class="form-label">Email</label>
@@ -129,6 +123,15 @@
 
         <!-- Submit -->
         <button id="bookRoomBtn" class="btn btn-green w-100">Book Room</button>
+      </div>
+
+      <!-- Room Description Widget -->
+      <div id="roomDescCard" class="card room-description-widget shadow-sm mt-3">
+        <div class="card-body py-2">
+          <h6 class="mb-1">Room Description</h6>
+          <div class="small text-muted" id="roomDescriptionRoom">Select Room</div>
+          <p class="mb-0 small" id="roomDescriptionText">Choose a room to view its description.</p>
+        </div>
       </div>
     </div>
 
@@ -155,6 +158,7 @@
         <div class="small text-muted mt-2">Click an available cell to select a 30-minute slot; click another to extend the end time.</div>
       </div>
     </div>
+
 
   </div>
 </div>
