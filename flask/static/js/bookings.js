@@ -78,6 +78,10 @@ window.initBookingButton = function() {
                     } catch (emailError) {
                         console.error('Email send error:', emailError);
                     }
+                    // Refresh map bookings to update room colors
+                    if (typeof window.refreshMapBookings === 'function') {
+                        window.refreshMapBookings();
+                    }
                     // Clear form
                     document.getElementById('email').value = '';
                     document.getElementById('purpose').value = '';
