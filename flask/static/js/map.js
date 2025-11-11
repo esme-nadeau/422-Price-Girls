@@ -3,29 +3,16 @@ let dbRoomDigits = new Set();        // set of numeric strings present in DB roo
 let digitsToDisplay = new Map();     // map: digits -> display name (first seen)
 let allBookings = [];                // all bookings from database
 let roomClickHandlers = new Map();   // store click handlers so we can disable them
+let roomDataMap = new Map();         // map: room name/id -> full room data from DB
 
+
+/* ==============================
+    General database functions
+============================== */
 function extractDigits(str) {
   if (!str) return null;
   const m = String(str).match(/(\d{2,4})/); // match 2-4 digit room numbers
   return m ? m[1] : null;
-}
-
-function setRoomPhotoByDigits(digits){
-  const img = document.getElementById('roomPhoto');
-  if(!img || !digits) return;
-  const exts = ['JPG'];
-  let i = 0;
-  const tryNext = () => {
-    if(i >= exts.length){
-      console.warn('No photo found for room', digits);
-      return;
-    }
-    const url = `/static/room_images/${digits}.${exts[i++]}`;
-    img.onerror = tryNext;
-    img.onload = () => { img.onerror = null; };
-    img.src = url;
-  };
-  tryNext();
 }
 
 // Fetch all bookings from the database
@@ -50,82 +37,98 @@ window.refreshMapBookings = async function() {
   updateRoomColors();
 };
 
-// Convert time label (e.g., "8:00 AM") to minutes since midnight
-function labelToMinutes(label) {
-  if (!label) return null;
-  const m = String(label).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (!m) return null;
-  let h = parseInt(m[1], 10);
-  const mm = parseInt(m[2], 10);
-  const ampm = m[3].toUpperCase();
-  if (ampm === 'PM' && h !== 12) h += 12;
-  if (ampm === 'AM' && h === 12) h = 0;
-  return h * 60 + mm;
+
+/* ==============================
+    Room information card
+============================== */
+function setRoomPhotoByDigits(digits){
+  const img = document.getElementById('roomPhoto');
+  if(!img || !digits) return;
+  const exts = ['JPG'];
+  let i = 0;
+  const tryNext = () => {
+    if(i >= exts.length){
+      console.warn('No photo found for room', digits);
+      descEl.textContent = 'No image available.';
+      showRoomInfoCard();
+      return;
+    }
+    const url = `/static/room_images/${digits}.${exts[i++]}`;
+    img.onerror = tryNext;
+    img.onload = () => { 
+      img.onerror = null;
+      // Show card when photo loads successfully
+      showRoomInfoCard();
+    };
+    img.src = url;
+  };
+  tryNext();
 }
 
-// Check if two time ranges overlap
-function timesOverlap(start1, end1, start2, end2) {
-  return start1 < end2 && start2 < end1;
+// Show the room info card
+function showRoomInfoCard() {
+  const card = document.getElementById('roomInfoCard');
+  if (card) {
+    card.style.display = 'block';
+  }
 }
 
-// Check if a room is booked at the selected date and time
-function isRoomBooked(roomId, selectedDate, selectedStartTime, selectedEndTime) {
-  if (!selectedDate || !selectedStartTime || !selectedEndTime) return false;
+// Update room description display
+function setRoomDescription(roomName) {
+  const descEl = document.getElementById('roomDescription');
+  if (!descEl) return;
   
-  // Convert selected times to minutes
-  const startMin = labelToMinutes(selectedStartTime);
-  const endMin = labelToMinutes(selectedEndTime);
-  if (startMin === null || endMin === null) return false;
+  // Try to find room data by name or by extracted digits
+  let roomData = null;
+  const digits = extractDigits(roomName);
   
-  // Find matching room ID (could be room number or full room name)
-  const roomDigits = extractDigits(roomId);
-  
-  // Check all bookings for this room on this date
-  for (const booking of allBookings) {
-    const bookingRoomId = booking.roomId || '';
-    const bookingDate = booking.date || '';
-    const bookingTimeRange = booking.timeRange || '';
-    
-    // Check if room matches (by digits or full name)
-    let roomMatches = false;
-    if (roomDigits) {
-      const bookingDigits = extractDigits(bookingRoomId);
-      roomMatches = bookingDigits === roomDigits || bookingRoomId === roomId;
-    } else {
-      roomMatches = bookingRoomId === roomId;
-    }
-    
-    if (!roomMatches || bookingDate !== selectedDate || !bookingTimeRange) {
-      continue;
-    }
-    
-    // Parse booking time range (format: "8:00 AM - 8:30 AM")
-    const [bookingStartStr, bookingEndStr] = bookingTimeRange.split(' - ').map(s => s.trim());
-    if (!bookingStartStr || !bookingEndStr) continue;
-    
-    const bookingStartMin = labelToMinutes(bookingStartStr);
-    const bookingEndMin = labelToMinutes(bookingEndStr);
-    if (bookingStartMin === null || bookingEndMin === null) continue;
-    
-    // Check for overlap
-    if (timesOverlap(startMin, endMin, bookingStartMin, bookingEndMin)) {
-      return true;
+  // First try to find by exact room name
+  if (roomDataMap.has(roomName)) {
+    roomData = roomDataMap.get(roomName);
+  } else if (digits) {
+    // Try to find by matching digits in room names
+    for (const [key, data] of roomDataMap.entries()) {
+      const keyDigits = extractDigits(key);
+      if (keyDigits === digits) {
+        roomData = data;
+        break;
+      }
     }
   }
   
-  return false;
+  // Get room_description from room data
+  if (roomData) {
+    const description = roomData.room_description;
+    if (description) {
+      // Handle array of descriptions
+      if (Array.isArray(description)) {
+        if (description.length === 0) {
+          descEl.textContent = 'No description available.';
+        } else if (description.length === 1) {
+          descEl.textContent = String(description[0]);
+        } else {
+          // Multiple descriptions: display as bullet list or comma-separated
+          descEl.innerHTML = description.map(desc => `• ${String(desc)}`).join('<br>');
+        }
+      } else {
+        descEl.textContent = String(description);
+      }
+    } else {
+      descEl.textContent = 'No description available.';
+    }
+  } else {
+    descEl.textContent = 'No description available.';
+  }
+  
+  // Show the card when description is set
+  showRoomInfoCard();
 }
 
-// Get selected date and time from the form
-function getSelectedDateTime() {
-  const date = document.getElementById('date_right')?.value || document.getElementById('date_left')?.value || '';
-  const startTime = document.getElementById('start_time_right')?.textContent.trim() || 
-                    document.getElementById('start_time_left')?.textContent.trim() || '';
-  const endTime = document.getElementById('end_time_right')?.textContent.trim() || 
-                  document.getElementById('end_time_left')?.textContent.trim() || '';
-  return { date, startTime, endTime };
-}
 
+
+/* ==============================
+    Map
+============================== */
 // Update room colors based on booking status
 function updateRoomColors() {
   const { date, startTime, endTime } = getSelectedDateTime();
@@ -174,6 +177,14 @@ async function loadRoomsAndPopulateDropdown() {
     rooms.forEach(r => {
       const display = (r.name || r.id || '').toString().trim();
       if (!display) return;
+      
+      // Store full room data in map
+      roomDataMap.set(display, r);
+      // Also store by ID if different from name
+      if (r.id && r.id !== display) {
+        roomDataMap.set(r.id, r);
+      }
+      
       const digits = extractDigits(display);
       if (digits) {
         if (!digitsToDisplay.has(digits)) digitsToDisplay.set(digits, display);
@@ -202,6 +213,7 @@ async function loadRoomsAndPopulateDropdown() {
         if (labelEl) labelEl.textContent = roomName;
         const digits = extractDigits(roomName);
         if (digits) setRoomPhotoByDigits(digits);
+        setRoomDescription(roomName); // Update room description and show card
       });
       li.appendChild(a);
       menu.appendChild(li);
@@ -211,28 +223,56 @@ async function loadRoomsAndPopulateDropdown() {
 
 // Add interactivity to the SVGs
 function addSVGInteractivity(svgObject) {
-  // Access the SVG document inside the object tag
   const svgDoc = svgObject.contentDocument;
   if (!svgDoc) return;
   
   const svgEl = svgDoc.querySelector('svg');
   if (!svgEl) return;
   
-  // To manipulate SVG elements
   const rooms = svgDoc.querySelectorAll('[id^="room"]');
+  let selectedRoom = null;
+  
+function clearSelection() {
+  if (selectedRoom) {
+    const prevShape = selectedRoom.querySelector('path, rect');
+    if (prevShape) prevShape.style.opacity = '0.7';
+    selectedRoom = null;
+  }
+
+  // Reset label text back to "Select Room"
+  const labelEl = document.getElementById('selectedRoom');
+  if (labelEl) {
+    labelEl.textContent = 'Select Room';
+  }
+
+  // Hide the room info card (optional — remove if you want it to stay visible)
+  const card = document.getElementById('roomInfoCard');
+  if (card) {
+    card.style.display = 'none';
+  }
+}
+  
+  svgDoc.addEventListener('click', (event) => {
+    if (![...rooms].some(r => r.contains(event.target))) {
+      clearSelection();
+    }
+  });
+  
+  document.addEventListener('click', (event) => {
+    if (!svgObject.contains(event.target)) {
+      clearSelection();
+    }
+  });
   
   rooms.forEach(room => {
     const roomId = room.id;
     const num = (roomId && roomId.match(/^\D*(\d+)\D*$/)) ? roomId.match(/^\D*(\d+)\D*$/)[1] : null;
-    const hasSuffix = /[A-Za-z]$/.test(roomId); // exclude rooms like 220A
+    const hasSuffix = /[A-Za-z]$/.test(roomId);
     const roomName = (num && !hasSuffix) ? `Room ${num}` : roomId;
     const isBookable = (!hasSuffix) && !!(num && dbRoomDigits.has(num));
     
-    // Only make bookable rooms interactive (clickable and hoverable)
     if (isBookable) {
-      // Create click handler
       const clickHandler = (e) => {
-        // Check if room is booked before allowing click
         const { date, startTime, endTime } = getSelectedDateTime();
         if (isRoomBooked(roomId, date, startTime, endTime)) {
           e.preventDefault();
@@ -242,31 +282,33 @@ function addSVGInteractivity(svgObject) {
         
         console.log('Clicked room:', roomId);
         
-        // Update selected room label so bookings.js validation passes
         const labelEl = document.getElementById('selectedRoom');
         if (labelEl) {
           const display = (num && digitsToDisplay.get(num)) || roomName;
           labelEl.textContent = display;
         }
 
-        // Update photo based on room number
         if (num) setRoomPhotoByDigits(num);
+        
+        const display = (num && digitsToDisplay.get(num)) || roomName;
+        setRoomDescription(display);
 
-        // Highlight the clicked room
         rooms.forEach(r => {
           const shape = r.querySelector('path, rect');
           if (shape) shape.style.opacity = '0.7';
         });
-        
+
         const clickedShape = room.querySelector('path, rect');
         if (clickedShape) clickedShape.style.opacity = '1';
+
+        selectedRoom = room;
+
+        e.stopPropagation();
       };
       
-      // Store handler for potential removal
       roomClickHandlers.set(room, clickHandler);
       room.addEventListener('click', clickHandler);
       
-      // Hover effects
       room.addEventListener('mouseenter', (e) => {
         const { date, startTime, endTime } = getSelectedDateTime();
         if (isRoomBooked(roomId, date, startTime, endTime)) {
@@ -274,16 +316,20 @@ function addSVGInteractivity(svgObject) {
           return;
         }
         const shape = room.querySelector('path, rect');
-        if (shape) shape.style.opacity = '0.9';
+        if (shape && room !== selectedRoom) shape.style.opacity = '0.9';
       });
       
       room.addEventListener('mouseleave', (e) => {
         const shape = room.querySelector('path, rect');
-        if (shape) shape.style.opacity = '0.7';
+        if (!shape) return;
+        if (room === selectedRoom) {
+          shape.style.opacity = '1';
+        } else {
+          shape.style.opacity = '0.7';
+        }
       });
     }
   });
-  
   // Initial color update
   updateRoomColors();
 }
@@ -392,6 +438,87 @@ window.initMap = function() {
     }
   });
 };
+
+
+/* ==============================
+    Time and calendar
+============================== */
+// Convert time label (e.g., "8:00 AM") to minutes since midnight
+function labelToMinutes(label) {
+  if (!label) return null;
+  const m = String(label).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!m) return null;
+  let h = parseInt(m[1], 10);
+  const mm = parseInt(m[2], 10);
+  const ampm = m[3].toUpperCase();
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return h * 60 + mm;
+}
+
+// Check if two time ranges overlap
+function timesOverlap(start1, end1, start2, end2) {
+  return start1 < end2 && start2 < end1;
+}
+
+// Check if a room is booked at the selected date and time
+function isRoomBooked(roomId, selectedDate, selectedStartTime, selectedEndTime) {
+  if (!selectedDate || !selectedStartTime || !selectedEndTime) return false;
+  
+  // Convert selected times to minutes
+  const startMin = labelToMinutes(selectedStartTime);
+  const endMin = labelToMinutes(selectedEndTime);
+  if (startMin === null || endMin === null) return false;
+  
+  // Find matching room ID (could be room number or full room name)
+  const roomDigits = extractDigits(roomId);
+  
+  // Check all bookings for this room on this date
+  for (const booking of allBookings) {
+    const bookingRoomId = booking.roomId || '';
+    const bookingDate = booking.date || '';
+    const bookingTimeRange = booking.timeRange || '';
+    
+    // Check if room matches (by digits or full name)
+    let roomMatches = false;
+    if (roomDigits) {
+      const bookingDigits = extractDigits(bookingRoomId);
+      roomMatches = bookingDigits === roomDigits || bookingRoomId === roomId;
+    } else {
+      roomMatches = bookingRoomId === roomId;
+    }
+    
+    if (!roomMatches || bookingDate !== selectedDate || !bookingTimeRange) {
+      continue;
+    }
+    
+    // Parse booking time range (format: "8:00 AM - 8:30 AM")
+    const [bookingStartStr, bookingEndStr] = bookingTimeRange.split(' - ').map(s => s.trim());
+    if (!bookingStartStr || !bookingEndStr) continue;
+    
+    const bookingStartMin = labelToMinutes(bookingStartStr);
+    const bookingEndMin = labelToMinutes(bookingEndStr);
+    if (bookingStartMin === null || bookingEndMin === null) continue;
+    
+    // Check for overlap
+    if (timesOverlap(startMin, endMin, bookingStartMin, bookingEndMin)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+// Get selected date and time from the form
+function getSelectedDateTime() {
+  const date = document.getElementById('date_right')?.value || document.getElementById('date_left')?.value || '';
+  const startTime = document.getElementById('start_time_right')?.textContent.trim() || 
+                    document.getElementById('start_time_left')?.textContent.trim() || '';
+  const endTime = document.getElementById('end_time_right')?.textContent.trim() || 
+                  document.getElementById('end_time_left')?.textContent.trim() || '';
+  return { date, startTime, endTime };
+}
+
 
 // Sync date inputs on page load (runs independently of initMap)
 document.addEventListener('DOMContentLoaded', function() {
@@ -517,4 +644,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(updateRoomColors, 50);
   };
 })();
+
+
+
 

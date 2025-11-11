@@ -76,9 +76,13 @@
     </div>
 
     <!-- bottom widget for photo display -->
-    <div class="card shadow-sm p-3" style="width: 100%;">
-      <img id="roomPhoto" class="d-block w-100" src="" alt="Room photo">
-      <div class="mt-2 small text-muted">Room Description</div>
+    <div id="roomInfoCard" class="card shadow-sm p-3" style="width: 100%; display: none;">
+      <img id="roomPhoto" class="d-block w-100 mb-3" src="" alt="No image avaliable">
+      <label class="form-label d-block mb-1">Room Description</label>
+      <div id="roomDescription" class="mt-1 small text-muted w-100" style="min-height: 1.5em; text-align: center;"
+>
+        <!-- Room description will be displayed here -->
+      </div>
     </div>
   </div>
   <!-- MIDDLE: Floor Map Widget -->
