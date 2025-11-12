@@ -41,29 +41,23 @@ window.refreshMapBookings = async function() {
 /* ==============================
     Room information card
 ============================== */
-function setRoomPhotoByDigits(digits){
+function setRoomPhotoByDigits(digits) {
   const img = document.getElementById('roomPhoto');
-  if(!img || !digits) return;
-  const exts = ['JPG'];
-  let i = 0;
-  const tryNext = () => {
-    if(i >= exts.length){
-      console.warn('No photo found for room', digits);
-      descEl.textContent = 'No image available.';
-      showRoomInfoCard();
-      return;
-    }
-    const url = `/static/room_images/${digits}.${exts[i++]}`;
-    img.onerror = tryNext;
-    img.onload = () => { 
-      img.onerror = null;
-      // Show card when photo loads successfully
-      showRoomInfoCard();
-    };
-    img.src = url;
+  if (!img || !digits) return;
+  const url = `/static/room_images/${digits}.JPG`;
+
+  img.onload = () => {   // When image loads successfully, show the room card
+    img.onerror = null;
+    showRoomInfoCard();
   };
-  tryNext();
+  img.onerror = () => {   // When image fails to load, log a warning and still show the card
+    console.warn(`No photo found for room ${digits}`);
+    showRoomInfoCard();
+  };
+
+  img.src = url;
 }
+
 
 // Show the room info card
 function showRoomInfoCard() {
@@ -74,52 +68,64 @@ function showRoomInfoCard() {
 }
 
 // Update room description display
-function setRoomDescription(roomName) {
+function setRoomDescription(roomName, hideCardFirst = false) {
   const descEl = document.getElementById('roomDescription');
   if (!descEl) return;
   
-  // Try to find room data by name or by extracted digits
-  let roomData = null;
-  const digits = extractDigits(roomName);
-  
-  // First try to find by exact room name
-  if (roomDataMap.has(roomName)) {
-    roomData = roomDataMap.get(roomName);
-  } else if (digits) {
-    // Try to find by matching digits in room names
-    for (const [key, data] of roomDataMap.entries()) {
-      const keyDigits = extractDigits(key);
-      if (keyDigits === digits) {
-        roomData = data;
-        break;
-      }
+  // Hide card first to prevent flash of old content
+  if (hideCardFirst) {
+    const card = document.getElementById('roomInfoCard');
+    if (card) {
+      card.style.display = 'none';
     }
   }
   
-  // Get room_description from room data
-  if (roomData) {
-    const description = roomData.room_description;
-    if (description) {
-      // Handle array of descriptions
-      if (Array.isArray(description)) {
-        if (description.length === 0) {
-          descEl.textContent = 'No description available.';
+  // Use requestAnimationFrame to ensure DOM update happens after hiding
+  requestAnimationFrame(() => {
+    // Try to find room data by name or by extracted digits
+    let roomData = null;
+    const digits = extractDigits(roomName);
+    
+    // First try to find by exact room name
+    if (roomDataMap.has(roomName)) {
+      roomData = roomDataMap.get(roomName);
+    } else if (digits) {
+      // Try to find by matching digits in room names
+      for (const [key, data] of roomDataMap.entries()) {
+        const keyDigits = extractDigits(key);
+        if (keyDigits === digits) {
+          roomData = data;
+          break;
+        }
+      }
+    }
+    
+    // Get room_description from room data
+    if (roomData) {
+      const description = roomData.room_description;
+      if (description) {
+        // Handle array of descriptions
+        if (Array.isArray(description)) {
+          if (description.length === 0) {
+            descEl.textContent = 'No description available.';
+          } else {
+            // Multiple descriptions: display as bullet list or comma-separated
+            descEl.innerHTML = description.map(desc => `• ${String(desc)}`).join('<br>');
+          }
         } else {
-          // Multiple descriptions: display as bullet list or comma-separated
-          descEl.innerHTML = description.map(desc => `• ${String(desc)}`).join('<br>');
+          descEl.textContent = String(description);
         }
       } else {
-        descEl.textContent = String(description);
+        descEl.textContent = 'No description available.';
       }
     } else {
       descEl.textContent = 'No description available.';
     }
-  } else {
-    descEl.textContent = 'No description available.';
-  }
-  
-  // Show the card when description is set
-  showRoomInfoCard();
+    
+    if (!hideCardFirst) {
+      showRoomInfoCard();
+    }
+  });
 }
 
 
@@ -210,8 +216,10 @@ async function loadRoomsAndPopulateDropdown() {
         const labelEl = document.getElementById('selectedRoom');
         if (labelEl) labelEl.textContent = roomName;
         const digits = extractDigits(roomName);
+        
+        // Update description first (hiding card to prevent flash), then load photo
+        setRoomDescription(roomName, true); // true = hide card first
         if (digits) setRoomPhotoByDigits(digits);
-        setRoomDescription(roomName); // Update room description and show card
         
         // Show the booking form fields
         const bookingFields = document.getElementById('bookingFormFields');
@@ -300,10 +308,11 @@ function clearSelection() {
           labelEl.textContent = display;
         }
 
-        if (num) setRoomPhotoByDigits(num);
-        
         const display = (num && digitsToDisplay.get(num)) || roomName;
-        setRoomDescription(display);
+        
+        // Update description first (hiding card to prevent flash), then load photo
+        setRoomDescription(display, true); // true = hide card first
+        if (num) setRoomPhotoByDigits(num);
 
         rooms.forEach(r => {
           const shape = r.querySelector('path, rect');
@@ -324,7 +333,6 @@ function clearSelection() {
         e.stopPropagation();
       };
       
-      roomClickHandlers.set(room, clickHandler);
       room.addEventListener('click', clickHandler);
       
       room.addEventListener('mouseenter', (e) => {
@@ -545,15 +553,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Set minimum date to today (prevents selecting past dates)
   const today = new Date().toISOString().split('T')[0];
-  if (dateLeft) {
-    dateLeft.setAttribute('min', today);
-    if (!dateLeft.value) dateLeft.value = today;
-  }
-  if (dateRight) {
-    dateRight.setAttribute('min', today);
-    if (!dateRight.value) dateRight.value = today;
-  }
-  
+
   if (dateLeft && dateRight) {
     // Sync from left to right
     dateLeft.addEventListener('change', function() {
@@ -574,17 +574,17 @@ document.addEventListener('DOMContentLoaded', function() {
   const END_MIN = 19 * 60;      // 6:30 PM (last valid end)
   const STEP = 30;              // minutes
 
-  function labelToMinutes(label){
-    if(!label) return null;
-    const m = String(label).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-    if(!m) return null;
-    let h = parseInt(m[1],10);
-    const mm = parseInt(m[2],10);
-    const ampm = m[3].toUpperCase();
-    if(ampm === 'PM' && h !== 12) h += 12;
-    if(ampm === 'AM' && h === 12) h = 0;
-    return h*60 + mm;
-  }
+  // function labelToMinutes(label){
+  //   if(!label) return null;
+  //   const m = String(label).trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  //   if(!m) return null;
+  //   let h = parseInt(m[1],10);
+  //   const mm = parseInt(m[2],10);
+  //   const ampm = m[3].toUpperCase();
+  //   if(ampm === 'PM' && h !== 12) h += 12;
+  //   if(ampm === 'AM' && h === 12) h = 0;
+  //   return h*60 + mm;
+  // }
   function minutesToLabel(min){
     let h = Math.floor(min/60);
     const mm = min%60;
@@ -662,7 +662,3 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(updateRoomColors, 50);
   };
 })();
-
-
-
-
