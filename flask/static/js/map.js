@@ -104,8 +104,6 @@ function setRoomDescription(roomName) {
       if (Array.isArray(description)) {
         if (description.length === 0) {
           descEl.textContent = 'No description available.';
-        } else if (description.length === 1) {
-          descEl.textContent = String(description[0]);
         } else {
           // Multiple descriptions: display as bullet list or comma-separated
           descEl.innerHTML = description.map(desc => `• ${String(desc)}`).join('<br>');
@@ -259,7 +257,9 @@ function clearSelection() {
   });
   
   document.addEventListener('click', (event) => {
-    if (!svgObject.contains(event.target)) {
+    const mapCard = document.getElementById('mapCard');
+
+    if (mapCard && mapCard.contains(event.target) && !svgObject.contains(event.target)) {
       clearSelection();
     }
   });
