@@ -1,6 +1,13 @@
+@font-face {
+  font-family: 'UnitedSerifBold';
+  src: url('/static/UnitedSerifReg-Bold.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 body {
     margin: 0;
-    font-family: Arial, sans-serif;
+    /* font-family: 'UnitedSerifBold', sans-serif !important; */
     background-color: #ffffff;
     display: flex;
     flex-direction: column;
@@ -72,4 +79,5 @@ footer {
 .nav-tabs .nav-link.active {
     color: #6FAD6F !important;
     font-weight: bold !important;
+    background-color: #f9f9f9; 
 }
