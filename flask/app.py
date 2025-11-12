@@ -304,7 +304,7 @@ def bookings():
                 conflicting_time = overlap_check.get("conflicting_time", "unknown time")
                 return jsonify({
                     "success": False,
-                    "error": f"This room is already booked for {conflicting_time} on {date}. Please choose a different time."
+                    "error": f"This room is already booked for {conflicting_time} on {date}."
                 }), 409  # 409 Conflict status code
             
             # Create the booking if no overlap

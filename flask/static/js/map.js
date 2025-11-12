@@ -212,6 +212,12 @@ async function loadRoomsAndPopulateDropdown() {
         const digits = extractDigits(roomName);
         if (digits) setRoomPhotoByDigits(digits);
         setRoomDescription(roomName); // Update room description and show card
+        
+        // Show the booking form fields
+        const bookingFields = document.getElementById('bookingFormFields');
+        if (bookingFields) {
+          bookingFields.style.display = 'block';
+        }
       });
       li.appendChild(a);
       menu.appendChild(li);
@@ -247,6 +253,12 @@ function clearSelection() {
   const card = document.getElementById('roomInfoCard');
   if (card) {
     card.style.display = 'none';
+  }
+
+  // Hide the booking form fields
+  const bookingFields = document.getElementById('bookingFormFields');
+  if (bookingFields) {
+    bookingFields.style.display = 'none';
   }
 }
   
@@ -302,6 +314,12 @@ function clearSelection() {
         if (clickedShape) clickedShape.style.opacity = '1';
 
         selectedRoom = room;
+
+        // Show the booking form fields
+        const bookingFields = document.getElementById('bookingFormFields');
+        if (bookingFields) {
+          bookingFields.style.display = 'block';
+        }
 
         e.stopPropagation();
       };

@@ -52,11 +52,23 @@ main {
 }
 
 footer {
-    background-color: #ffffff;
-    color: #333;
-    text-align: center;
-    padding: 20px;
-    border-top: 1px solid #ccc;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background-color: #ffffff;
+  border-top: 1px solid #ccc;
+  padding: 20px 20px 0px 20px;
+  font-size: 13px;
+  line-height: 0.3;
+  box-sizing: border-box;
+}
+
+.signature {
+  text-align: left;
+}
+
+address {
+  text-align: right;
 }
 
 .nav-tabs {
