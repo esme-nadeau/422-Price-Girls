@@ -8,19 +8,14 @@
 
         <!-- Room Selector -->
         <div class="room-header mb-3 dropdown d-flex align-items-center">
-          <span id="selectedRoom" class="fw-semibold" style="font-size:1.3rem;">Select Room</span>
-          <button class="btn p-0 border-0 bg-transparent edit-icon ms-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="bi bi-pencil"></i>
-          </button>
-          <ul class="dropdown-menu">
-            <li><a class="dropdown-item" href="#" onclick="this.closest('.room-header').querySelector('#selectedRoom').textContent='Room 127'; window.calendar_setRoom('Room 127')">Room 127</a></li>
-            <li><a class="dropdown-item" href="#" onclick="this.closest('.room-header').querySelector('#selectedRoom').textContent='Room 160'; window.calendar_setRoom('Room 160')">Room 160</a></li>
-            <li><a class="dropdown-item" href="#" onclick="this.closest('.room-header').querySelector('#selectedRoom').textContent='Room 200'; window.calendar_setRoom('Room 200')">Room 200</a></li>
-            <li><a class="dropdown-item" href="#" onclick="this.closest('.room-header').querySelector('#selectedRoom').textContent='Room 220'; window.calendar_setRoom('Room 220')">Room 220</a></li>
-            <li><a class="dropdown-item" href="#" onclick="this.closest('.room-header').querySelector('#selectedRoom').textContent='Room 258'; window.calendar_setRoom('Room 258')">Room 258</a></li>
-            <li><a class="dropdown-item" href="#" onclick="this.closest('.room-header').querySelector('#selectedRoom').textContent='Room 260'; window.calendar_setRoom('Room 260')">Room 260</a></li>
-            <li><a class="dropdown-item" href="#" onclick="this.closest('.room-header').querySelector('#selectedRoom').textContent='Room 360'; window.calendar_setRoom('Room 360')">Room 360</a></li>
-          </ul>
+            <!-- Room label -->
+            <span id="selectedRoom" class="fw-semibold" style="font-size:1.3rem;">Select Room</span>
+            <!-- Pencil icon with small gap -->
+            <button class="btn p-0 border-0 bg-transparent edit-icon ms-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-caret-down-square"></i>
+            </button>
+            <!-- Dynamically populated from /api/rooms -->
+            <ul id="roomDropdownMenu" class="dropdown-menu"></ul>
         </div>
 
         <!-- Date -->
@@ -128,6 +123,9 @@
       <!-- Room Description Widget -->
       <div id="roomDescCard" class="card room-description-widget shadow-sm mt-3">
         <div class="card-body py-2">
+          <div id="roomPhotoCard" class="mt-2 mb-2 text-center" style="display:none;">
+            <img id="roomPhoto" class="d-block w-100 mb-2" src="" alt="No image avaliable">
+          </div>
           <h6 class="mb-1">Room Description</h6>
           <div class="small text-muted" id="roomDescriptionRoom">Select Room</div>
           <p class="mb-0 small" id="roomDescriptionText">Choose a room to view its description.</p>

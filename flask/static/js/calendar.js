@@ -11,6 +11,16 @@
     selection: null, // { dateISO, startIdx, endIdx }
   };
 
+  // Room dropdown variables
+  let roomDataMap = new Map(); // map: room name/id -> full room data from DB
+
+  // Helper function to extract digits from room name
+  function extractDigits(str) {
+    if (!str) return null;
+    const m = String(str).match(/(\d{2,4})/); // match 2-4 digit room numbers
+    return m ? m[1] : null;
+  }
+
   function toISODate(d){ return d.toISOString().split('T')[0]; }
   function parseISODate(iso){ const [y,m,da]=iso.split('-').map(Number); return new Date(y,m-1,da); }
   function minutesToLabel(min){
@@ -260,6 +270,84 @@
     return document.querySelector('#nav-calendar') || document.querySelector('.calendar-page') || document;
   }
 
+  // Helper function to update room description
+  function setRoomDescription(roomName) {
+    const root = getRoot();
+    const roomNameEl = root.querySelector('#roomDescriptionRoom');
+    const roomTextEl = root.querySelector('#roomDescriptionText');
+    if (!roomNameEl || !roomTextEl) return;
+    
+    roomNameEl.textContent = roomName || 'Select Room';
+    
+    // Try to find room data by name or by extracted digits
+    let roomData = null;
+    const digits = extractDigits(roomName);
+    
+    // First try to find by exact room name
+    if (roomDataMap.has(roomName)) {
+      roomData = roomDataMap.get(roomName);
+    } else if (digits) {
+      // Try to find by matching digits in room names
+      for (const [key, data] of roomDataMap.entries()) {
+        const keyDigits = extractDigits(key);
+        if (keyDigits === digits) {
+          roomData = data;
+          break;
+        }
+      }
+    }
+    
+    // Get room_description from room data
+    if (roomData) {
+      const description = roomData.room_description;
+      if (description) {
+        // Handle array of descriptions
+        if (Array.isArray(description)) {
+          if (description.length === 0) {
+            roomTextEl.textContent = 'No description available.';
+          } else {
+            // Multiple descriptions: display as bullet list or comma-separated
+            roomTextEl.innerHTML = description.map(desc => `• ${String(desc)}`).join('<br>');
+          }
+        } else {
+          roomTextEl.textContent = String(description);
+        }
+      } else {
+        roomTextEl.textContent = 'No description available.';
+      }
+    } else {
+      roomTextEl.textContent = 'Description coming soon.';
+    }
+
+    // Update photo display
+    if (digits) setRoomPhotoByDigits(digits);
+  }
+
+  // ==============================
+  //   Room photo display helpers
+  // ==============================
+  function setRoomPhotoByDigits(digits) {
+    const img = document.getElementById('roomPhoto');
+    if (!img || !digits) return;
+    const url = `/static/room_images/${digits}.JPG`;
+
+    img.onload = () => {
+      img.onerror = null;
+      showRoomPhotoCard();
+    };
+    img.onerror = () => {
+      console.warn(`No photo found for room ${digits}`);
+      showRoomPhotoCard();
+    };
+
+    img.src = url;
+  }
+
+  function showRoomPhotoCard() {
+    const card = document.getElementById('roomPhotoCard');
+    if (card) card.style.display = 'block';
+  }
+
   // Exposed helpers used by template
   window.calendar_setRoom = function(roomName){
     state.room = roomName;
@@ -267,14 +355,7 @@
     if(labelEl) labelEl.textContent = state.room ? `Showing availability for ${state.room}` : '';
 
     // Update room description widget
-    const root = getRoot();
-    const roomNameEl = root.querySelector('#roomDescriptionRoom');
-    const roomTextEl = root.querySelector('#roomDescriptionText');
-    if(roomNameEl) roomNameEl.textContent = roomName || 'Select Room';
-    if(roomTextEl) {
-      const desc = (window.ROOM_DESCRIPTIONS && window.ROOM_DESCRIPTIONS[roomName]) || 'Description coming soon.';
-      roomTextEl.textContent = desc;
-    }
+    setRoomDescription(roomName);
 
     state.selection = null;
     update();
@@ -315,10 +396,65 @@
     else setTimeout(syncHeights, 0);
   }
 
+  async function loadRoomsAndPopulateDropdown() {
+    // Load from API (DB)
+    let displayRooms = [];
+    try {
+      const resp = await fetch('/api/rooms');
+      const data = await resp.json();
+      const rooms = (data.rooms || []);
+      rooms.forEach(r => {
+        const display = (r.name || r.id || '').toString().trim();
+        if (!display) return;
+        
+        // Store full room data in map
+        roomDataMap.set(display, r);
+        // Also store by ID if different from name
+        if (r.id && r.id !== display) {
+          roomDataMap.set(r.id, r);
+        }
+        
+        displayRooms.push(display);
+      });
+    } catch (e) {
+      console.warn('Failed to load rooms from /api/rooms; no rooms will be interactive.', e);
+    }
+
+    // Populate dropdown from DB names
+    const bookableRooms = Array.from(new Set(displayRooms)).sort();
+    const root = getRoot();
+    const menu = root.querySelector('#roomDropdownMenu');
+    if (menu) {
+      menu.innerHTML = '';
+      bookableRooms.forEach(roomName => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.className = 'dropdown-item';
+        a.href = '#';
+        a.textContent = roomName;
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          const labelEl = root.querySelector('#selectedRoom');
+          if (labelEl) labelEl.textContent = roomName;
+          
+          // Update calendar with selected room
+          window.calendar_setRoom(roomName);
+        });
+        li.appendChild(a);
+        menu.appendChild(li);
+      });
+    }
+  }
+
   async function init(){
+    // Load rooms and populate dropdown
+    await loadRoomsAndPopulateDropdown();
+
     // Initial room from label
     const roomLabel = getRoot().querySelector('#selectedRoom');
-    state.room = roomLabel ? roomLabel.textContent.trim() : null;
+    state.room = roomLabel && roomLabel.textContent.trim() !== 'Select Room' 
+      ? roomLabel.textContent.trim() 
+      : null;
 
     // Seed description widget
     const root = getRoot();
