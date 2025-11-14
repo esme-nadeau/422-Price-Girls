@@ -121,14 +121,11 @@
       </div>
 
       <!-- Room Description Widget -->
-      <div id="roomDescCard" class="card room-description-widget shadow-sm mt-3">
-        <div class="card-body py-2">
-          <div id="roomPhotoCard" class="mt-2 mb-2 text-center" style="display:none;">
-            <img id="roomPhoto" class="d-block w-100 mb-2" src="" alt="No image avaliable">
-          </div>
-          <h6 class="mb-1">Room Description</h6>
-          <div class="small text-muted" id="roomDescriptionRoom">Select Room</div>
-          <p class="mb-0 small" id="roomDescriptionText">Choose a room to view its description.</p>
+      <div id="roomDescCard" class="card shadow-sm p-3 mt-3" style="width: 100%; display: none;">
+        <img id="roomPhoto" class="d-block w-100 mb-2" src="" alt="No image avaliable">
+        <label class="form-label d-block mb-1">Room Description</label>
+        <div id="roomDescriptionText" class="mt-1 small text-muted w-100" style="min-height: 1.5em; text-align: center;">
+          Choose a room to view its description.
         </div>
       </div>
     </div>

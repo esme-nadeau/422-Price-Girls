@@ -1,3 +1,8 @@
+function getRoot() {
+    return document.querySelector(".calendar-page") 
+        || document;
+}
+
 // static/js/calendar.js
 (function(){
   const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday"]; // Mon-Fri to match mock
@@ -275,9 +280,11 @@
     const root = getRoot();
     const roomNameEl = root.querySelector('#roomDescriptionRoom');
     const roomTextEl = root.querySelector('#roomDescriptionText');
-    if (!roomNameEl || !roomTextEl) return;
+    if (!roomTextEl) return; // Only require roomTextEl
     
-    roomNameEl.textContent = roomName || 'Select Room';
+    if (roomNameEl) {
+      roomNameEl.textContent = roomName || 'Select Room';
+    }
     
     // Try to find room data by name or by extracted digits
     let roomData = null;
@@ -320,32 +327,56 @@
     }
 
     // Update photo display
-    if (digits) setRoomPhotoByDigits(digits);
+    // Always reveal the card
+    showRoomPhotoCard();
+
+    // Load a photo if digits exist
+    if (digits) {
+        setRoomPhotoByDigits(digits);
+    } else {
+        // No digits = still show card but no image
+        const img = getRoot().querySelector('#roomPhoto');
+        if (img) img.style.display = 'none';
+    }
   }
 
   // ==============================
   //   Room photo display helpers
   // ==============================
-  function setRoomPhotoByDigits(digits) {
-    const img = document.getElementById('roomPhoto');
+function setRoomPhotoByDigits(digits) {
+    const img = getRoot().querySelector('#roomPhoto');
     if (!img || !digits) return;
+
     const url = `/static/room_images/${digits}.JPG`;
 
+    // Always show the card immediately
+    showRoomPhotoCard();
+
+    // Set image
     img.onload = () => {
-      img.onerror = null;
-      showRoomPhotoCard();
+        img.onerror = null;
+        img.style.display = 'block';
     };
     img.onerror = () => {
-      console.warn(`No photo found for room ${digits}`);
-      showRoomPhotoCard();
+        img.style.display = 'none'; // hides broken image
     };
 
     img.src = url;
-  }
+}
+
 
   function showRoomPhotoCard() {
-    const card = document.getElementById('roomPhotoCard');
-    if (card) card.style.display = 'block';
+      const root = getRoot();
+      const card = root.querySelector('#roomDescCard');
+      if (card) {
+        card.style.display = 'block';
+      } else {
+        // Fallback: try document if root didn't find it
+        const fallbackCard = document.querySelector('#roomDescCard');
+        if (fallbackCard) {
+          fallbackCard.style.display = 'block';
+        }
+      }
   }
 
   // Exposed helpers used by template
@@ -389,7 +420,6 @@
     const bookH = bookingCard.getBoundingClientRect().height;
     const mt = parseFloat(getComputedStyle(descCard).marginTop || '0') || 0;
     const target = Math.max(0, calH - bookH - mt);
-    descCard.style.minHeight = `${target}px`;
   }
   function scheduleSyncHeights(){
     if(typeof requestAnimationFrame === 'function') requestAnimationFrame(syncHeights);
