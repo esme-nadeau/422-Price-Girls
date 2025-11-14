@@ -21,9 +21,21 @@ async function loadTabContent(targetId, url, initFunction = null) {
             initFunction();
         }
         
-        // Initialize booking button if it exists (for map tab)
-        if (targetId === 'nav-map' && typeof window.initBookingButton === "function") {
-            setTimeout(() => window.initBookingButton(), 50);
+        // Initialize booking button if it exists (for map and calendar tabs)
+        if ((targetId === 'nav-map' || targetId === 'nav-calendar') && typeof window.initBookingButton === "function") {
+            setTimeout(() => {
+                window.initBookingButton(targetId);
+            }, 100);
+        }
+        
+        // Initialize time filter to disable past times (for map and calendar tabs)
+        if ((targetId === 'nav-map' || targetId === 'nav-calendar') && typeof window.initTimeFilter === "function") {
+            setTimeout(() => {
+                const container = document.getElementById(targetId);
+                if (container) {
+                    window.initTimeFilter(container);
+                }
+            }, 150);
         }
 
     } catch (err) {

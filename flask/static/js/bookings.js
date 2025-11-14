@@ -1,28 +1,75 @@
 // Function to initialize booking button - can be called after content loads
-window.initBookingButton = function() {
-    const bookButton = document.getElementById('bookRoomBtn');
+window.initBookingButton = function(containerId) {
+    // Try to find button in specified container or active tab, then fall back to document
+    let bookButton = null;
+    let container = null;
+    
+    if (containerId) {
+        container = document.getElementById(containerId);
+    }
+    
+    if (!container) {
+        // Try to find active tab (Bootstrap uses 'show active' classes)
+        container = document.querySelector('.tab-pane.show.active') || 
+                    document.querySelector('#nav-map.show, #nav-calendar.show, #nav-bookings.show');
+    }
+    
+    if (container) {
+        bookButton = container.querySelector('#bookRoomBtn');
+    }
+    
+    if (!bookButton) {
+        bookButton = document.getElementById('bookRoomBtn');
+    }
     
     if (!bookButton) {
         console.warn('Book Room button not found');
         return;
     }
     
+    // Check if button already has a listener (prevent duplicate initialization)
+    if (bookButton.dataset.initialized === 'true') {
+        console.log('Book button already initialized, skipping');
+        return;
+    }
+    
     // Remove any existing listeners by cloning the button
     const newButton = bookButton.cloneNode(true);
     bookButton.parentNode.replaceChild(newButton, bookButton);
+    newButton.dataset.initialized = 'true';
     
     newButton.addEventListener('click', async function(e) {
             e.preventDefault();
             
-            // Get form values
-            const room = document.getElementById('selectedRoom').textContent.trim();
-            const date = document.getElementById('date_right').value;
-            const startTime = document.getElementById('start_time_right').textContent.trim();
-            const endTime = document.getElementById('end_time_right').textContent.trim();
+            // Get form values - try to find in the container that has the button
+            const getElement = (id) => {
+                // Find the tab pane that contains this button (re-evaluate at click time)
+                const buttonContainer = newButton.closest('.tab-pane') || 
+                                       document.querySelector('.tab-pane.show.active') ||
+                                       document.querySelector('#nav-map.show, #nav-calendar.show');
+                if (buttonContainer) {
+                    const el = buttonContainer.querySelector('#' + id);
+                    if (el) return el;
+                }
+                return document.getElementById(id);
+            };
+            
+            const roomEl = getElement('selectedRoom');
+            const dateEl = getElement('date_right');
+            const startTimeEl = getElement('start_time_right');
+            const endTimeEl = getElement('end_time_right');
+            const repeatEl = getElement('repeatDropdown');
+            const emailEl = getElement('email');
+            const purposeEl = getElement('purpose');
+            
+            const room = roomEl ? roomEl.textContent.trim() : '';
+            const date = dateEl ? dateEl.value : '';
+            const startTime = startTimeEl ? startTimeEl.textContent.trim() : '';
+            const endTime = endTimeEl ? endTimeEl.textContent.trim() : '';
             const timeRange = `${startTime} - ${endTime}`;
-            const repeat = document.getElementById('repeatDropdown').textContent.trim();
-            const email = document.getElementById('email').value.trim();
-            const purpose = document.getElementById('purpose').value.trim();
+            const repeat = repeatEl ? repeatEl.textContent.trim() : '';
+            const email = emailEl ? emailEl.value.trim() : '';
+            const purpose = purposeEl ? purposeEl.value.trim() : '';
             
             // Validate
             if (room === 'Select Room' || !room) {
@@ -82,9 +129,15 @@ window.initBookingButton = function() {
                     if (typeof window.refreshMapBookings === 'function') {
                         window.refreshMapBookings();
                     }
+                    // Refresh calendar bookings to update grid
+                    if (typeof window.refreshCalendarBookings === 'function') {
+                        window.refreshCalendarBookings();
+                    }
                     // Clear form
-                    document.getElementById('email').value = '';
-                    document.getElementById('purpose').value = '';
+                    const emailInput = getElement('email');
+                    const purposeInput = getElement('purpose');
+                    if (emailInput) emailInput.value = '';
+                    if (purposeInput) purposeInput.value = '';
                 } else {
                     // Handle different error types
                     const errorMsg = result.error || 'Failed to book room. Please try again.';

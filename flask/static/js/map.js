@@ -463,6 +463,19 @@ window.initMap = function() {
       btn.addEventListener('hidden.bs.dropdown', updateRoomColors);
     }
   });
+  
+  // Initialize time filter to disable past times
+  if (typeof window.initTimeFilter === 'function') {
+    setTimeout(() => {
+      // Try multiple container options to find the right one
+      const mapContainer = document.getElementById('mapContainer') || 
+                          document.getElementById('nav-map') ||
+                          document.querySelector('.container');
+      if (mapContainer) {
+        window.initTimeFilter(mapContainer);
+      }
+    }, 200);
+  }
 };
 
 

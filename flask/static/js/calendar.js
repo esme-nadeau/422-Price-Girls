@@ -426,13 +426,81 @@ function setRoomPhotoByDigits(digits) {
   };
 
   // Calendar-scoped setters so we don't override Map behavior
+  // Enforce: end >= start + 30 minutes; also clamp to available range (8:00–20:00)
+  const CAL_START_MIN = START_HOUR * 60;     // 8:00 AM (matches START_HOUR)
+  const CAL_END_MIN = END_HOUR * 60;        // 8:00 PM (20:00) - last valid end for calendar
+  const CAL_STEP = 30;                       // minutes
+
+  function clampToBounds(min){
+    if(min < CAL_START_MIN) return CAL_START_MIN;
+    if(min > CAL_END_MIN) return CAL_END_MIN;
+    return min;
+  }
+
   window.calendar_updateStartTime = function(label){
-    const el = getRoot().querySelector('#start_time_right');
-    if(el) el.textContent = label;
+    const root = getRoot();
+    const startEl = root.querySelector('#start_time_right');
+    if(!startEl) return;
+    
+    // Set start to requested label
+    startEl.textContent = label;
+
+    let startMin = toMinutes(label);
+    if(startMin == null) return;
+
+    // If start is too late to allow 30 min, back it up to last valid (19:30)
+    const minEnd = startMin + CAL_STEP;
+    if(minEnd > CAL_END_MIN){
+      startMin = CAL_END_MIN - CAL_STEP; // 19:30
+      const adjustedLabel = minutesToLabel(startMin);
+      startEl.textContent = adjustedLabel;
+      startMin = toMinutes(adjustedLabel);
+    }
+
+    // Ensure end >= start + 30 (always enforce minimum)
+    // Use setTimeout to ensure DOM has updated
+    setTimeout(() => {
+      const endEl = root.querySelector('#end_time_right');
+      if(endEl){
+        const desiredEndMin = startMin + CAL_STEP;
+        const desiredEnd = clampToBounds(desiredEndMin);
+        const currentEndLabel = endEl.textContent.trim() || '';
+        const currentEndMin = toMinutes(currentEndLabel);
+        
+        // Always update end time to be at least 30 minutes after start
+        if(currentEndMin == null || currentEndMin < desiredEndMin){
+          endEl.textContent = minutesToLabel(desiredEnd);
+        }
+      }
+    }, 10);
   };
+
   window.calendar_updateEndTime = function(label){
-    const el = getRoot().querySelector('#end_time_right');
-    if(el) el.textContent = label;
+    const root = getRoot();
+    const endEl = root.querySelector('#end_time_right');
+    if(!endEl) return;
+    
+    let endMin = toMinutes(label);
+    if(endMin == null) return;
+
+    // Read current start; if missing, assume earliest
+    const startEl = root.querySelector('#start_time_right');
+    const currentStartLabel = startEl ? startEl.textContent.trim() : minutesToLabel(CAL_START_MIN);
+    let startMin = toMinutes(currentStartLabel);
+    if(startMin == null) startMin = CAL_START_MIN;
+
+    // If start too late to allow 30 mins, back it up
+    if(startMin + CAL_STEP > CAL_END_MIN){
+      startMin = CAL_END_MIN - CAL_STEP; // 19:30
+      if(startEl) startEl.textContent = minutesToLabel(startMin);
+    }
+
+    // Enforce end >= start + 30 and within bounds
+    const minEnd = startMin + CAL_STEP;
+    if(endMin < minEnd) endMin = minEnd;
+    if(endMin > CAL_END_MIN) endMin = CAL_END_MIN;
+
+    endEl.textContent = minutesToLabel(endMin);
   };
 
   function initMinDate(){
@@ -540,6 +608,14 @@ function setRoomPhotoByDigits(digits) {
     await update();
     scheduleSyncHeights();
     window.addEventListener('resize', scheduleSyncHeights);
+    
+    // Initialize time filter to disable past times
+    if (typeof window.initTimeFilter === 'function') {
+      const root = getRoot();
+      if (root) {
+        setTimeout(() => window.initTimeFilter(root), 200);
+      }
+    }
   }
 
   // Expose for dynamic loader
