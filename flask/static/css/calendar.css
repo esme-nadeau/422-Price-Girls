@@ -68,7 +68,8 @@
   transition: background 0.1s ease;
 }
 .week-grid .cell:hover { background: #dbefdc; }
-.week-grid .cell.booked { background: #cfd4d1; cursor: not-allowed; position: relative; }
+.week-grid .cell.booked { background: #cfd4d1 !important; cursor: not-allowed; position: relative; }
+.week-grid .cell.past { background: #f5f5f5; cursor: not-allowed; opacity: 0.6; }
 .week-grid .cell.selected { outline: 2px solid #6FAD6F; outline-offset: -2px; }
 .week-grid .cell.in-range { background: #dcefe0; }
 

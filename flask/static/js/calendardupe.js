@@ -38,20 +38,6 @@ function getRoot() {
   }
   function idxToMinutes(idx){ return (START_HOUR*60) + (idx*30); }
   function labelForIdx(idx){ return minutesToLabel(idxToMinutes(idx)); }
-  
-  // Check if a cell (date + time index) is in the past
-  function isCellInPast(dateISO, idx){
-    const now = new Date();
-    const cellDate = parseISODate(dateISO);
-    const cellMinutes = idxToMinutes(idx);
-    
-    // Set the cell's date and time
-    const cellDateTime = new Date(cellDate);
-    cellDateTime.setHours(Math.floor(cellMinutes / 60), cellMinutes % 60, 0, 0);
-    
-    // Compare with current time
-    return cellDateTime < now;
-  }
 
   function computeWeekStart(date){
     // Get Monday for given date
@@ -104,15 +90,7 @@ function getRoot() {
         cell.dataset.date = dateISO;
         cell.dataset.idx = idx;
         if(di>0) cell.classList.add('day-divider');
-        
-        // Mark past cells as disabled
-        if(isCellInPast(dateISO, idx)){
-          cell.classList.add('past');
-          cell.style.cursor = 'not-allowed';
-        } else {
-          cell.addEventListener('click', onCellClick);
-        }
-        
+        cell.addEventListener('click', onCellClick);
         grid.appendChild(cell);
       }
     });
@@ -130,7 +108,6 @@ function getRoot() {
     dom('#calendarGrid').querySelectorAll('.cell').forEach(c=>{
       c.classList.remove('booked','selected','in-range');
       c.title = '';
-      // Note: 'past' class is not removed here as it's based on current time
     });
   }
 
@@ -195,40 +172,30 @@ function getRoot() {
   function onCellClick(e){
     const cell = e.currentTarget;
     if(cell.classList.contains('booked')) return;
-    if(cell.classList.contains('past')) return; // Prevent clicking on past times
     const dateISO = cell.dataset.date;
     const idx = Number(cell.dataset.idx);
 
-    // If extending selection, stop before a booked cell or past time
+    // If extending selection, stop before a booked cell
     const clampEnd = (start, end) => {
       const grid = dom('#calendarGrid');
       for(let i=start; i<end; i++){
         const c = grid.querySelector(`.cell[data-date="${dateISO}"][data-idx="${i}"]`);
-        if(c && (c.classList.contains('booked') || c.classList.contains('past'))) return i; // stop here
+        if(c && c.classList.contains('booked')) return i; // stop here
       }
       return end;
     };
 
     if(!state.selection){
-      // Only allow selection if the start time is not in the past
-      if(!isCellInPast(dateISO, idx)){
-        state.selection = { dateISO, startIdx: idx, endIdx: idx+1 };
-      }
+      state.selection = { dateISO, startIdx: idx, endIdx: idx+1 };
     } else if(state.selection.dateISO === dateISO) {
       if(idx < state.selection.startIdx){
-        // Only allow moving start earlier if it's not in the past
-        if(!isCellInPast(dateISO, idx)){
-          state.selection = { dateISO, startIdx: idx, endIdx: idx+1 };
-        }
+        state.selection = { dateISO, startIdx: idx, endIdx: idx+1 };
       } else {
         const desired = Math.max(idx+1, state.selection.startIdx+1);
         state.selection.endIdx = clampEnd(state.selection.startIdx+1, desired);
       }
     } else {
-      // Only allow selection if the start time is not in the past
-      if(!isCellInPast(dateISO, idx)){
-        state.selection = { dateISO, startIdx: idx, endIdx: idx+1 };
-      }
+      state.selection = { dateISO, startIdx: idx, endIdx: idx+1 };
     }
     applySelectionToGrid();
     syncSelectionToForm();
@@ -242,7 +209,7 @@ function getRoot() {
     const grid = dom('#calendarGrid');
     for(let i=startIdx;i<endIdx;i++){
       const c = grid.querySelector(`.cell[data-date="${dateISO}"][data-idx="${i}"]`);
-      if(c && !c.classList.contains('booked') && !c.classList.contains('past')){
+      if(c && !c.classList.contains('booked')){
         c.classList.add('in-range');
         if(i===startIdx) c.classList.add('selected');
       }
@@ -313,11 +280,9 @@ function getRoot() {
     const root = getRoot();
     const roomNameEl = root.querySelector('#roomDescriptionRoom');
     const roomTextEl = root.querySelector('#roomDescriptionText');
-    if (!roomTextEl) return; // Only require roomTextEl
+    if (!roomNameEl || !roomTextEl) return;
     
-    if (roomNameEl) {
-      roomNameEl.textContent = roomName || 'Select Room';
-    }
+    roomNameEl.textContent = roomName || 'Select Room';
     
     // Try to find room data by name or by extracted digits
     let roomData = null;
@@ -360,56 +325,32 @@ function getRoot() {
     }
 
     // Update photo display
-    // Always reveal the card
-    showRoomPhotoCard();
-
-    // Load a photo if digits exist
-    if (digits) {
-        setRoomPhotoByDigits(digits);
-    } else {
-        // No digits = still show card but no image
-        const img = getRoot().querySelector('#roomPhoto');
-        if (img) img.style.display = 'none';
-    }
+    if (digits) setRoomPhotoByDigits(digits);
   }
 
   // ==============================
   //   Room photo display helpers
   // ==============================
-function setRoomPhotoByDigits(digits) {
+  function setRoomPhotoByDigits(digits) {
     const img = getRoot().querySelector('#roomPhoto');
     if (!img || !digits) return;
-
     const url = `/static/room_images/${digits}.JPG`;
 
-    // Always show the card immediately
-    showRoomPhotoCard();
-
-    // Set image
     img.onload = () => {
-        img.onerror = null;
-        img.style.display = 'block';
+      img.onerror = null;
+      showRoomPhotoCard();
     };
     img.onerror = () => {
-        img.style.display = 'none'; // hides broken image
+      console.warn(`No photo found for room ${digits}`);
+      showRoomPhotoCard();
     };
 
     img.src = url;
-}
-
+  }
 
   function showRoomPhotoCard() {
-      const root = getRoot();
-      const card = root.querySelector('#roomDescCard');
-      if (card) {
-        card.style.display = 'block';
-      } else {
-        // Fallback: try document if root didn't find it
-        const fallbackCard = document.querySelector('#roomDescCard');
-        if (fallbackCard) {
-          fallbackCard.style.display = 'block';
-        }
-      }
+    const card = document.getElementById('roomPhotoCard');
+    if (card) card.style.display = 'block';
   }
 
   // Exposed helpers used by template
