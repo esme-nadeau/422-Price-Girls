@@ -1,0 +1,99 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
+
+<!-- All Bookings Content (admin/faculty view) -->
+<div id="allbookings-tab-content" class="mybookings-container allbookings-page">
+  <div class="container-fluid mt-2">
+    <div class="row g-3 align-items-start allbookings-layout">
+
+      <!-- LEFT: Side panel for viewing/editing a booking -->
+      <div class="col-12 col-lg-3">
+        <div class="card shadow-sm p-3 allbookings-panel" id="allBookingPanel">
+          <h5 class="fw-semibold mb-3">Booking Details</h5>
+          <form id="allBookingForm">
+            <input type="hidden" id="allBookingId" />
+
+            <div class="mb-3">
+              <label for="allBookingDate" class="form-label">Date</label>
+              <input type="date" class="form-control" id="allBookingDate">
+            </div>
+
+            <div class="mb-3">
+              <label for="allBookingRoomId" class="form-label">Room</label>
+              <select id="allBookingRoomId" class="form-select"></select>
+            </div>
+
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label for="allBookingStartTime" class="form-label">Start Time</label>
+                <select id="allBookingStartTime" class="form-select"></select>
+              </div>
+              <div class="col-6">
+                <label for="allBookingEndTime" class="form-label">End Time</label>
+                <select id="allBookingEndTime" class="form-select"></select>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="allBookingRepeat" class="form-label">Repeat</label>
+              <select id="allBookingRepeat" class="form-select">
+                <option value="Never">Never</option>
+                <option value="Weekly">Weekly</option>
+                <option value="Monthly">Monthly</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="allBookingEmail" class="form-label">Email</label>
+              <input type="email" class="form-control" id="allBookingEmail" placeholder="user@example.com">
+            </div>
+
+            <div class="mb-3">
+              <label for="allBookingPurpose" class="form-label">Purpose</label>
+              <input type="text" class="form-control" id="allBookingPurpose" placeholder="e.g. Study session">
+            </div>
+
+            <div class="d-flex gap-2 mt-3">
+              <button type="button" class="btn btn-danger flex-grow-1" id="allDeleteBookingBtn">Delete</button>
+              <button type="button" class="btn btn-green flex-grow-1" id="allSaveBookingBtn">Save</button>
+            </div>
+
+            <p class="small text-muted mt-2 mb-0" id="allBookingHint">Select a booking in the calendar to view or edit details.</p>
+          </form>
+        </div>
+      </div>
+
+      <!-- RIGHT: Week calendar -->
+      <div class="col-12 col-lg-9">
+        <div class="card shadow-sm p-3" id="allWeekCalendarCard">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center gap-2">
+              <button class="btn btn-outline-secondary btn-sm" id="allPrevWeek" aria-label="Previous week">
+                <i class="bi bi-chevron-left"></i>
+              </button>
+              <div class="input-group input-group-sm" style="width: 240px;">
+                <span class="input-group-text">Week of</span>
+                <input type="date" class="form-control" id="allWeekPicker" />
+              </div>
+              <button class="btn btn-outline-secondary btn-sm" id="allNextWeek" aria-label="Next week">
+                <i class="bi bi-chevron-right"></i>
+              </button>
+              <button class="btn btn-outline-success btn-sm" id="allTodayWeek" aria-label="Jump to current week">
+                Today
+              </button>
+            </div>
+            <div class="text-end small text-muted">
+              <div><strong>All Room Bookings</strong></div>
+              <div id="allCalendarSummary"></div>
+            </div>
+          </div>
+
+          <div id="allCalendarGrid" class="week-grid"></div>
+          <div class="allbookings-instruction alert alert-info mt-2 py-1 px-2">
+            <strong>Tip:</strong> Each gray cell with a label has a booking. Click a cell to view or edit its booking.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

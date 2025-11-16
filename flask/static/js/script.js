@@ -51,7 +51,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const tabMap = {
         'nav-map-tab': { target: 'nav-map', url: '/map', init: window.initMap },
         'nav-calendar-tab': { target: 'nav-calendar', url: '/calendar', init: window.initCalendar },
-        'nav-bookings-tab': { target: 'nav-bookings', url: '/mybookings', init: window.initBookings }
+        'nav-bookings-tab': { target: 'nav-bookings', url: '/mybookings', init: window.initBookings },
+        'nav-allbookings-tab': { target: 'nav-allbookings', url: '/allbookings', init: window.initAllBookings }
     };
 
     Object.keys(tabMap).forEach(tabId => {

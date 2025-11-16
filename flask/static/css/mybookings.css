@@ -9,6 +9,76 @@
   border-radius: 16px;
 }
 
+/* ==============================
+   All Bookings layout (calendar + side panel)
+   ============================== */
+/* Remove tab padding so the calendar can use full width */
+#nav-allbookings {
+  padding: 0 !important;
+}
+
+/* Override My Bookings container styles when used for All Bookings */
+.allbookings-page.mybookings-container {
+  padding: 0;
+  border-radius: 0;
+  background-color: #f9f9f9;
+}
+
+.allbookings-page .container-fluid {
+  padding: 0 1rem 1rem 1rem;
+}
+
+/* Layout: side panel + calendar */
+.allbookings-layout {
+  margin: 0;
+}
+
+.allbookings-page .card {
+  max-width: none;
+  width: 100%;
+}
+
+/* Side panel styling */
+.allbookings-panel {
+  height: calc(100vh - 180px);
+  display: flex;
+  flex-direction: column;
+}
+
+.allbookings-panel form {
+  flex: 1 1 auto;
+}
+
+/* Calendar card fills remaining height */
+#allWeekCalendarCard {
+  width: 100%;
+  max-width: none; /* override map.css .card max-width */
+  height: calc(100vh - 180px); /* account for header + tabs + footer */
+  display: flex;
+  flex-direction: column;
+  margin: 0; /* no auto-centering */
+}
+
+#allCalendarGrid.week-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Highlighted instruction below All Bookings calendar */
+.allbookings-instruction {
+  font-size: 0.85rem;
+  border-radius: 8px;
+  background-color: #e6f4ea;
+  border: 1px solid #6FAD6F;
+  color: #335533;
+}
+
+/* Let the week grid expand to fill the card */
+#allCalendarGrid.week-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 /* Headings and labels */
 .mybookings-container h4,
 .mybookings-container h5,

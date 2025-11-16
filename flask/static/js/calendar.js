@@ -286,12 +286,23 @@ function getRoot() {
     update();
   }
 
+  function jumpToTodayWeek(){
+    const now = new Date();
+    state.weekStart = computeWeekStart(now);
+    const picker = dom('#weekPicker');
+    if(picker) picker.value = toISODate(state.weekStart);
+    state.selection = null;
+    update();
+  }
+
   function bindControls(){
     const prev = dom('#prevWeek');
     const next = dom('#nextWeek');
+    const todayBtn = dom('#todayWeek');
     const picker = dom('#weekPicker');
     if(prev) prev.addEventListener('click', ()=>changeWeek(-7));
     if(next) next.addEventListener('click', ()=>changeWeek(7));
+    if(todayBtn) todayBtn.addEventListener('click', jumpToTodayWeek);
     if(picker){
       picker.addEventListener('change', ()=>{
         const d = parseISODate(picker.value);

@@ -147,6 +147,61 @@ def my_bookings():
         print(f"[mybookings] {error_message}")
     return render_template("mybookings.html", bookings=bookings, error_message=error_message)
 
+
+# All Bookings: admin/faculty view of current and upcoming bookings
+@app.route("/allbookings")
+def all_bookings():
+    error_message = None
+    bookings = []
+    try:
+        if db is None:
+            error_message = "Firestore is not initialized. Please check your service account and environment variables."
+            print(f"[allbookings] {error_message}")
+        else:
+            bookings_ref = db.collection("bookings")
+            docs = bookings_ref.stream()
+            today = datetime.utcnow().date()
+            for doc in docs:
+                data = doc.to_dict()
+                data["id"] = doc.id
+                # Parse date field (stored as YYYY-MM-DD string)
+                date_str = data.get("date")
+                parsed_date = None
+                if isinstance(date_str, str) and date_str:
+                    try:
+                        parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                    except ValueError:
+                        parsed_date = None
+                data["_parsed_date"] = parsed_date
+                bookings.append(data)
+
+            # Keep only current and future bookings with valid dates
+            current_bookings = [
+                b for b in bookings
+                if b.get("_parsed_date") is not None and b["_parsed_date"] >= today
+            ]
+
+            # Sort by date then start time
+            def sort_key(b):
+                d = b.get("_parsed_date") or today
+                time_range = b.get("timeRange", "") or ""
+                try:
+                    start_t, _ = parse_time_string(time_range)
+                except Exception:
+                    start_t = time(0, 0)
+                return (d, start_t)
+
+            current_bookings.sort(key=sort_key)
+            bookings = current_bookings
+
+            if not bookings:
+                error_message = "No current or upcoming bookings found in Firestore."
+                print(f"[allbookings] {error_message}")
+    except Exception as e:
+        error_message = f"Error loading all bookings: {e}"
+        print(f"[allbookings] {error_message}")
+    return render_template("allbookings.html", bookings=bookings, error_message=error_message)
+
 # ----------------------------
 # MyBookings DELETE endpoint (Esmé's addition)
 # ----------------------------

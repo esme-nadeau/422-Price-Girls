@@ -40,6 +40,8 @@
           type="button" role="tab" aria-controls="nav-calendar" aria-selected="false">Calendar</button>
         <button class="nav-link" id="nav-bookings-tab" data-bs-toggle="tab" data-bs-target="#nav-bookings"
           type="button" role="tab" aria-controls="nav-bookings" aria-selected="false">My Bookings</button>
+        <button class="nav-link" id="nav-allbookings-tab" data-bs-toggle="tab" data-bs-target="#nav-allbookings"
+          type="button" role="tab" aria-controls="nav-allbookings" aria-selected="false">All Bookings</button>
       </div>
     </nav>
 
@@ -49,6 +51,8 @@
       <div class="tab-pane fade p-3" id="nav-calendar" role="tabpanel" aria-labelledby="nav-calendar-tab">
       </div>
       <div class="tab-pane fade p-3" id="nav-bookings" role="tabpanel" aria-labelledby="nav-bookings-tab">
+      </div>
+      <div class="tab-pane fade p-3" id="nav-allbookings" role="tabpanel" aria-labelledby="nav-allbookings-tab">
       </div>
     </div>
   </main>
@@ -72,6 +76,7 @@
   <script src="{{ url_for('static', filename='js/repeat.js') }}"></script>
   <script src="{{ url_for('static', filename='js/map.js') }}"></script>
   <script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/allbookings.js') }}"></script>
   <script src="{{ url_for('static', filename='js/bookings.js') }}"></script>
 
   <!-- Dynamically load mybookings.js only when tab is shown -->
