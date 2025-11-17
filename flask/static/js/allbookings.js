@@ -4,7 +4,8 @@
 (function(){
   const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday"]; // Mon-Fri
   const START_HOUR = 8; // 8 AM
-  const END_HOUR = 20;  // 8 PM end boundary (last slot starts 7:30 PM)
+  const END_HOUR = 20;  // 8 PM end boundary (last slot ends 8:00 PM)
+  const SLOT_COUNT = 24; // 24 half-hour slots from 8:00–7:30
 
   let state = {
     weekStart: null, // Date object for Monday of visible week
@@ -38,8 +39,9 @@
   }
 
   function buildTimeIndexes(){
-    // 8:00 -> 19:30 inclusive = 24 half-hours
-    return Array.from({length: 24}, (_,i)=>i);
+    // We want labels from 8:00 AM through 8:00 PM.
+    // There are 24 bookable half-hour slots (8:00–7:30), plus a final 8:00 PM label row.
+    return Array.from({length: SLOT_COUNT + 1}, (_,i)=>i); // 0..24
   }
 
   function dom(sel, root){ return (root || document).querySelector(sel); }
@@ -164,7 +166,7 @@
       const sMin = toMinutes(s);
       const eMin = toMinutes(e);
       const sIdx = Math.max(0, Math.floor((sMin - startMin)/30));
-      const eIdx = Math.min(24, Math.ceil((eMin - startMin)/30));
+      const eIdx = Math.min(SLOT_COUNT, Math.ceil((eMin - startMin)/30));
 
       // Remember span indexes so we can only label the first slot per booking
       b._sIdx = sIdx;
@@ -315,6 +317,8 @@
     const slots = [];
     for(let h = START_HOUR; h <= END_HOUR; h++){
       for(let m = 0; m < 60; m += 30){
+        // Skip 8:30 PM so the latest selectable time is exactly 8:00 PM
+        if (h === END_HOUR && m === 30) continue;
         let hour = h > 12 ? h - 12 : h;
         const ampm = h < 12 ? 'AM' : 'PM';
         const mm = m === 0 ? '00' : '30';

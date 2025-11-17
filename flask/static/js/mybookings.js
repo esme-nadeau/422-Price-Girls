@@ -72,6 +72,8 @@ function setBookingFormEditable(editable) {
         const slots = [];
         for (let h = 8; h <= 20; h++) {
           for (let m = 0; m < 60; m += 30) {
+            // Skip 8:30 PM so the latest selectable time is exactly 8:00 PM
+            if (h === 20 && m === 30) continue;
             let hour = h > 12 ? h - 12 : h;
             let ampm = h < 12 ? 'AM' : 'PM';
             let min = m === 0 ? '00' : '30';

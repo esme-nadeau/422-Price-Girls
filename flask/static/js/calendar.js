@@ -7,7 +7,8 @@ function getRoot() {
 (function(){
   const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday"]; // Mon-Fri to match mock
   const START_HOUR = 8; // 8 AM
-  const END_HOUR = 20;  // 8 PM end boundary (last slot starts 7:30 PM)
+  const END_HOUR = 20;  // 8 PM end boundary (last slot ends 8:00 PM)
+  const SLOT_COUNT = 24; // 24 half-hour slots from 8:00–7:30
 
   let state = {
     room: null,
@@ -64,8 +65,9 @@ function getRoot() {
   }
 
   function buildTimeIndexes(){
-    // 8:00 -> 19:30 inclusive = 24 half-hours
-    return Array.from({length: 24}, (_,i)=>i);
+    // We want labels from 8:00 AM through 8:00 PM.
+    // There are 24 bookable half-hour slots (8:00–7:30), plus a final 8:00 PM label row.
+    return Array.from({length: SLOT_COUNT + 1}, (_,i)=>i); // 0..24
   }
 
   function dom(sel, root=document){ return root.querySelector(sel); }
@@ -92,6 +94,7 @@ function getRoot() {
 
     // Rows
     const timeIdxs = buildTimeIndexes();
+    const lastIdx = timeIdxs.length - 1; // terminal 8:00 PM label row
     timeIdxs.forEach(idx => {
       // time label column
       const label = createEl('div','time-label', labelForIdx(idx));
@@ -105,8 +108,11 @@ function getRoot() {
         cell.dataset.idx = idx;
         if(di>0) cell.classList.add('day-divider');
         
-        // Mark past cells as disabled
-        if(isCellInPast(dateISO, idx)){
+        // The last index is a label-only row at 8:00 PM; make it non-interactive
+        if(idx === lastIdx){
+          cell.classList.add('past');
+          cell.style.cursor = 'default';
+        } else if(isCellInPast(dateISO, idx)){
           cell.classList.add('past');
           cell.style.cursor = 'not-allowed';
         } else {
@@ -165,7 +171,7 @@ function getRoot() {
         const sMin = toMinutes(s);
         const eMin = toMinutes(e);
         const sIdx = Math.max(0, Math.floor((sMin - startMin)/30));
-        const eIdx = Math.min(24, Math.ceil((eMin - startMin)/30));
+        const eIdx = Math.min(SLOT_COUNT, Math.ceil((eMin - startMin)/30));
 
         // Mark underlying cells as booked for interaction/hover
         for(let i=sIdx;i<eIdx;i++){

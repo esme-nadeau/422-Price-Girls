@@ -584,7 +584,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Enforce: end >= start + 30 minutes; also clamp to available range (8:00–20:00)
 (function(){
   const START_MIN = 8 * 60;     // 8:00 AM
-  const END_MIN = 19 * 60;      // 6:30 PM (last valid end)
+  const END_MIN = 20 * 60;      // 8:00 PM boundary (last valid end)
   const STEP = 30;              // minutes
 
   // function labelToMinutes(label){
