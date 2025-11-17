@@ -64,8 +64,10 @@ function getRoot() {
   }
 
   function buildTimeIndexes(){
-    // 8:00 -> 19:30 inclusive = 24 half-hours
-    return Array.from({length: 24}, (_,i)=>i);
+    // Build half-hour indexes from START_HOUR up to (but not including) END_HOUR as end time.
+    // Example: START_HOUR=8, END_HOUR=19 -> (19-8)*2 = 22 slots, last start = 18:30
+    const slots = (END_HOUR - START_HOUR) * 2;
+    return Array.from({length: slots}, (_,i)=>i);
   }
 
   function dom(sel, root=document){ return root.querySelector(sel); }
@@ -162,10 +164,10 @@ function getRoot() {
         if(di < 0 || di > 6) return; // only this week
         const [s,e] = (b.timeRange||'').split(' - ').map(s => s.trim());
         if(!s || !e) return;
-        const sMin = toMinutes(s);
-        const eMin = toMinutes(e);
-        const sIdx = Math.max(0, Math.floor((sMin - startMin)/30));
-        const eIdx = Math.min(24, Math.ceil((eMin - startMin)/30));
+  const sMin = toMinutes(s);
+  const eMin = toMinutes(e);
+  const sIdx = Math.max(0, Math.floor((sMin - startMin)/30));
+  const eIdx = Math.min((END_HOUR - START_HOUR) * 2, Math.ceil((eMin - startMin)/30));
 
         // Mark underlying cells as booked for interaction/hover
         for(let i=sIdx;i<eIdx;i++){
@@ -439,7 +441,7 @@ function setRoomPhotoByDigits(digits) {
   // Calendar-scoped setters so we don't override Map behavior
   // Enforce: end >= start + 30 minutes; also clamp to available range (8:00–20:00)
   const CAL_START_MIN = START_HOUR * 60;     // 8:00 AM (matches START_HOUR)
-  const CAL_END_MIN = END_HOUR * 60;        // 8:00 PM (20:00) - last valid end for calendar
+  const CAL_END_MIN = END_HOUR * 60;        // 7:00 PM (19:00) - last valid end for calendar
   const CAL_STEP = 30;                       // minutes
 
   function clampToBounds(min){
@@ -459,10 +461,10 @@ function setRoomPhotoByDigits(digits) {
     let startMin = toMinutes(label);
     if(startMin == null) return;
 
-    // If start is too late to allow 30 min, back it up to last valid (19:30)
+    // If start is too late to allow 30 min, back it up to last valid (18:30 / 6:30 PM)
     const minEnd = startMin + CAL_STEP;
     if(minEnd > CAL_END_MIN){
-      startMin = CAL_END_MIN - CAL_STEP; // 19:30
+      startMin = CAL_END_MIN - CAL_STEP; // 18:30
       const adjustedLabel = minutesToLabel(startMin);
       startEl.textContent = adjustedLabel;
       startMin = toMinutes(adjustedLabel);
@@ -502,7 +504,7 @@ function setRoomPhotoByDigits(digits) {
 
     // If start too late to allow 30 mins, back it up
     if(startMin + CAL_STEP > CAL_END_MIN){
-      startMin = CAL_END_MIN - CAL_STEP; // 19:30
+      startMin = CAL_END_MIN - CAL_STEP; // 18:30
       if(startEl) startEl.textContent = minutesToLabel(startMin);
     }
 

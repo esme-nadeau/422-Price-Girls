@@ -581,10 +581,10 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Functions to sync start and end times between left and right sections
-// Enforce: end >= start + 30 minutes; also clamp to available range (8:00–20:00)
+// Enforce: end >= start + 30 minutes; also clamp to available range (8:00–19:00)
 (function(){
   const START_MIN = 8 * 60;     // 8:00 AM
-  const END_MIN = 19 * 60;      // 6:30 PM (last valid end)
+  const END_MIN = 19 * 60;      // 7:00 PM (19:00) - last valid end
   const STEP = 30;              // minutes
 
   // function labelToMinutes(label){
@@ -631,10 +631,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let startMin = labelToMinutes(time);
     if(startMin == null) return;
 
-    // If start is too late to allow 30 min, back it up to last valid (19:30)
+    // If start is too late to allow 30 min, back it up to last valid (18:30 / 6:30 PM)
     const minEnd = startMin + STEP;
     if(minEnd > END_MIN){
-      startMin = END_MIN - STEP; // 19:30
+      startMin = END_MIN - STEP; // 18:30
       setStartLabel(minutesToLabel(startMin));
     }
 
@@ -660,7 +660,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // If start too late to allow 30 mins, back it up
     if(startMin + STEP > END_MIN){
-      startMin = END_MIN - STEP; // 19:30
+      startMin = END_MIN - STEP; // 18:30
       setStartLabel(minutesToLabel(startMin));
     }
 

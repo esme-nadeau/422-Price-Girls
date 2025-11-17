@@ -11,7 +11,7 @@
   display: grid;
   grid-template-columns: 90px repeat(5, 1fr); /* time column + Mon-Fri */
   /* header row + 24 half-hour rows */
-  grid-template-rows: 48px repeat(24, 40px);
+  grid-template-rows: 48px repeat(22, 40px);
   /* Ensure any implicit tracks created by events stay consistent */
   grid-auto-rows: 40px;
   grid-auto-columns: 1fr;

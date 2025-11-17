@@ -68,9 +68,9 @@ function setBookingFormEditable(editable) {
         // Create two dropdowns for start and end time
         const wrapper = document.createElement('div');
         wrapper.className = 'd-flex gap-2';
-        // Generate time slots from 8:00 AM to 8:00 PM
+        // Generate time slots from 8:00 AM to 6:30 PM (last start at 6:30 PM)
         const slots = [];
-        for (let h = 8; h <= 20; h++) {
+        for (let h = 8; h <= 18; h++) {
           for (let m = 0; m < 60; m += 30) {
             let hour = h > 12 ? h - 12 : h;
             let ampm = h < 12 ? 'AM' : 'PM';

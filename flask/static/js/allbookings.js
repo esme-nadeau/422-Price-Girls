@@ -4,7 +4,7 @@
 (function(){
   const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday"]; // Mon-Fri
   const START_HOUR = 8; // 8 AM
-  const END_HOUR = 20;  // 8 PM end boundary (last slot starts 7:30 PM)
+  const END_HOUR = 19;  // 7 PM end boundary (last slot starts 6:30 PM)
 
   let state = {
     weekStart: null, // Date object for Monday of visible week
@@ -38,8 +38,9 @@
   }
 
   function buildTimeIndexes(){
-    // 8:00 -> 19:30 inclusive = 24 half-hours
-    return Array.from({length: 24}, (_,i)=>i);
+    // Build half-hour indexes dynamically from START_HOUR to END_HOUR
+    const slots = (END_HOUR - START_HOUR) * 2; // e.g., 8->19 gives 22 slots (last start 18:30)
+    return Array.from({length: slots}, (_,i)=>i);
   }
 
   function dom(sel, root){ return (root || document).querySelector(sel); }
@@ -161,10 +162,10 @@
       const [s,e] = range.split(' - ').map(s => s.trim());
       if(!s || !e) return;
 
-      const sMin = toMinutes(s);
-      const eMin = toMinutes(e);
-      const sIdx = Math.max(0, Math.floor((sMin - startMin)/30));
-      const eIdx = Math.min(24, Math.ceil((eMin - startMin)/30));
+    const sMin = toMinutes(s);
+    const eMin = toMinutes(e);
+    const sIdx = Math.max(0, Math.floor((sMin - startMin)/30));
+    const eIdx = Math.min((END_HOUR - START_HOUR) * 2, Math.ceil((eMin - startMin)/30));
 
       // Remember span indexes so we can only label the first slot per booking
       b._sIdx = sIdx;
