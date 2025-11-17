@@ -7,7 +7,7 @@ function getRoot() {
 (function(){
   const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday"]; // Mon-Fri to match mock
   const START_HOUR = 8; // 8 AM
-  const END_HOUR = 20;  // 8 PM end boundary (last slot starts 7:30 PM)
+  const END_HOUR = 19;  // 7 PM end boundary (last slot starts 6:30 PM)
 
   let state = {
     room: null,
