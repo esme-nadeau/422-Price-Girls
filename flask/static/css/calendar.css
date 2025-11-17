@@ -71,6 +71,9 @@
 }
 .week-grid .cell:hover { background: #dbefdc; }
 .week-grid .cell.booked { background: #cfd4d1 !important; cursor: not-allowed; position: relative; }
+.week-grid .cell.booked.overlap-2 { background: #bfc4c1 !important; }
+.week-grid .cell.booked.overlap-3 { background: #afb4b1 !important; }
+.week-grid .cell.booked.overlap-4 { background: #9fa4a1 !important; }
 .week-grid .cell.past { background: #f5f5f5; cursor: not-allowed; opacity: 0.6; }
 
 /* All Bookings tab: booked cells are editable (show pencil cursor) */
@@ -91,21 +94,37 @@
 /* Nice vertical day separators */
 .week-grid .day-divider { border-left: 2px solid #e5e7eb; }
 
-/* Booking purpose label inside booked cells */
-.week-grid .booked-label {
+/* Booking purpose labels inside booked cells */
+.week-grid .booked-label-list {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 0.8rem;
+  inset: 2px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.week-grid .booked-label {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  font-size: 0.75rem;
   font-weight: 600;
-  color: #666;
-  text-align: center;
+  color: #555;
+  text-align: left;
   pointer-events: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 90%;
+  max-width: 100%;
+}
+
+.week-grid .booked-label-more {
+  font-weight: 500;
+  font-style: italic;
 }
 
 /* ==============================

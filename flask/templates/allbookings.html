@@ -9,6 +9,7 @@
       <div class="col-12 col-lg-3">
         <div class="card shadow-sm p-3 allbookings-panel" id="allBookingPanel">
           <h5 class="fw-semibold mb-3">Booking Details</h5>
+
           <form id="allBookingForm">
             <input type="hidden" id="allBookingId" />
 
@@ -94,6 +95,25 @@
         </div>
       </div>
 
+    </div>
+  </div>
+</div>
+
+<!-- Modal chooser for multiple bookings in the same time slot -->
+<div class="modal fade" id="allBookingsChooserModal" tabindex="-1" aria-labelledby="allBookingsChooserLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="allBookingsChooserLabel">Multiple bookings in this time slot</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2">Select a booking below to view or edit its details.</p>
+        <div id="allBookingsChooserList" class="list-group list-group-flush small"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
     </div>
   </div>
 </div>

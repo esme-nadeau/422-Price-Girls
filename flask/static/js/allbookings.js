@@ -110,9 +110,9 @@
     const grid = root.querySelector('#allCalendarGrid');
     if(!grid) return;
     grid.querySelectorAll('.cell').forEach(c=>{
-      c.classList.remove('booked');
+      c.classList.remove('booked','overlap-2','overlap-3','overlap-4');
       c.title = '';
-      const labels = c.querySelectorAll('.booked-label');
+      const labels = c.querySelectorAll('.booked-label, .booked-label-list');
       labels.forEach(l => l.remove());
     });
     cellBookingLookup = {};
@@ -183,11 +183,21 @@
     });
 
     // Build labels and tooltips per cell.
-    // Only show room+purpose text in the first 30-minute slot of each booking.
+    // Show one line per room for bookings that start in this slot.
+    const MAX_LINES = 3;
+
     Object.keys(lookup).forEach(key => {
       const cell = cellMap[key];
       if(!cell) return;
       const bookings = lookup[key];
+
+      // Darker background for heavier overlaps
+      const count = bookings.length;
+      cell.classList.remove('overlap-2','overlap-3','overlap-4');
+      if(count >= 2){
+        const level = Math.min(count, 4); // 2,3,4+
+        cell.classList.add(`overlap-${level}`);
+      }
 
       // Extract time index from key (YYYY-MM-DD-idx)
       const parts = key.split('-');
@@ -196,13 +206,32 @@
       // Bookings whose first slot is this cell
       const starters = bookings.filter(b => typeof b._sIdx === 'number' && b._sIdx === idx);
       if(starters.length){
-        const primary = starters[0];
-        const room = primary.roomId || primary.roomName || 'Room';
-        const purpose = primary.purpose || 'Booked';
+        // Sort by room so multi-room slots are organized
+        const startersSorted = [...starters].sort((a,b) => {
+          const ar = (a.roomName || a.roomId || '').toString();
+          const br = (b.roomName || b.roomId || '').toString();
+          return ar.localeCompare(br, undefined, {numeric:true, sensitivity:'base'});
+        });
 
-        const label = createEl('div','booked-label');
-        label.textContent = `${room}: ${purpose}`;
-        cell.appendChild(label);
+        const wrapper = createEl('div','booked-label-list');
+
+        if(startersSorted.length === 1){
+          // Single booking starting in this slot: show room + purpose
+          const b = startersSorted[0];
+          const room = b.roomId || b.roomName || 'Room';
+          const purpose = b.purpose || 'Booked';
+          const line = createEl('div','booked-label');
+          line.textContent = `${room}: ${purpose}`;
+          wrapper.appendChild(line);
+        } else {
+          // Multiple bookings starting here: show a concise message
+          const count = startersSorted.length;
+          const line = createEl('div','booked-label');
+          line.textContent = `${count} bookings – click to choose`;
+          wrapper.appendChild(line);
+        }
+
+        cell.appendChild(wrapper);
       }
 
       // Tooltip always lists all bookings for this cell
@@ -269,7 +298,57 @@
     if(hint)         hint.textContent = 'Select a booking in the calendar to view or edit details.';
   }
 
-  // Click handler for cells (opens side panel on primary booking or clears panel)
+  // Modal-based chooser for multi-booking cells
+  function openMultiBookingModal(bookings){
+    // Ensure modal is a direct child of <body> so it appears above the backdrop
+    let modalEl = document.getElementById('allBookingsChooserModal');
+    if(!modalEl) return;
+    if(modalEl.parentElement !== document.body){
+      document.body.appendChild(modalEl);
+    }
+
+    const list = modalEl.querySelector('#allBookingsChooserList');
+    if(!list) return;
+
+    list.innerHTML = '';
+
+    bookings.forEach(b => {
+      const room = b.roomId || b.roomName || 'Room';
+      const purpose = b.purpose || 'Booked';
+      const rng = b.timeRange || '';
+      const labelText = `${room}: ${purpose}${rng ? ' ('+rng+')' : ''}`;
+
+      const item = createEl('button','list-group-item list-group-item-action');
+      item.type = 'button';
+      item.textContent = labelText;
+      item.addEventListener('click', () => {
+        openBookingPanel(b);
+        if(window.bootstrap && bootstrap.Modal){
+          const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+          modalInstance.hide();
+        } else {
+          // Basic hide fallback if Bootstrap JS is unavailable
+          modalEl.classList.remove('show');
+          modalEl.style.display = 'none';
+          modalEl.setAttribute('aria-hidden','true');
+        }
+      });
+      list.appendChild(item);
+    });
+
+    // Show the modal using Bootstrap if available
+    if(window.bootstrap && bootstrap.Modal){
+      const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+      modalInstance.show();
+    } else {
+      // Fallback: open the first booking directly if we can't show a proper modal
+      if(bookings.length === 1){
+        openBookingPanel(bookings[0]);
+      }
+    }
+  }
+
+  // Click handler for cells (opens booking or chooser)
   function bindCellClickHandler(){
     const root = getRoot();
     const grid = root.querySelector('#allCalendarGrid');
@@ -281,17 +360,23 @@
       const cell = e.target.closest('.cell');
       if(!cell) return;
 
-      // Empty cell: clear panel
-      if(!cell.classList.contains('booked')){
+      const key = `${cell.dataset.date}-${cell.dataset.idx}`;
+      const bookings = cellBookingLookup[key];
+
+      // Empty cell or no bookings: clear panel
+      if(!cell.classList.contains('booked') || !bookings || !bookings.length){
         clearBookingPanel();
         return;
       }
 
-      // Booked cell: open first booking for that slot
-      const key = `${cell.dataset.date}-${cell.dataset.idx}`;
-      const bookings = cellBookingLookup[key];
-      if(!bookings || !bookings.length) return;
-      openBookingPanel(bookings[0]);
+      // Single booking: open directly in side panel
+      if(bookings.length === 1){
+        openBookingPanel(bookings[0]);
+        return;
+      }
+
+      // Multiple bookings: open modal chooser
+      openMultiBookingModal(bookings);
     });
   }
 
