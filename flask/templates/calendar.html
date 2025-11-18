@@ -35,7 +35,7 @@
                 8:00 AM
               </button>
               <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
-                {% for h in range(8, 21) %}
+                {% for h in range(8, 19) %}
                   <li>
                     <a class="dropdown-item" href="#" onclick="calendar_updateStartTime('{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}')">
                       {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
@@ -62,7 +62,7 @@
                 8:30 AM
               </button>
               <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
-                {% for h in range(8, 21) %}
+                {% for h in range(8, 19) %}
                   <li>
                     <a class="dropdown-item" href="#" onclick="calendar_updateEndTime('{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}')">
                       {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}

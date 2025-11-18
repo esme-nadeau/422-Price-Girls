@@ -45,7 +45,7 @@ async function loadTabContent(targetId, url, initFunction = null) {
 
 document.addEventListener("DOMContentLoaded", () => {
     // Load the default tab (Map) immediately after DOM ready
-    loadTabContent('nav-map', '/map', window.initMap);
+    loadTabContent('nav-allbookings', '/allbookings', window.initAllBookings);
 
     // Set up event listeners for tab clicks
     const tabMap = {

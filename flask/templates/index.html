@@ -34,26 +34,36 @@
   <main>
     <nav>
       <div class="nav nav-tabs" id="nav-tab" role="tablist">
-        <button class="nav-link active" id="nav-map-tab" data-bs-toggle="tab" data-bs-target="#nav-map"
-          type="button" role="tab" aria-controls="nav-map" aria-selected="true">Map</button>
+
+        <!-- moved to first position AND stays active -->
+        <button class="nav-link active" id="nav-allbookings-tab" data-bs-toggle="tab"
+          data-bs-target="#nav-allbookings" type="button" role="tab"
+          aria-controls="nav-allbookings" aria-selected="true">All Bookings</button>
+
+        <button class="nav-link" id="nav-map-tab" data-bs-toggle="tab" data-bs-target="#nav-map"
+          type="button" role="tab" aria-controls="nav-map" aria-selected="false">Map</button>
+
         <button class="nav-link" id="nav-calendar-tab" data-bs-toggle="tab" data-bs-target="#nav-calendar"
           type="button" role="tab" aria-controls="nav-calendar" aria-selected="false">Calendar</button>
+
         <button class="nav-link" id="nav-bookings-tab" data-bs-toggle="tab" data-bs-target="#nav-bookings"
           type="button" role="tab" aria-controls="nav-bookings" aria-selected="false">My Bookings</button>
-        <button class="nav-link" id="nav-allbookings-tab" data-bs-toggle="tab" data-bs-target="#nav-allbookings"
-          type="button" role="tab" aria-controls="nav-allbookings" aria-selected="false">All Bookings</button>
+
       </div>
     </nav>
 
     <div class="tab-content" id="nav-tabContent">
-      <div class="tab-pane fade show active p-3" id="nav-map" role="tabpanel" aria-labelledby="nav-map-tab">
-      </div>
-      <div class="tab-pane fade p-3" id="nav-calendar" role="tabpanel" aria-labelledby="nav-calendar-tab">
-      </div>
-      <div class="tab-pane fade p-3" id="nav-bookings" role="tabpanel" aria-labelledby="nav-bookings-tab">
-      </div>
-      <div class="tab-pane fade p-3" id="nav-allbookings" role="tabpanel" aria-labelledby="nav-allbookings-tab">
-      </div>
+
+      <!-- moved to first position AND stays active -->
+      <div class="tab-pane fade show active p-3" id="nav-allbookings" role="tabpanel"
+        aria-labelledby="nav-allbookings-tab"></div>
+
+      <div class="tab-pane fade p-3" id="nav-map" role="tabpanel" aria-labelledby="nav-map-tab"></div>
+
+      <div class="tab-pane fade p-3" id="nav-calendar" role="tabpanel" aria-labelledby="nav-calendar-tab"></div>
+
+      <div class="tab-pane fade p-3" id="nav-bookings" role="tabpanel" aria-labelledby="nav-bookings-tab"></div>
+
     </div>
   </main>
 
@@ -86,7 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const bookingsContent = document.getElementById('nav-bookings');
 
   bookingsTab.addEventListener('shown.bs.tab', async () => {
-    console.log("📥 My Bookings tab opened");
+    console.log("My Bookings tab opened");
 
     if (!bookingsContent.dataset.loaded) {
       try {
@@ -94,14 +104,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const html = await response.text();
         bookingsContent.innerHTML = html;
         bookingsContent.dataset.loaded = "true";
-        console.log("✅ My Bookings HTML loaded");
+        console.log("My Bookings HTML loaded");
 
         const script = document.createElement('script');
         script.src = "{{ url_for('static', filename='js/mybookings.js') }}";
         script.dataset.loaded = "mybookings";
         document.body.appendChild(script);
       } catch (err) {
-        console.error("❌ Failed to load My Bookings:", err);
+        console.error("Failed to load My Bookings:", err);
       }
     }
   });
