@@ -68,6 +68,8 @@ window.initBookingButton = function(containerId) {
             const endTime = endTimeEl ? endTimeEl.textContent.trim() : '';
             const timeRange = `${startTime} - ${endTime}`;
             const repeat = repeatEl ? repeatEl.textContent.trim() : '';
+            const nameEl = getElement('name');
+            const name = nameEl ? nameEl.value.trim() : '';
             const email = emailEl ? emailEl.value.trim() : '';
             const purpose = purposeEl ? purposeEl.value.trim() : '';
             
@@ -225,6 +227,7 @@ window.initBookingButton = function(containerId) {
                 date: date,
                 timeRange: timeRange,
                 repeat: repeat,
+                name: name, // will be stored as userId on the server
                 email: email,
                 purpose: purpose
             };
