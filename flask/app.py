@@ -1,5 +1,6 @@
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 
 import os
 import json
@@ -111,6 +112,11 @@ def send_html_email(to_email: str, subject: str, html: str, text_fallback: str =
 # ----------------------------
 # UI routes
 # ----------------------------
+@app.route("/login", methods=["GET"])
+def login_page():
+    # If you want to redirect logged-in users away from the login page later, you can check session here.
+    return render_template("login.html")
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -491,6 +497,66 @@ def preview_email():
         "current_year": "2025",
     }
     return render_template('booking_confirmation_email.html', **sample)
+
+# ----------------------------
+# Add User (Call this when admin adds a new user or a new user signs up)
+# ----------------------------
+
+def add_user(email: str, name: str, role: str = "student"):
+    """
+    Create or update a user in Firestore under users/{email}
+
+    Args:
+        email (str): The user's email (used as document ID)
+        name (str): Full name of the user
+        role (str): "student", "faculty", or "admin"
+    """
+
+    # Validate role
+    role = role.lower()
+    valid_roles = {"student", "faculty", "admin"}
+    if role not in valid_roles:
+        raise ValueError(f"Invalid role '{role}'. Must be one of {valid_roles}")
+
+    # Ensure Firestore client is initialized
+    if db is None:
+        raise RuntimeError("Firestore DB is not initialized.")
+
+    # Write to Firestore
+    doc_ref = db.collection("users").document(email)
+    user_data = {
+        "email": email,
+        "name": name,
+        "role": role,
+    }
+
+    doc_ref.set(user_data)
+
+    print(f"[users] Upserted user: {email} ({role})")
+    return True
+
+# ----------------------------
+# Flask route for Admin adding a user (Currently not in use)
+# ----------------------------
+
+
+@app.route("/api/add-user", methods=["POST"])
+def api_add_user():
+    data = request.json
+    if not data:
+        return {"ok": False, "error": "No JSON body"}, 400
+
+    required = ["email", "name", "role"]
+    if not all(k in data for k in required):
+        return {"ok": False, "error": "Missing fields"}, 400
+
+    try:
+        add_user(data["email"], data["name"], data["role"])
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}, 400
+
+
 
 # ----------------------------
 # Run app

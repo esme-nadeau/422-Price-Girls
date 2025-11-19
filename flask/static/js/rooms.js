@@ -1,6 +1,7 @@
 import { db } from "./firebase";
 // doc creates ref pointer, setdoc writes data to reference
 import { doc, setDoc } from "firebase/firestore";
+import { seedAllRooms } from "./rooms";
 
 // function definition to call
 export const createRoom = async (roomId) => {
@@ -18,7 +19,7 @@ export const createRoom = async (roomId) => {
             };
         }
     }
-
+    await seedAllRooms();
     // KEY LINE: creates collection=rooms reference, writes object to firestore
     await setDoc(doc(db, "rooms", roomId), {
         name: roomId,
