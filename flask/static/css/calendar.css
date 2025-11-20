@@ -2,10 +2,6 @@
 .calendar-page #weekCalendarCard { max-width: none !important; width: 100%; }
 .calendar-page .booking-widget { max-width: none; }
 
-/* Room description widget */
-.room-description-widget { border-radius: 12px; min-height: 120px; }
-.calendar-page .room-description-widget { max-width: none; width: 100%; }
-
 /* Week calendar grid styles */
 .week-grid {
   display: grid;
@@ -109,6 +105,10 @@
 /* ==============================
    Room Description Card
 ============================== */
+/* Room description widget */
+.room-description-widget { border-radius: 12px; min-height: 120px; }
+.calendar-page .room-description-widget { max-width: none; width: 100%; }
+
 #roomDescriptionText {
   columns: 2;
   column-gap: 1rem;
