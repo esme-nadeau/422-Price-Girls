@@ -7,7 +7,8 @@ import json
 import ssl
 import smtplib
 from email.message import EmailMessage
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
+import random
 
 from flask import Flask, render_template, jsonify, request
 from dotenv import load_dotenv
@@ -555,6 +556,254 @@ def api_add_user():
         return {"ok": True}
     except Exception as e:
         return {"ok": False, "error": str(e)}, 400
+
+
+@app.post("/auth/request-code")
+def auth_request_code():
+    payload = request.get_json(silent=True) or {}
+    raw_email = payload.get("email") or ""
+    email = raw_email.strip().lower()
+
+    if not email:
+        return jsonify({"error": "Email is required."}), 400
+    if not email.endswith("@uoregon.edu"):
+        return jsonify({"error": "Email must end with @uoregon.edu."}), 400
+    if db is None:
+        return jsonify({"error": "Firestore is not initialized."}), 500
+
+    code = f"{random.randint(0, 999999):06d}"
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
+
+    try:
+        doc_ref = db.collection("authCodes").document(email)
+        doc_ref.set(
+            {
+                "code": code,
+                "expiresAt": expires_at,
+                "createdAt": firestore.SERVER_TIMESTAMP,
+            }
+        )
+        print(f"Auth code generated for {email}")
+    except Exception as e:
+        return jsonify({"error": f"Failed to store auth code: {e}"}), 500
+
+    subject = "Your verification code"
+    html = (
+        f"<p>Your verification code is <strong>{code}</strong>.</p>"
+        "<p>This code expires in 10 minutes.</p>"
+    )
+    text_fallback = f"Your verification code is {code}. It expires in 10 minutes."
+
+    try:
+        send_html_email(email, subject, html, text_fallback=text_fallback)
+        print(f"Auth code email sent to {email}")
+    except Exception as e:
+        return jsonify({"error": f"Failed to send email: {e}"}), 500
+
+    return jsonify({"success": True})
+
+
+@app.post("/auth/verify-code")
+def auth_verify_code():
+    payload = request.get_json(silent=True) or {}
+    raw_email = payload.get("email") or ""
+    raw_code = payload.get("code") or ""
+    email = raw_email.strip().lower()
+    code = raw_code.strip()
+
+    if not email or not code:
+        return jsonify({"success": False, "error": "invalid_or_expired_code"}), 400
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+
+    doc_ref = db.collection("authCodes").document(email)
+    snap = doc_ref.get()
+    if not snap.exists:
+        return jsonify({"success": False, "error": "invalid_or_expired_code"}), 400
+
+    data = snap.to_dict() or {}
+    stored_code = (data.get("code") or "").strip()
+    expires_at = data.get("expiresAt")
+    expires_dt = None
+
+    if isinstance(expires_at, datetime):
+        expires_dt = expires_at
+    if expires_dt and getattr(expires_dt, "tzinfo", None):
+        expires_dt = expires_dt.replace(tzinfo=None)
+
+    now = datetime.utcnow()
+    if not (stored_code and stored_code == code and expires_dt and expires_dt > now):
+        return jsonify({"success": False, "error": "invalid_or_expired_code"}), 400
+
+    doc_ref.delete()
+    print(f"Code verified for {email}")
+
+    user_doc = db.collection("users").document(email)
+    user_snap = user_doc.get()
+    user_data = user_snap.to_dict() if user_snap.exists else None
+
+    if not user_data:
+        user_data = {"email": email, "name": "", "role": "student"}
+        user_doc.set(user_data)
+    else:
+        user_data.setdefault("name", "")
+        user_data.setdefault("role", "student")
+
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    ip = forwarded_for.split(",")[0].strip() if forwarded_for else (request.remote_addr or "unknown")
+    session_id = f"{ip}-{int(datetime.utcnow().timestamp() * 1000)}"
+
+    db.collection("sessions").document(session_id).set(
+        {
+            "email": email,
+            "role": user_data.get("role", "student"),
+            "name": user_data.get("name", ""),
+            "ip": ip,
+            "createdAt": firestore.SERVER_TIMESTAMP,
+        }
+    )
+    print(f"User session created for {email} with role {user_data.get('role', 'student')}")
+
+    response = jsonify(
+        {
+            "success": True,
+            "email": email,
+            "role": user_data.get("role", "student"),
+            "name": user_data.get("name", ""),
+            "sessionId": session_id,
+        }
+    )
+    response.set_cookie(
+        "sessionId",
+        session_id,
+        max_age=60 * 60 * 24 * 7,
+        secure=False,
+        httponly=False,
+        samesite="Lax",
+    )
+    return response
+
+
+@app.get("/auth/session")
+def auth_session_info():
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+
+    session_id = request.cookies.get("sessionId")
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    ip = forwarded_for.split(",")[0].strip() if forwarded_for else (request.remote_addr or "unknown")
+
+    session_data = None
+
+    if session_id:
+        snap = db.collection("sessions").document(session_id).get()
+        if snap.exists:
+            session_data = snap.to_dict()
+
+    if session_data is None:
+        try:
+            query = (
+                db.collection("sessions")
+                .where("ip", "==", ip)
+                .order_by("createdAt", direction=firestore.Query.DESCENDING)
+                .limit(1)
+                .stream()
+            )
+            for doc in query:
+                session_data = doc.to_dict()
+                break
+        except Exception as e:
+            print(f"[auth_session] Failed to load session for IP {ip}: {e}")
+
+    if session_data is None:
+        return jsonify({"success": False, "error": "session_not_found"}), 404
+
+    created_at = session_data.get("createdAt")
+    if hasattr(created_at, "isoformat"):
+        created_at_value = created_at.isoformat()
+    elif isinstance(created_at, datetime):
+        created_at_value = created_at.isoformat()
+    else:
+        created_at_value = created_at
+
+    session_payload = {
+        "email": session_data.get("email"),
+        "role": session_data.get("role"),
+        "name": session_data.get("name"),
+        "ip": session_data.get("ip"),
+        "createdAt": created_at_value,
+    }
+
+    return jsonify({"success": True, "session": session_payload})
+
+
+@app.post("/auth/logout")
+def auth_logout():
+    session_id = request.cookies.get("sessionId")
+    forwarded_for = request.headers.get("X-Forwarded-For", "")
+    ip = forwarded_for.split(",")[0].strip() if forwarded_for else (request.remote_addr or "unknown")
+
+    if db is not None:
+        if session_id:
+            db.collection("sessions").document(session_id).delete()
+        else:
+            try:
+                query = (
+                    db.collection("sessions")
+                    .where("ip", "==", ip)
+                    .order_by("createdAt", direction=firestore.Query.DESCENDING)
+                    .limit(1)
+                    .stream()
+                )
+                for doc in query:
+                    doc.reference.delete()
+                    break
+            except Exception as e:
+                print(f"[auth_logout] Failed to delete session for IP {ip}: {e}")
+
+    resp = jsonify({"success": True})
+    resp.delete_cookie("sessionId")
+    return resp
+
+
+def cleanup_sessions_older_than(days=30):
+    if db is None:
+        raise RuntimeError("Firestore is not initialized.")
+
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    deleted = 0
+
+    try:
+        query = db.collection("sessions").where("createdAt", "<", cutoff)
+        for doc in query.stream():
+            doc.reference.delete()
+            deleted += 1
+    except Exception as e:
+        print(f"[session_cleanup] Query by createdAt failed: {e}")
+        fallback_docs = db.collection("sessions").stream()
+        for doc in fallback_docs:
+            data = doc.to_dict() or {}
+            created_at = data.get("createdAt")
+            created_dt = None
+            if hasattr(created_at, "to_datetime"):
+                created_dt = created_at.to_datetime()
+            elif isinstance(created_at, datetime):
+                created_dt = created_at
+            if created_dt and created_dt < cutoff:
+                doc.reference.delete()
+                deleted += 1
+
+    print(f"[session_cleanup] Deleted {deleted} sessions older than {days} days.")
+    return deleted
+
+
+@app.post("/auth/cleanup-sessions")
+def auth_cleanup_sessions():
+    try:
+        deleted = cleanup_sessions_older_than(30)
+        return jsonify({"success": True, "deleted": deleted})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 

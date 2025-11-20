@@ -29,75 +29,149 @@
   <main class="container d-flex align-items-center justify-content-center" style="min-height: 75vh;">
     <div class="card login-card p-4" style="max-width: 420px; width: 100%;">
       <h2 class="h4 text-center mb-1">Welcome Back</h2>
-      <p class="text-muted text-center mb-4">Sign in with your email to continue</p>
+      <p class="text-muted text-center mb-4">Enter your uoregon.edu email to receive a code</p>
 
-      <form id="loginForm" class="needs-validation" novalidate>
-
-        <!-- Email -->
+      <form id="loginForm" novalidate>
         <div class="mb-3">
           <label for="email" class="form-label fw-semibold">Email</label>
-          <input id="email" type="email" class="form-control" placeholder="@uoregon.edu" required>
-          <div class="invalid-feedback">Please provide a valid UO email.</div>
+          <div class="input-group">
+            <input id="email" type="email" class="form-control" placeholder="yourname@uoregon.edu" autocomplete="email">
+            <button id="requestCodeBtn" class="btn btn-success" type="button">Send Code</button>
+          </div>
+          <div id="emailError" class="text-danger small mt-2"></div>
         </div>
 
-        <!-- Password -->
         <div class="mb-3">
-          <label for="password" class="form-label fw-semibold">Password</label>
-          <input id="password" type="password" class="form-control" placeholder="••••••••" required>
-          <div class="invalid-feedback">Password is required.</div>
+          <label for="code" class="form-label fw-semibold">Verification Code</label>
+          <div class="input-group">
+            <input id="code" type="text" class="form-control" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit code">
+            <button id="verifyCodeBtn" class="btn btn-primary" type="button" disabled>Verify Code</button>
+          </div>
+          <div id="codeError" class="text-danger small mt-2"></div>
         </div>
-
-        <!-- Sign in button -->
-        <a href="/login" class="btn btn-green px-3 py-1" style="font-size: 1rem;">
-          Login
-        </a>
-
       </form>
 
-      <!-- Error message -->
       <div id="loginMsg" class="text-danger small mt-3" style="min-height: 1.25rem;"></div>
+      <div id="statusMsg" class="text-success small mt-1" style="min-height: 1.25rem;"></div>
 
     </div>
   </main>
 
   <script>
     (function () {
-      const form = document.getElementById('loginForm');
-      const email = document.getElementById('email');
-      const password = document.getElementById('password');
-      const msg = document.getElementById('loginMsg');
+      const emailInput = document.getElementById('email');
+      const codeInput = document.getElementById('code');
+      const requestBtn = document.getElementById('requestCodeBtn');
+      const verifyBtn = document.getElementById('verifyCodeBtn');
+      const emailError = document.getElementById('emailError');
+      const codeError = document.getElementById('codeError');
+      const loginMsg = document.getElementById('loginMsg');
+      const statusMsg = document.getElementById('statusMsg');
 
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        form.classList.add('was-validated');
-        if (!form.checkValidity()) return;
+      const clearMessages = () => {
+        emailError.textContent = '';
+        codeError.textContent = '';
+        loginMsg.textContent = '';
+        statusMsg.textContent = '';
+      };
 
-        msg.textContent = '';
-        const body = { email: email.value.trim(), password: password.value };
+      const validateEmail = () => {
+        const value = emailInput.value.trim();
+        if (!value) {
+          emailError.textContent = 'Email is required.';
+          return null;
+        }
+        if (!value.toLowerCase().endsWith('@uoregon.edu')) {
+          emailError.textContent = 'Email must end with @uoregon.edu.';
+          return null;
+        }
+        return value;
+      };
+
+      requestBtn.addEventListener('click', async () => {
+        clearMessages();
+        const email = validateEmail();
+        if (!email) {
+          loginMsg.textContent = 'Missing email or invalid domain.';
+          return;
+        }
+
+        requestBtn.disabled = true;
+        requestBtn.textContent = 'Sending…';
+        verifyBtn.disabled = true;
 
         try {
-          const res = await fetch('/api/login', {
+          const res = await fetch('/auth/request-code', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            body: JSON.stringify({ email })
           });
           const data = await res.json().catch(() => ({}));
 
-          if (!res.ok || data.ok === false) {
-            msg.textContent = data.error || "Sign-in failed.";
+          if (!res.ok || data.error) {
+            loginMsg.textContent = data.error || 'Unable to send code.';
             return;
           }
 
-          const redirect = new URLSearchParams(window.location.search).get('to') || '{{ url_for("calendar_tab") }}';
-          window.location.href = redirect;
-
+          statusMsg.textContent = 'Code sent! Check your inbox.';
+          verifyBtn.disabled = false;
+          codeInput.focus();
         } catch (err) {
           console.error(err);
-          msg.textContent = "Network error. Try again.";
+          loginMsg.textContent = 'Send failure. Please try again.';
+        } finally {
+          requestBtn.disabled = false;
+          requestBtn.textContent = 'Send Code';
+        }
+      });
+
+      verifyBtn.addEventListener('click', async () => {
+        clearMessages();
+        const email = validateEmail();
+        if (!email) {
+          loginMsg.textContent = 'Missing email or invalid domain.';
+          return;
+        }
+        const code = codeInput.value.trim();
+        if (!code) {
+          codeError.textContent = 'Enter the verification code.';
+          return;
+        }
+
+        verifyBtn.disabled = true;
+        verifyBtn.textContent = 'Verifying…';
+
+        try {
+          const res = await fetch('/auth/verify-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email, code })
+          });
+          const data = await res.json().catch(() => ({}));
+
+          if (!res.ok || data.error || data.success === false) {
+            loginMsg.textContent = 'Invalid or expired code.';
+            return;
+          }
+
+          statusMsg.textContent = 'Code verified! Redirecting...';
+          console.log('Logged in as', data.email, 'role:', data.role, 'name:', data.name);
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 800);
+        } catch (err) {
+          console.error(err);
+          loginMsg.textContent = 'Invalid or expired code.';
+        } finally {
+          verifyBtn.disabled = false;
+          verifyBtn.textContent = 'Verify Code';
         }
       });
     })();
+
   </script>
+  <script src="{{ url_for('static', filename='js/session-debug.js') }}"></script>
 
 </body>
 </html>
