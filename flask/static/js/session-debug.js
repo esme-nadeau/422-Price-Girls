@@ -54,7 +54,8 @@
       if (!loginBtn.dataset.originalHref) {
         loginBtn.dataset.originalHref = loginBtn.getAttribute('href') || '/login';
       }
-      loginBtn.textContent = `Logout: ${session.email}`;
+      // Preserve the person icon by setting innerHTML instead of textContent
+      loginBtn.innerHTML = `<i class="bi bi-person"></i> Logout: ${session.email}`;
       loginBtn.setAttribute('href', '#');
       if (loginBtn.classList.contains('btn-outline-danger')) {
         loginBtn.classList.remove('btn-outline-danger');
@@ -66,7 +67,8 @@
       }
     } else {
       const originalHref = loginBtn.dataset.originalHref || '/login';
-      loginBtn.textContent = 'Login';
+      // Preserve the person icon when switching back to Login
+      loginBtn.innerHTML = `<i class="bi bi-person"></i> Login`;
       loginBtn.setAttribute('href', originalHref);
       if (loginBtn.classList.contains('btn-outline-secondary')) {
         loginBtn.classList.remove('btn-outline-secondary');
