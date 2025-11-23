@@ -10,8 +10,8 @@
 .week-grid {
   display: grid;
   grid-template-columns: 90px repeat(5, 1fr); /* time column + Mon-Fri */
-  /* header row + 25 half-hour labels (8:00 AM through 8:00 PM) */
-  grid-template-rows: 48px repeat(25, 40px);
+  /* header row + 24 half-hour labels (8:00 AM through 7:30 PM) */
+  grid-template-rows: 48px repeat(24, 40px);
   /* Ensure any implicit tracks created by events stay consistent */
   grid-auto-rows: 40px;
   grid-auto-columns: 1fr;

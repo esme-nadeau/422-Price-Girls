@@ -69,8 +69,8 @@ function getMinAllowedTime() {
   // Round up to next 30-minute slot
   const roundedMinutes = Math.ceil(currentMinutes / 30) * 30;
   
-  // If we're past 8:00 PM (20:00), return null (no times available today)
-  if (roundedMinutes >= 20 * 60) {
+  // If we're past 7:30 PM (19:30), return null (no times available today)
+  if (roundedMinutes >= (19 * 60 + 30)) {
     return null;
   }
   

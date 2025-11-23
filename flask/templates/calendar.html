@@ -35,7 +35,7 @@
                 8:00 AM
               </button>
               <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
-                {% for h in range(8, 19) %}
+                {% for h in range(8, 20) %}
                   <li>
                     <a class="dropdown-item" href="#" onclick="calendar_updateStartTime('{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}')">
                       {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
@@ -62,7 +62,7 @@
                 8:30 AM
               </button>
               <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
-                {% for h in range(8, 19) %}
+                {% for h in range(8, 20) %}
                   <li>
                     <a class="dropdown-item" href="#" onclick="calendar_updateEndTime('{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}')">
                       {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
@@ -79,6 +79,11 @@
               </ul>
             </div>
 
+          </div>
+          <div class="mt-2 text-end">
+            <button type="button" class="btn btn-sm btn-outline-success" onclick="calendar_setFullDay()">
+              Book entire day (8:00 AM – 7:30 PM)
+            </button>
           </div>
         </div>
 
@@ -158,6 +163,22 @@
     </div>
 
 
+  </div>
+</div>
+
+<!-- Booking error modal (shared on this page) -->
+<div class="modal fade" id="bookingErrorModal" tabindex="-1" aria-labelledby="bookingErrorModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bookingErrorModalLabel">Booking Not Possible</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="bookingErrorModalBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
   </div>
 </div>
 

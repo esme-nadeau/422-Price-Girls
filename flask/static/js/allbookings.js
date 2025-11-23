@@ -5,7 +5,7 @@
   const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday"]; // Mon-Fri
   const START_HOUR = 8; // 8 AM
   const END_HOUR = 20;  // 8 PM end boundary (last slot ends 8:00 PM)
-  const SLOT_COUNT = 24; // 24 half-hour slots from 8:00–7:30
+  const SLOT_COUNT = 24; // 24 half-hour slots from 8:00–7:30 PM
 
   let state = {
     weekStart: null, // Date object for Monday of visible week
@@ -40,7 +40,7 @@
 
   function buildTimeIndexes(){
     // We want labels from 8:00 AM through 8:00 PM.
-    // There are 24 bookable half-hour slots (8:00–7:30), plus a final 8:00 PM label row.
+    // There are 24 bookable half-hour slots (8:00–7:30 PM), plus a final 8:00 PM label row.
     return Array.from({length: SLOT_COUNT + 1}, (_,i)=>i); // 0..24
   }
 

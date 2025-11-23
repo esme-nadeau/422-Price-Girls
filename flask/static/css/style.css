@@ -26,7 +26,7 @@ header {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    background-color: #548754;
+    background-color: #548754; /* top banner dark green */
     color: white;
     padding: 3px 20px;
     font-size: 2em;
@@ -55,12 +55,22 @@ footer {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  background-color: #ffffff;
-  border-top: 1px solid #ccc;
-  padding: 20px 20px 0px 20px;
+  background-color: #548754; /* match top banner dark green */
+  color: #ffffff;
+  border-top: none;
+  padding: 20px 20px 10px 20px;
   font-size: 13px;
-  line-height: 0.3;
+  line-height: 1.2;
   box-sizing: border-box;
+}
+
+footer a {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+footer a:hover {
+  color: #dfeee0;
 }
 
 .signature {

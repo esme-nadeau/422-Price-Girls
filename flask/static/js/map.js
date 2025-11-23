@@ -580,11 +580,44 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
+// Helper to set full-day range on the map (8:00 AM – 7:30 PM).
+// If there are existing bookings for the selected room/date that overlap this range, show an error instead.
+window.map_setFullDay = function(){
+  const roomLabelEl = document.getElementById('selectedRoom');
+  const dateRight = document.getElementById('date_right');
+  const dateLeft = document.getElementById('date_left');
+
+  const roomName = roomLabelEl ? roomLabelEl.textContent.trim() : '';
+  const date = (dateRight && dateRight.value) || (dateLeft && dateLeft.value) || '';
+
+  // Only check conflicts if a room and date are chosen and we have booking data
+  if(roomName && roomName !== 'Select Room' && date && Array.isArray(allBookings) && allBookings.length){
+    // Reuse the same overlap logic as room coloring: if any booking overlaps 8:00–7:30, treat as conflict
+    const hasConflict = isRoomBooked(roomName, date, '8:00 AM', '7:30 PM');
+    if(hasConflict){
+      if (typeof window.showBookingErrorModal === 'function') {
+        window.showBookingErrorModal('Cannot book entire day for this room: there are existing bookings on that date that would conflict. Please choose a smaller time range.');
+      } else {
+        alert('Cannot book entire day for this room: there are existing bookings on that date that would conflict. Please choose a smaller time range.');
+      }
+      return;
+    }
+  }
+
+  // These helpers already keep left/right in sync and clamp to allowed bounds
+  if(typeof window.updateStartTime === 'function'){
+    window.updateStartTime('8:00 AM');
+  }
+  if(typeof window.updateEndTime === 'function'){
+    window.updateEndTime('7:30 PM');
+  }
+};
+
 // Functions to sync start and end times between left and right sections
-// Enforce: end >= start + 30 minutes; also clamp to available range (8:00–20:00)
+// Enforce: end >= start + 30 minutes; also clamp to available range (8:00–19:30)
 (function(){
-  const START_MIN = 8 * 60;     // 8:00 AM
-  const END_MIN = 20 * 60;      // 8:00 PM boundary (last valid end)
+  const START_MIN = 8 * 60;      // 8:00 AM
+  const END_MIN   = START_MIN + 23 * 30; // 7:30 PM latest end (23 half-hours)
   const STEP = 30;              // minutes
 
   // function labelToMinutes(label){

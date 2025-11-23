@@ -1,3 +1,36 @@
+// Helper: show a lightweight booking error dialog without blocking the whole page
+window.showBookingErrorModal = function(message) {
+    const body = document.getElementById('bookingErrorModalBody');
+    const modalEl = document.getElementById('bookingErrorModal');
+
+    if (body) {
+        body.textContent = message;
+    }
+
+    if (modalEl) {
+        // Manually show the dialog without using Bootstrap's backdrop logic
+        modalEl.classList.add('show');
+        modalEl.style.display = 'block';
+        modalEl.removeAttribute('aria-hidden');
+        modalEl.setAttribute('aria-modal', 'true');
+        modalEl.setAttribute('role', 'dialog');
+
+        // Ensure close buttons hide the dialog
+        const closeButtons = modalEl.querySelectorAll('[data-bs-dismiss="modal"]');
+        closeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                modalEl.classList.remove('show');
+                modalEl.style.display = 'none';
+                modalEl.setAttribute('aria-hidden', 'true');
+                modalEl.removeAttribute('aria-modal');
+            }, { once: true });
+        });
+    } else {
+        // Fallback if the dialog markup is not present on this page
+        alert(message);
+    }
+};
+
 // Function to initialize booking button - can be called after content loads
 window.initBookingButton = function(containerId) {
     // Try to find button in specified container or active tab, then fall back to document

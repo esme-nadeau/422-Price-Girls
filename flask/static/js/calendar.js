@@ -5,9 +5,10 @@ function getRoot() {
 
 // static/js/calendar.js
 (function(){
-  const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday"]; // Mon-Fri to match mock
-  const START_HOUR = 8; // 8 AM
-  const END_HOUR = 19;  // 8 PM end boundary (last slot starts 7:30 PM)
+  const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday"]; // Mon–Fri only
+  const START_HOUR = 8;  // 8:00 AM
+  const END_HOUR = 19;  // 7:30 PM latest end (last slot 7:00–7:30 PM)
+  const SLOT_COUNT = 23; // 23 half-hour slots from 8:00–7:00 PM
 
   let state = {
     room: null,
@@ -64,9 +65,9 @@ function getRoot() {
   }
 
   function buildTimeIndexes(){
-    // We want labels from 8:00 AM through 8:00 PM.
-    // There are 24 bookable half-hour slots (8:00–7:30), plus a final 8:00 PM label row.
-    return Array.from({length: SLOT_COUNT + 1}, (_,i)=>i); // 0..24
+    // We want labels from 8:00 AM through 7:30 PM.
+    // There are 23 bookable half-hour slots (8:00–7:00 PM), plus a final 7:30 PM label row.
+    return Array.from({length: SLOT_COUNT + 1}, (_,i)=>i); // 0..23
   }
 
   function dom(sel, root=document){ return root.querySelector(sel); }
@@ -93,7 +94,7 @@ function getRoot() {
 
     // Rows
     const timeIdxs = buildTimeIndexes();
-    const lastIdx = timeIdxs.length - 1; // terminal 8:00 PM label row
+    const lastIdx = timeIdxs.length - 1; // terminal 7:30 PM label row
     timeIdxs.forEach(idx => {
       // time label column
       const label = createEl('div','time-label', labelForIdx(idx));
@@ -442,9 +443,9 @@ function setRoomPhotoByDigits(digits) {
   };
 
   // Calendar-scoped setters so we don't override Map behavior
-  // Enforce: end >= start + 30 minutes; also clamp to available range (8:00–20:00)
-  const CAL_START_MIN = START_HOUR * 60;     // 8:00 AM (matches START_HOUR)
-  const CAL_END_MIN = END_HOUR * 60;        // 8:00 PM (20:00) - last valid end for calendar
+  // Enforce: end >= start + 30 minutes; also clamp to available range (8:00–19:30)
+  const CAL_START_MIN = START_HOUR * 60;          // 8:00 AM (matches START_HOUR)
+  const CAL_END_MIN   = CAL_START_MIN + SLOT_COUNT * 30; // 7:30 PM latest end
   const CAL_STEP = 30;                       // minutes
 
   function clampToBounds(min){
@@ -517,6 +518,86 @@ function setRoomPhotoByDigits(digits) {
     if(endMin > CAL_END_MIN) endMin = CAL_END_MIN;
 
     endEl.textContent = minutesToLabel(endMin);
+  };
+
+  // Set form to full-day (8:00 AM – 7:30 PM) and, if possible, select the full column in the week grid.
+  // If there are existing bookings for the selected room/date that overlap this range, show an error instead.
+  window.calendar_setFullDay = function(){
+    const root = getRoot();
+    const startEl = root.querySelector('#start_time_right');
+    const endEl = root.querySelector('#end_time_right');
+    const dateInput = root.querySelector('#date_right');
+    if(!startEl || !endEl || !dateInput || !dateInput.value) return;
+
+    const dateISO = dateInput.value;
+    const roomName = state.room;
+
+    // Only run conflict check when a room is selected and we have bookings loaded
+    if(roomName && Array.isArray(state.bookings) && state.bookings.length){
+      const roomDigits = extractDigits(roomName);
+      const fullStart = CAL_START_MIN;
+      const fullEnd = CAL_END_MIN;
+
+      const hasConflict = state.bookings.some(b => {
+        if(!b || !b.date || b.date !== dateISO) return false;
+        const bookingRoomId = (b.roomId || b.room || '').toString();
+        if(!bookingRoomId) return false;
+
+        // Match by exact id/name or by digits inside the name
+        let roomMatches = false;
+        if(roomDigits){
+          const bookingDigits = extractDigits(bookingRoomId);
+          roomMatches = (bookingDigits === roomDigits) || (bookingRoomId === roomName);
+        } else {
+          roomMatches = (bookingRoomId === roomName);
+        }
+        if(!roomMatches) return false;
+
+        const range = (b.timeRange || '').toString();
+        const parts = range.split(' - ');
+        if(parts.length !== 2) return false;
+        const sLabel = parts[0].trim();
+        const eLabel = parts[1].trim();
+        if(!sLabel || !eLabel) return false;
+
+        const sMin = toMinutes(sLabel);
+        const eMin = toMinutes(eLabel);
+        if(sMin == null || eMin == null) return false;
+
+        // Overlap check: [fullStart, fullEnd) vs [sMin, eMin)
+        return fullStart < eMin && sMin < fullEnd;
+      });
+
+      if(hasConflict){
+        if (typeof window.showBookingErrorModal === 'function') {
+          window.showBookingErrorModal('Cannot book entire day for this room: there are existing bookings on that date that would conflict. Please choose a smaller time range.');
+        } else {
+          alert('Cannot book entire day for this room: there are existing bookings on that date that would conflict. Please choose a smaller time range.');
+        }
+        return;
+      }
+    }
+
+    const startLabel = minutesToLabel(CAL_START_MIN);
+    const endLabel = minutesToLabel(CAL_END_MIN);
+    startEl.textContent = startLabel;
+    endEl.textContent = endLabel;
+
+    // Try to mirror this as a selection in the grid for the chosen date, if it’s in the current week
+    if(state.weekStart){
+      const d = parseISODate(dateISO);
+      if(!isNaN(d)){
+        const diffDays = Math.floor((d - state.weekStart) / (1000*60*60*24));
+        if(diffDays >= 0 && diffDays < DAYS.length){
+          state.selection = {
+            dateISO,
+            startIdx: 0,
+            endIdx: SLOT_COUNT // 0..(SLOT_COUNT-1) are interactive slots
+          };
+          applySelectionToGrid();
+        }
+      }
+    }
   };
 
   function initMinDate(){

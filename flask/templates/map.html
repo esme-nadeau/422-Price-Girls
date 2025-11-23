@@ -21,8 +21,8 @@
             <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="start_time_left" data-bs-toggle="dropdown" aria-expanded="false">
               8:00 AM
             </button>
-            <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
-              {% for h in range(8, 21) %}
+      <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
+              {% for h in range(8, 20) %}
                 <li>
                   <a class="dropdown-item" href="#"
                     onclick="updateStartTime('{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}')">
@@ -52,7 +52,7 @@
               8:30 AM
             </button>
             <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
-              {% for h in range(8, 21) %}
+              {% for h in range(8, 20) %}
                 <li>
                   <a class="dropdown-item" href="#"
                     onclick="updateEndTime('{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}')">
@@ -205,7 +205,7 @@
               8:30 AM
             </button>
             <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
-              {% for h in range(8, 21) %}
+              {% for h in range(8, 20) %}
                 <li>
                   <a class="dropdown-item" href="#"
                     onclick="updateEndTime('{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}')">
@@ -224,6 +224,11 @@
             </ul>
           </div>
 
+        </div>
+        <div class="mt-2 text-end">
+          <button type="button" class="btn btn-sm btn-outline-success" onclick="map_setFullDay()">
+            Book entire day (8:00 AM – 7:30 PM)
+          </button>
         </div>
       </div>
 
@@ -270,6 +275,23 @@
   </div>
   </div>
 </div>
+
+<!-- Booking error modal (shared on this page) -->
+<div class="modal fade" id="bookingErrorModal" tabindex="-1" aria-labelledby="bookingErrorModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bookingErrorModalLabel">Booking Not Possible</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="bookingErrorModalBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Repeat Options Modal -->
 <div class="modal fade" id="repeatModal" tabindex="-1" aria-labelledby="repeatModalLabel" aria-hidden="true">
   <div class="modal-dialog">

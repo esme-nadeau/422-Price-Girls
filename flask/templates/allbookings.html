@@ -23,14 +23,18 @@
               <select id="allBookingRoomId" class="form-select"></select>
             </div>
 
-            <div class="row g-2 mb-3">
-              <div class="col-6">
-                <label for="allBookingStartTime" class="form-label">Start Time</label>
-                <select id="allBookingStartTime" class="form-select"></select>
-              </div>
-              <div class="col-6">
-                <label for="allBookingEndTime" class="form-label">End Time</label>
-                <select id="allBookingEndTime" class="form-select"></select>
+            <div class="mb-3">
+              <label class="form-label d-block mb-1">Start Time - End Time</label>
+              <div class="d-flex align-items-center gap-2">
+                <div class="flex-fill">
+                  <select id="allBookingStartTime" class="form-select"></select>
+                </div>
+                <div class="d-flex align-items-center">
+                  <span class="fw-bold">–</span>
+                </div>
+                <div class="flex-fill">
+                  <select id="allBookingEndTime" class="form-select"></select>
+                </div>
               </div>
             </div>
 

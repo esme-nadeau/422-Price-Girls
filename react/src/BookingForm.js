@@ -77,6 +77,10 @@ function BookingForm() {
       if (!isValidHHMM(startTime) || !isValidHHMM(endTime)) {
         throw new Error('Invalid time format detected. Ensure times are HH:MM (24-hour).');
       }
+      // Enforce booking window 08:00–20:00 (8am–8pm)
+      if (startTime < '08:00' || endTime > '20:00') {
+        throw new Error('Bookings must be between 08:00 and 20:00 (8am–8pm).');
+      }
 
       // Construct Date objects (local time)
       const initialBookingStartDateTime = makeLocalDateTime(date, startTime);
@@ -252,11 +256,27 @@ function BookingForm() {
       </label>
       <label>
         Start Time:
-        <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} required />
+        <input
+          type="time"
+          min="08:00"
+          max="20:00"
+          step="1800"
+          value={startTime}
+          onChange={(e) => setStartTime(e.target.value)}
+          required
+        />
       </label>
       <label>
         End Time:
-        <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
+        <input
+          type="time"
+          min="08:00"
+          max="20:00"
+          step="1800"
+          value={endTime}
+          onChange={(e) => setEndTime(e.target.value)}
+          required
+        />
       </label>
       <label>
         Status:
