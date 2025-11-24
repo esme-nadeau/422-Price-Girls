@@ -2,16 +2,13 @@
 .calendar-page #weekCalendarCard { max-width: none !important; width: 100%; }
 .calendar-page .booking-widget { max-width: none; }
 
-/* Room description widget */
-.room-description-widget { border-radius: 12px; min-height: 120px; }
-.calendar-page .room-description-widget { max-width: none; width: 100%; }
-
 /* Week calendar grid styles */
 .week-grid {
   display: grid;
   grid-template-columns: 90px repeat(5, 1fr); /* time column + Mon-Fri */
-  /* header row + 24 half-hour labels (8:00 AM through 7:30 PM) */
-  grid-template-rows: 48px repeat(24, 40px);
+  /* header row + 24 half-hour rows */
+  grid-template-rows: 48px repeat(22, 40px);
+  
   /* Ensure any implicit tracks created by events stay consistent */
   grid-auto-rows: 40px;
   grid-auto-columns: 1fr;
@@ -130,6 +127,10 @@
 /* ==============================
    Room Description Card
 ============================== */
+/* Room description widget */
+.room-description-widget { border-radius: 12px; min-height: 120px; }
+.calendar-page .room-description-widget { max-width: none; width: 100%; }
+
 #roomDescriptionText {
   columns: 2;
   column-gap: 1rem;

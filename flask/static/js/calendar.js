@@ -5,10 +5,9 @@ function getRoot() {
 
 // static/js/calendar.js
 (function(){
-  const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday"]; // Mon–Fri only
-  const START_HOUR = 8;  // 8:00 AM
-  const END_HOUR = 19;  // 7:30 PM latest end (last slot 7:00–7:30 PM)
-  const SLOT_COUNT = 23; // 23 half-hour slots from 8:00–7:00 PM
+  const DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday"]; // Mon-Fri to match mock
+  const START_HOUR = 8; // 8 AM
+  const END_HOUR = 19;  // 7 PM end boundary (last slot starts 6:30 PM)
 
   let state = {
     room: null,
@@ -65,9 +64,10 @@ function getRoot() {
   }
 
   function buildTimeIndexes(){
-    // We want labels from 8:00 AM through 7:30 PM.
-    // There are 23 bookable half-hour slots (8:00–7:00 PM), plus a final 7:30 PM label row.
-    return Array.from({length: SLOT_COUNT + 1}, (_,i)=>i); // 0..23
+    // Build half-hour indexes from START_HOUR up to (but not including) END_HOUR as end time.
+    // Example: START_HOUR=8, END_HOUR=19 -> (19-8)*2 = 22 slots, last start = 18:30
+    const slots = (END_HOUR - START_HOUR) * 2;
+    return Array.from({length: slots}, (_,i)=>i);
   }
 
   function dom(sel, root=document){ return root.querySelector(sel); }
@@ -94,7 +94,6 @@ function getRoot() {
 
     // Rows
     const timeIdxs = buildTimeIndexes();
-    const lastIdx = timeIdxs.length - 1; // terminal 7:30 PM label row
     timeIdxs.forEach(idx => {
       // time label column
       const label = createEl('div','time-label', labelForIdx(idx));
@@ -108,11 +107,8 @@ function getRoot() {
         cell.dataset.idx = idx;
         if(di>0) cell.classList.add('day-divider');
         
-        // The last index is a label-only row at 8:00 PM; make it non-interactive
-        if(idx === lastIdx){
-          cell.classList.add('past');
-          cell.style.cursor = 'default';
-        } else if(isCellInPast(dateISO, idx)){
+        // Mark past cells as disabled
+        if(isCellInPast(dateISO, idx)){
           cell.classList.add('past');
           cell.style.cursor = 'not-allowed';
         } else {
@@ -168,10 +164,10 @@ function getRoot() {
         if(di < 0 || di > 6) return; // only this week
         const [s,e] = (b.timeRange||'').split(' - ').map(s => s.trim());
         if(!s || !e) return;
-        const sMin = toMinutes(s);
-        const eMin = toMinutes(e);
-        const sIdx = Math.max(0, Math.floor((sMin - startMin)/30));
-        const eIdx = Math.min(SLOT_COUNT, Math.ceil((eMin - startMin)/30));
+  const sMin = toMinutes(s);
+  const eMin = toMinutes(e);
+  const sIdx = Math.max(0, Math.floor((sMin - startMin)/30));
+  const eIdx = Math.min((END_HOUR - START_HOUR) * 2, Math.ceil((eMin - startMin)/30));
 
         // Mark underlying cells as booked for interaction/hover
         for(let i=sIdx;i<eIdx;i++){
@@ -443,9 +439,9 @@ function setRoomPhotoByDigits(digits) {
   };
 
   // Calendar-scoped setters so we don't override Map behavior
-  // Enforce: end >= start + 30 minutes; also clamp to available range (8:00–19:30)
-  const CAL_START_MIN = START_HOUR * 60;          // 8:00 AM (matches START_HOUR)
-  const CAL_END_MIN   = CAL_START_MIN + SLOT_COUNT * 30; // 7:30 PM latest end
+  // Enforce: end >= start + 30 minutes; also clamp to available range (8:00–20:00)
+  const CAL_START_MIN = START_HOUR * 60;     // 8:00 AM (matches START_HOUR)
+  const CAL_END_MIN = END_HOUR * 60;        // 7:00 PM (19:00) - last valid end for calendar
   const CAL_STEP = 30;                       // minutes
 
   function clampToBounds(min){
@@ -465,10 +461,10 @@ function setRoomPhotoByDigits(digits) {
     let startMin = toMinutes(label);
     if(startMin == null) return;
 
-    // If start is too late to allow 30 min, back it up to last valid (19:30)
+    // If start is too late to allow 30 min, back it up to last valid (18:30 / 6:30 PM)
     const minEnd = startMin + CAL_STEP;
     if(minEnd > CAL_END_MIN){
-      startMin = CAL_END_MIN - CAL_STEP; // 19:30
+      startMin = CAL_END_MIN - CAL_STEP; // 18:30
       const adjustedLabel = minutesToLabel(startMin);
       startEl.textContent = adjustedLabel;
       startMin = toMinutes(adjustedLabel);
@@ -508,7 +504,7 @@ function setRoomPhotoByDigits(digits) {
 
     // If start too late to allow 30 mins, back it up
     if(startMin + CAL_STEP > CAL_END_MIN){
-      startMin = CAL_END_MIN - CAL_STEP; // 19:30
+      startMin = CAL_END_MIN - CAL_STEP; // 18:30
       if(startEl) startEl.textContent = minutesToLabel(startMin);
     }
 
@@ -520,7 +516,7 @@ function setRoomPhotoByDigits(digits) {
     endEl.textContent = minutesToLabel(endMin);
   };
 
-  // Set form to full-day (8:00 AM – 7:30 PM) and, if possible, select the full column in the week grid.
+  // Set form to full-day (8:00 AM – 7:00 PM) and, if possible, select the full column in the week grid.
   // If there are existing bookings for the selected room/date that overlap this range, show an error instead.
   window.calendar_setFullDay = function(){
     const root = getRoot();
@@ -589,10 +585,11 @@ function setRoomPhotoByDigits(digits) {
       if(!isNaN(d)){
         const diffDays = Math.floor((d - state.weekStart) / (1000*60*60*24));
         if(diffDays >= 0 && diffDays < DAYS.length){
+          const slots = (END_HOUR - START_HOUR) * 2; // same as buildTimeIndexes
           state.selection = {
             dateISO,
             startIdx: 0,
-            endIdx: SLOT_COUNT // 0..(SLOT_COUNT-1) are interactive slots
+            endIdx: slots
           };
           applySelectionToGrid();
         }

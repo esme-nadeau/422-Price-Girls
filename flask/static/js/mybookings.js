@@ -21,6 +21,7 @@ function setBookingFormEditable(editable) {
     { id: 'date', type: 'date' },
     { id: 'time', type: 'custom-time' },
     { id: 'repeat', type: 'select' },
+    { id: 'name', type: 'text' },
     { id: 'email', type: 'email' },
     { id: 'purpose', type: 'text' },
     { id: 'roomId', type: 'dropdown' }
@@ -68,18 +69,10 @@ function setBookingFormEditable(editable) {
         // Create two dropdowns for start and end time
         const wrapper = document.createElement('div');
         wrapper.className = 'd-flex gap-2';
-        // Generate time slots from 8:00 AM to 7:30 PM (last slot 7:00–7:30 PM)
+        // Generate time slots from 8:00 AM to 6:30 PM (last start at 6:30 PM)
         const slots = [];
-        for (let h = 8; h <= 19; h++) {
+        for (let h = 8; h <= 18; h++) {
           for (let m = 0; m < 60; m += 30) {
-            const isBeyondWindow = (h === 19 && m > 30);
-            if (isBeyondWindow) continue;
-            let hour = h > 12 ? h - 12 : h;
-            let ampm = h < 12 ? 'AM' : 'PM';
-            let min = m === 0 ? '00' : '30';
-            slots.push(`${hour}:${min} ${ampm}`);
-          }
-        }
             let hour = h > 12 ? h - 12 : h;
             let ampm = h < 12 ? 'AM' : 'PM';
             let min = m === 0 ? '00' : '30';
@@ -229,7 +222,10 @@ if (editBtn) {
         repeat: getVal('repeat'),
         email: getVal('email'),
         purpose: getVal('purpose'),
-        roomId: getVal('roomId')
+        roomId: getVal('roomId'),
+        // Include name/userId so server can update the booking owner info
+        userId: getVal('name'),
+        name: getVal('name')
       };
       if (updated.timeRange === null) return; // Invalid time selection
       try {
@@ -272,11 +268,13 @@ if (editBtn) {
             card.dataset.email = updated.email;
             card.dataset.purpose = updated.purpose;
             card.dataset.roomid = updated.roomId;
+            card.dataset.name = updated.name || updated.userId || '';
             card.dataset.booking = JSON.stringify({
               id: bookingId,
               date: updated.date,
               time: updated.timeRange,
               repeat: updated.repeat,
+              name: updated.name || updated.userId || '',
               email: updated.email,
               purpose: updated.purpose,
               roomId: updated.roomId
@@ -345,7 +343,8 @@ bookingCards.forEach(card => {
     setSpan('date', bookingData.date || card.dataset.date || '');
     setSpan('time', bookingData.time || card.dataset.time || '');
     setSpan('repeat', bookingData.repeat || card.dataset.repeat || 'Never');
-    setSpan('email', bookingData.email || card.dataset.email || '');
+  setSpan('name', bookingData.name || bookingData.userId || card.dataset.name || '');
+  setSpan('email', bookingData.email || card.dataset.email || '');
     setSpan('purpose', bookingData.purpose || card.dataset.purpose || '');
     setSpan('roomId', bookingData.roomId || card.dataset.roomid || '');
 

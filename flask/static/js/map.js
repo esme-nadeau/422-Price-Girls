@@ -580,7 +580,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// Helper to set full-day range on the map (8:00 AM – 7:30 PM).
+// Helper to set full-day range on the map (8:00 AM – 7:00 PM).
 // If there are existing bookings for the selected room/date that overlap this range, show an error instead.
 window.map_setFullDay = function(){
   const roomLabelEl = document.getElementById('selectedRoom');
@@ -592,8 +592,8 @@ window.map_setFullDay = function(){
 
   // Only check conflicts if a room and date are chosen and we have booking data
   if(roomName && roomName !== 'Select Room' && date && Array.isArray(allBookings) && allBookings.length){
-    // Reuse the same overlap logic as room coloring: if any booking overlaps 8:00–7:30, treat as conflict
-    const hasConflict = isRoomBooked(roomName, date, '8:00 AM', '7:30 PM');
+    // Reuse the same overlap logic as room coloring: if any booking overlaps 8:00–7:00, treat as conflict
+    const hasConflict = isRoomBooked(roomName, date, '8:00 AM', '7:00 PM');
     if(hasConflict){
       if (typeof window.showBookingErrorModal === 'function') {
         window.showBookingErrorModal('Cannot book entire day for this room: there are existing bookings on that date that would conflict. Please choose a smaller time range.');
@@ -609,15 +609,15 @@ window.map_setFullDay = function(){
     window.updateStartTime('8:00 AM');
   }
   if(typeof window.updateEndTime === 'function'){
-    window.updateEndTime('7:30 PM');
+    window.updateEndTime('7:00 PM');
   }
 };
 
 // Functions to sync start and end times between left and right sections
-// Enforce: end >= start + 30 minutes; also clamp to available range (8:00–19:30)
+// Enforce: end >= start + 30 minutes; also clamp to available range (8:00–19:00)
 (function(){
-  const START_MIN = 8 * 60;      // 8:00 AM
-  const END_MIN   = START_MIN + 23 * 30; // 7:30 PM latest end (23 half-hours)
+  const START_MIN = 8 * 60;     // 8:00 AM
+  const END_MIN = 19 * 60;      // 7:00 PM (19:00) - last valid end
   const STEP = 30;              // minutes
 
   // function labelToMinutes(label){
@@ -664,10 +664,10 @@ window.map_setFullDay = function(){
     let startMin = labelToMinutes(time);
     if(startMin == null) return;
 
-    // If start is too late to allow 30 min, back it up to last valid (19:30)
+    // If start is too late to allow 30 min, back it up to last valid (18:30 / 6:30 PM)
     const minEnd = startMin + STEP;
     if(minEnd > END_MIN){
-      startMin = END_MIN - STEP; // 19:30
+      startMin = END_MIN - STEP; // 18:30
       setStartLabel(minutesToLabel(startMin));
     }
 
@@ -693,7 +693,7 @@ window.map_setFullDay = function(){
 
     // If start too late to allow 30 mins, back it up
     if(startMin + STEP > END_MIN){
-      startMin = END_MIN - STEP; // 19:30
+      startMin = END_MIN - STEP; // 18:30
       setStartLabel(minutesToLabel(startMin));
     }
 

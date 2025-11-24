@@ -1,9 +1,9 @@
-@font-face {
+/* @font-face {
   font-family: 'UnitedSerifBold';
   src: url('/static/UnitedSerifReg-Bold.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
-}
+} */
 
 body {
     margin: 0;
