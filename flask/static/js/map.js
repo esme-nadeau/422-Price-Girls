@@ -604,10 +604,11 @@ window.map_setFullDay = async function(){
     // Reuse the same overlap logic as room coloring: if any booking overlaps 8:00–7:00, treat as conflict
     const hasConflict = isRoomBooked(roomName, date, '8:00 AM', '7:00 PM');
     if(hasConflict){
+      const msg = 'Cannot book entire day for this room: there are existing bookings on that date that would conflict. Please choose a smaller time range. If you want more details on the booking conflict, look at the All Bookings tab.';
       if (typeof window.showBookingErrorModal === 'function') {
-        window.showBookingErrorModal('Cannot book entire day for this room: there are existing bookings on that date that would conflict. Please choose a smaller time range.');
+        window.showBookingErrorModal(msg);
       } else {
-        alert('Cannot book entire day for this room: there are existing bookings on that date that would conflict. Please choose a smaller time range.');
+        alert(msg);
       }
       return;
     }

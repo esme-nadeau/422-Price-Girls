@@ -574,10 +574,11 @@ function setRoomPhotoByDigits(digits) {
       });
 
       if(hasConflict){
+        const msg = 'Cannot book entire day for this room: there are existing bookings on that date that would conflict. Please choose a smaller time range. If you want more details on the booking conflict, look at the All Bookings tab.';
         if (typeof window.showBookingErrorModal === 'function') {
-          window.showBookingErrorModal('Cannot book entire day for this room: there are existing bookings on that date that would conflict. Please choose a smaller time range.');
+          window.showBookingErrorModal(msg);
         } else {
-          alert('Cannot book entire day for this room: there are existing bookings on that date that would conflict. Please choose a smaller time range.');
+          alert(msg);
         }
         return;
       }
