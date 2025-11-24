@@ -61,7 +61,7 @@ function minutesToLabel(min) {
   return `${h}:${m2} ${ampm}`;
 }
 
-// Get the minimum allowed time for today (rounded up to next 30-minute slot)
+// Get the minimum allowed time for today (rounded up to the next 30-minute slot)
 function getMinAllowedTime() {
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -69,8 +69,8 @@ function getMinAllowedTime() {
   // Round up to next 30-minute slot
   const roundedMinutes = Math.ceil(currentMinutes / 30) * 30;
   
-  // If we're past 7:30 PM (19:30), return null (no times available today)
-  if (roundedMinutes >= (19 * 60 + 30)) {
+  // If we're past 7:00 PM (19:00), return null (no times available today)
+  if (roundedMinutes >= 19 * 60) {
     return null;
   }
   
@@ -89,7 +89,12 @@ function filterPastTimes(container) {
   const selectedDate = dateInput.value;
   if (!selectedDate) return;
 
-  const today = new Date().toISOString().split('T')[0];
+  // Compare against local-date string (YYYY-MM-DD) so we don't get timezone off-by-one issues
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const today = `${yyyy}-${mm}-${dd}`;
   const isToday = selectedDate === today;
 
   let minAllowedMinutes = null;

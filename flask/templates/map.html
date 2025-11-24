@@ -22,14 +22,15 @@
               8:00 AM
             </button>
       <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
-              {% for h in range(8, 20) %}
+              {# Start times: 8:00 AM through 6:30 PM (last slot 6:30–7:00 PM) #}
+              {% for h in range(8, 19) %}
                 <li>
                   <a class="dropdown-item" href="#"
                     onclick="updateStartTime('{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}')">
                     {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
                   </a>
                 </li>
-                {% if h < 20 %}
+                {% if h < 19 %}
                 <li>
                   <a class="dropdown-item" href="#"
                     onclick="updateStartTime('{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}')">
@@ -52,6 +53,7 @@
               8:30 AM
             </button>
             <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
+              {# End times: 8:30 AM through 7:00 PM (no 7:30) #}
               {% for h in range(8, 20) %}
                 <li>
                   <a class="dropdown-item" href="#"
@@ -59,7 +61,7 @@
                     {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
                   </a>
                 </li>
-                {% if h < 20 %}
+                {% if h < 19 %}
                 <li>
                   <a class="dropdown-item" href="#"
                     onclick="updateEndTime('{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}')">
@@ -175,14 +177,15 @@
               8:00 AM
             </button>
             <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
-              {% for h in range(8, 21) %}
+              {# Start times: 8:00 AM through 6:30 PM (last slot 6:30–7:00 PM) #}
+              {% for h in range(8, 19) %}
                 <li>
                   <a class="dropdown-item" href="#"
                     onclick="updateStartTime('{{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}')">
                     {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
                   </a>
                 </li>
-                {% if h < 20 %}
+                {% if h < 19 %}
                 <li>
                   <a class="dropdown-item" href="#"
                     onclick="updateStartTime('{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}')">
@@ -205,6 +208,7 @@
               8:30 AM
             </button>
             <ul class="dropdown-menu w-100 overflow-auto" style="max-height: 12rem;">
+              {# End times: 8:30 AM through 7:00 PM (no 7:30) #}
               {% for h in range(8, 20) %}
                 <li>
                   <a class="dropdown-item" href="#"
@@ -212,7 +216,7 @@
                     {{ (h if h<=12 else h-12) }}:00 {{ 'AM' if h<12 else 'PM' }}
                   </a>
                 </li>
-                {% if h < 20 %}
+                {% if h < 19 %}
                 <li>
                   <a class="dropdown-item" href="#"
                     onclick="updateEndTime('{{ (h if h<=12 else h-12) }}:30 {{ 'AM' if h<12 else 'PM' }}')">
@@ -227,7 +231,7 @@
         </div>
         <div class="mt-2 text-end">
           <button type="button" class="btn btn-sm btn-outline-success" onclick="map_setFullDay()">
-            Book entire day (8:00 AM – 7:30 PM)
+            Book entire day (8:00 AM – 7:00 PM)
           </button>
         </div>
       </div>
