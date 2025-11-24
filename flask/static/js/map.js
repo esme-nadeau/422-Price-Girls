@@ -582,8 +582,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Helper to set full-day range on the map (8:00 AM – 7:00 PM).
 // If there are existing bookings for the selected room/date that overlap this range, show an error instead.
-window.map_setFullDay = function(){
+window.map_setFullDay = async function(){
   const roomLabelEl = document.getElementById('selectedRoom');
+
+  // Ensure bookings are loaded before checking for conflicts
+  if (!Array.isArray(allBookings) || allBookings.length === 0) {
+    try {
+      await fetchBookings();
+    } catch (e) {
+      console.warn('[map_setFullDay] Failed to refresh bookings before full-day check:', e);
+    }
+  }
   const dateRight = document.getElementById('date_right');
   const dateLeft = document.getElementById('date_left');
 

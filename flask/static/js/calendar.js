@@ -518,8 +518,17 @@ function setRoomPhotoByDigits(digits) {
 
   // Set form to full-day (8:00 AM – 7:00 PM) and, if possible, select the full column in the week grid.
   // If there are existing bookings for the selected room/date that overlap this range, show an error instead.
-  window.calendar_setFullDay = function(){
+  window.calendar_setFullDay = async function(){
     const root = getRoot();
+
+    // Make sure we have the latest bookings before checking for conflicts
+    if (!Array.isArray(state.bookings) || state.bookings.length === 0) {
+      try {
+        await fetchBookings();
+      } catch (e) {
+        console.warn('[calendar_setFullDay] Failed to refresh bookings before full-day check:', e);
+      }
+    }
     const startEl = root.querySelector('#start_time_right');
     const endEl = root.querySelector('#end_time_right');
     const dateInput = root.querySelector('#date_right');
