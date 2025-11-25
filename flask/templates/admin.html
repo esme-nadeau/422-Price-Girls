@@ -1,12 +1,113 @@
-<body>Hai!!! :3</body>
-  <div class="col">
-    <div class="approve-bookings card shadow-sm p-3 mb-4" style="width: 100%;">
-        <h5 class="fw-semibold mb-3">Bookings to Approve</h5>
-    </div>
-  </div>
+<!-- Admin Content -->
+<div id="admin-page-root">
+<div id="mybookings-tab-content" class="mybookings-container">
+<div class="row g-4 align-items-start">
 
-  <div class="col">
-    <div class="approve-account card shadow-sm p-3 mb-4" style="width: 100%;">
-        <h5 class="fw-semibold mb-3">Pending Accounts</h5>
+    <!-- LEFT: Bookings to approve -->
+    <div class="col-md-4">
+        <div class="approve-bookings card shadow-sm p-3 mb-4" style="width: 100%;">
+            <h5 class="fw-semibold mb-3">Bookings to Approve</h5>
+            {% if error_message %}
+            <div style="color: #b00020; background: #fff3f3; border: 1px solid #f8b6b6; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">
+            <strong>Error:</strong> {{ error_message }}
+            </div>
+            {% endif %}
+            <div id="bookingsList">
+            {% for booking in bookings %}
+        <div class="booking-card mb-3 p-3 rounded" 
+            data-id="{{ booking.id }}"
+            data-date="{{ booking.date }}"
+            data-time="{{ booking.timeRange }}"
+            data-repeat="{{ booking.repeat }}"
+            data-email="{{ booking.email or booking.userEmail }}"
+            data-purpose="{{ booking.purpose }}"
+            data-roomid="{{ booking.roomId }}"
+            data-booking='{{ {
+            "id": booking.id or '',
+            "date": booking.date or '',
+            "time": booking.timeRange or '',
+            "repeat": booking.repeat or '',
+            "name": booking.name or booking.userId or '',
+            "email": (booking.email or booking.userEmail or ''),
+            "purpose": booking.purpose or '',
+            "roomId": booking.roomId or ''
+            } | tojson }}'>
+                <h5 class="fw-bold mb-1">{{ booking.purpose }}</h5>
+                <p class="mb-0">{{ booking.roomId }}</p>
+                <p class="mb-0">{{ booking.timeRange }}</p>
+                <p class="text-muted small mb-0">{{ booking.date }}</p>
+            </div>
+            {% endfor %}
+            </div>
+        </div>
     </div>
-  </div>
+
+    <!-- MIDDLE: Booking Information -->
+    <div class="col-md-4">
+      <div class="card shadow-sm p-4">
+        <h4 class="fw-semibold mb-3">Booking Information</h4>
+        <form id="bookingForm" data-id="">
+
+          <div class="mb-3">
+            <label class="form-label">Date</label>
+            <span id="date" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Time</label>
+            <span id="time" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Does this booking repeat?</label>
+            <span id="repeat" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <span id="name" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <span id="email" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Booking Purpose</label>
+            <span id="purpose" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+          </div>
+
+          <!-- Room ID -->
+          <div class="mb-3">
+            <label class="form-label">Room ID</label>
+            <span id="roomId" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+          </div>
+
+          <div class="d-flex gap-3">
+            <button type="button" id="confirmBookingBtn" class="btn btn-green flex-grow-1">Confirm Reservation</button>
+            <button type="button" id="denyBookingBtn" class="btn btn-red flex-grow-1">Deny Reservation</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- RIGHT: Pending accounts to approve -->
+    <div class="col-md-4">
+        <div class="approve-account card shadow-sm p-3 mb-4" style="width: 100%;">
+            <h5 class="fw-semibold mb-3">Pending Accounts</h5>
+        </div>
+        
+        <div class="room-management card shadow-sm p-3 mb-4" style="width: 100%;">
+            <h5 class="fw-semibold mb-3">Room Management</h5>
+        </div>
+
+        <div class="building-management card shadow-sm p-3 mb-4" style="width: 100%;">
+            <h5 class="fw-semibold mb-3">Building Hours</h5>
+        </div>
+    </div>
+</div>
+</div>
+</div>
+
+<script src="{{ url_for('static', filename='js/session-debug.js') }}"></script>

@@ -124,7 +124,26 @@ def index():
 
 @app.route("/admin")
 def admin():
-    return render_template("admin.html")
+    error_message = None
+    bookings = []
+    try:
+        if db is None:
+            error_message = "Firestore is not initialized. Please check your service account and environment variables."
+            print(f"[mybookings] {error_message}")
+        else:
+            bookings_ref = db.collection("bookings")
+            docs = bookings_ref.stream()
+            for doc in docs:
+                data = doc.to_dict()
+                data["id"] = doc.id
+                bookings.append(data)
+            if not bookings:
+                error_message = "No bookings found in Firestore."
+                print(f"[mybookings] {error_message}")
+    except Exception as e:
+        error_message = f"Error loading bookings: {e}"
+        print(f"[mybookings] {error_message}")
+    return render_template("admin.html", bookings=bookings, error_message=error_message)
 
 @app.route("/map")
 def map_tab():

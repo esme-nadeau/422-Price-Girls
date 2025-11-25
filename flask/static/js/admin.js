@@ -1,8 +1,9 @@
-if (!document.getElementById("mybookings-root")) {
-  console.log("mybookings.js: exiting (not on mybookings page)");
+if (!document.getElementById("admin-page-root")) {
+  console.log("admin.js: exiting (not on admin page)");
   return;
 }
-else { console.log("📜 mybookings.js loaded and executing"); }
+else {  console.log("admin.js: running (on admin page)");
+}
 
 // Initialize Flatpickr on the date field
 const dateInput = document.getElementById('date');
@@ -10,7 +11,7 @@ let datePicker = null;
 if (dateInput) {
   datePicker = flatpickr(dateInput, { dateFormat: "m/d/Y" });
 } else {
-  console.warn("⚠️ Date input not found");
+  console.warn("Date input not found");
 }
 
 // Grab other elements
@@ -300,15 +301,15 @@ if (editBtn) {
 }
 
 if (!bookingCards.length) {
-  console.warn("⚠️ No booking cards found in DOM when mybookings.js ran");
+  console.warn("No booking cards found in DOM when mybookings.js ran");
 } else {
-  console.log(`✅ Found ${bookingCards.length} booking cards`);
+  console.log(`Found ${bookingCards.length} booking cards`);
 }
 
 // Add click listeners to booking cards
 bookingCards.forEach(card => {
   card.addEventListener('click', () => {
-    console.log(`🟢 Clicked booking ${card.dataset.id}`);
+    console.log(`Clicked booking ${card.dataset.id}`);
 
     // Highlight selected
     document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
@@ -319,7 +320,7 @@ bookingCards.forEach(card => {
     try {
       if (card.dataset.booking) bookingData = JSON.parse(card.dataset.booking);
     } catch (err) {
-      console.warn('⚠️ Could not parse data-booking JSON, falling back to data-* attributes', err);
+      console.warn('Could not parse data-booking JSON, falling back to data-* attributes', err);
       bookingData = {};
     }
 
@@ -332,7 +333,7 @@ bookingCards.forEach(card => {
       const parsed = new Date(dateValue);
       if (!isNaN(parsed)) dateValue = parsed;
       else {
-        console.warn('⚠️ Could not parse date:', bookingData.date || card.dataset.date);
+        console.warn('Could not parse date:', bookingData.date || card.dataset.date);
         dateValue = null;
       }
     }
@@ -347,12 +348,12 @@ bookingCards.forEach(card => {
     setSpan('date', bookingData.date || card.dataset.date || '');
     setSpan('time', bookingData.time || card.dataset.time || '');
     setSpan('repeat', bookingData.repeat || card.dataset.repeat || 'Never');
-  setSpan('name', bookingData.name || bookingData.userId || card.dataset.name || '');
-  setSpan('email', bookingData.email || card.dataset.email || '');
+    setSpan('name', bookingData.name || bookingData.userId || card.dataset.name || '');
+    setSpan('email', bookingData.email || card.dataset.email || '');
     setSpan('purpose', bookingData.purpose || card.dataset.purpose || '');
     setSpan('roomId', bookingData.roomId || card.dataset.roomid || '');
 
-    console.log('📋 Form populated with:', {
+    console.log('Form populated with:', {
       id: bookingForm.dataset.id,
       date: bookingData.date || card.dataset.date,
       time: bookingData.time || card.dataset.time,
@@ -391,10 +392,10 @@ if (cancelBtn) {
         alert("Error canceling booking: " + (result.error || "unknown error"));
       }
     } catch (err) {
-      console.error("❌ Error deleting booking:", err);
+      console.error("Error deleting booking:", err);
       alert("Failed to cancel booking.");
     }
   });
 } else {
-  console.warn("⚠️ Cancel button not found");
+  console.warn("Cancel button not found");
 }
