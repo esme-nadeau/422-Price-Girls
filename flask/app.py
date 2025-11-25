@@ -122,6 +122,10 @@ def login_page():
 def index():
     return render_template("index.html")
 
+@app.route("/admin")
+def admin():
+    return render_template("admin.html")
+
 @app.route("/map")
 def map_tab():
     return render_template("map.html")
@@ -153,7 +157,6 @@ def my_bookings():
         error_message = f"Error loading bookings: {e}"
         print(f"[mybookings] {error_message}")
     return render_template("mybookings.html", bookings=bookings, error_message=error_message)
-
 
 # All Bookings: admin/faculty view of current and upcoming bookings
 @app.route("/allbookings")

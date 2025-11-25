@@ -52,7 +52,9 @@ document.addEventListener("DOMContentLoaded", () => {
         'nav-map-tab': { target: 'nav-map', url: '/map', init: window.initMap },
         'nav-calendar-tab': { target: 'nav-calendar', url: '/calendar', init: window.initCalendar },
         'nav-bookings-tab': { target: 'nav-bookings', url: '/mybookings', init: window.initBookings },
-        'nav-allbookings-tab': { target: 'nav-allbookings', url: '/allbookings', init: window.initAllBookings }
+        'nav-allbookings-tab': { target: 'nav-allbookings', url: '/allbookings', init: window.initAllBookings },
+        'nav-admin-tab': { target: 'nav-admin', url: '/admin', init: window.initAdminTools }
+
     };
 
     Object.keys(tabMap).forEach(tabId => {

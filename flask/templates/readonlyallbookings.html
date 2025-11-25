@@ -1,0 +1,61 @@
+<link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
+
+<!-- All Bookings Content (admin/faculty view) -->
+<div id="allbookings-tab-content" class="mybookings-container allbookings-page">
+  <div class="container-fluid mt-2">
+    <div class="row g-3 align-items-start allbookings-layout">
+
+      <!-- RIGHT: Week calendar -->
+      <div class="col-12 col-lg-9">
+        <div class="card shadow-sm p-3" id="allWeekCalendarCard">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex align-items-center gap-2">
+              <button class="btn btn-outline-secondary btn-sm" id="allPrevWeek" aria-label="Previous week">
+                <i class="bi bi-chevron-left"></i>
+              </button>
+              <div class="input-group input-group-sm" style="width: 240px;">
+                <span class="input-group-text">Week of</span>
+                <input type="date" class="form-control" id="allWeekPicker" />
+              </div>
+              <button class="btn btn-outline-secondary btn-sm" id="allNextWeek" aria-label="Next week">
+                <i class="bi bi-chevron-right"></i>
+              </button>
+              <button class="btn btn-outline-success btn-sm" id="allTodayWeek" aria-label="Jump to current week">
+                Today
+              </button>
+            </div>
+            <div class="text-end small text-muted">
+              <div><strong>All Room Bookings</strong></div>
+              <div id="allCalendarSummary"></div>
+            </div>
+          </div>
+
+          <div id="allCalendarGrid" class="week-grid"></div>
+          <div class="allbookings-instruction alert alert-info mt-2 py-1 px-2">
+            <strong>Tip:</strong> Each gray cell with a label has a booking. Click a cell to view or edit its booking.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal chooser for multiple bookings in the same time slot -->
+<div class="modal fade" id="allBookingsChooserModal" tabindex="-1" aria-labelledby="allBookingsChooserLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="allBookingsChooserLabel">Multiple bookings in this time slot</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted mb-2">Select a booking below to view or edit its details.</p>
+        <div id="allBookingsChooserList" class="list-group list-group-flush small"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
