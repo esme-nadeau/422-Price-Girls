@@ -1,3 +1,6 @@
+/* ==============================
+   Calendar page
+============================== */
 /* Calendar page layout overrides (make grid take ~2/3 width) */
 .calendar-page #weekCalendarCard { max-width: none !important; width: 100%; }
 .calendar-page .booking-widget { max-width: none; }
@@ -73,7 +76,53 @@
 .week-grid .cell.booked.overlap-4 { background: #9fa4a1 !important; }
 .week-grid .cell.past { background: #f5f5f5; cursor: not-allowed; opacity: 0.6; }
 
-/* All Bookings tab: booked cells are editable (show pencil cursor) */
+
+/* ==============================
+   Room Description Card
+============================== */
+/* Room description widget */
+.room-description-widget { border-radius: 12px; min-height: 120px; }
+.calendar-page .room-description-widget { max-width: none; width: 100%; }
+
+#roomDescriptionText {
+  columns: 2;
+  column-gap: 1rem;
+}
+
+#roomDescCard {
+  min-height: 200px;
+  padding: 1.5rem;
+}
+
+
+/* ==============================
+   For All Bookings page
+============================== */
+
+.allbookings-page .week-grid {
+  max-height: 100%;       /* limits to card height */
+  overflow-y: auto;       /* scroll only inside the grid */
+  overflow-x: hidden;
+}
+
+.allbookings-page #allWeekCalendarCard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;           /* ensure the card fills column */
+}
+
+.allbookings-page #allCalendarGrid {
+  flex: 1 1 auto;         /* take remaining space in card */
+  min-height: 0;          /* allow proper overflow handling */
+  overflow-y: auto;       /* only scroll inside grid */
+}
+
+.allbookings-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 100%;     /* prevent overflow */
+}
 .allbookings-page .week-grid .cell.booked {
   cursor: pointer;
 }
@@ -122,21 +171,4 @@
 .week-grid .booked-label-more {
   font-weight: 500;
   font-style: italic;
-}
-
-/* ==============================
-   Room Description Card
-============================== */
-/* Room description widget */
-.room-description-widget { border-radius: 12px; min-height: 120px; }
-.calendar-page .room-description-widget { max-width: none; width: 100%; }
-
-#roomDescriptionText {
-  columns: 2;
-  column-gap: 1rem;
-}
-
-#roomDescCard {
-  min-height: 200px;
-  padding: 1.5rem;
 }

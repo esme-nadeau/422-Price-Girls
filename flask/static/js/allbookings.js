@@ -283,6 +283,7 @@
     const endSel       = root.querySelector('#allBookingEndTime');
     const repeatSel    = root.querySelector('#allBookingRepeat');
     const emailInput   = root.querySelector('#allBookingEmail');
+    const nameInput   = root.querySelector('#allBookingName');
     const purposeInput = root.querySelector('#allBookingPurpose');
     const hint         = root.querySelector('#allBookingHint');
 
@@ -293,6 +294,7 @@
     if(endSel)       endSel.value = '';
     if(repeatSel)    repeatSel.value = 'Never';
     if(emailInput)   emailInput.value = '';
+    if(nameInput)    nameInput.value = '';
     if(purposeInput) purposeInput.value = '';
     if(hint)         hint.textContent = 'Select a booking in the calendar to view or edit details.';
   }
@@ -459,12 +461,14 @@
     const endSel = root.querySelector('#allBookingEndTime');
     const repeatSel = root.querySelector('#allBookingRepeat');
     const emailInput = root.querySelector('#allBookingEmail');
+    const nameInput = root.querySelector('#allBookingName');
     const purposeInput = root.querySelector('#allBookingPurpose');
 
     if(idInput) idInput.value = booking.id || '';
     if(dateInput && booking.date) dateInput.value = booking.date;
     if(repeatSel) repeatSel.value = booking.repeat || 'Never';
     if(emailInput) emailInput.value = booking.email || booking.userEmail || '';
+    if(nameInput) nameInput.value = booking.name || booking.userId || '';
     if(purposeInput) purposeInput.value = booking.purpose || '';
 
     populateTimeSelects(startSel, endSel, booking.timeRange || '');
@@ -488,6 +492,7 @@
         const endSel = root.querySelector('#allBookingEndTime');
         const repeatSel = root.querySelector('#allBookingRepeat');
         const emailInput = root.querySelector('#allBookingEmail');
+        const nameInput = root.querySelector('#allBookingName');
         const purposeInput = root.querySelector('#allBookingPurpose');
 
         const bookingId = idInput ? idInput.value : '';
@@ -502,6 +507,7 @@
           date: dateInput ? dateInput.value : '',
           timeRange,
           repeat: repeatSel ? repeatSel.value : 'Never',
+          name: nameInput ? nameInput.value.trim() : '',
           email: emailInput ? emailInput.value.trim() : '',
           purpose: purposeInput ? purposeInput.value.trim() : '',
           roomId: roomSelect ? roomSelect.value : ''
