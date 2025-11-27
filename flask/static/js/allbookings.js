@@ -126,6 +126,38 @@
     return h*60 + m;
   }
 
+  function rangesOverlapMinutes(s1, e1, s2, e2){
+    // Mirror backend logic: overlap when start1 < end2 AND start2 < end1
+    return s1 < e2 && s2 < e1;
+  }
+
+  function hasOverlapForEdit(bookingId, roomId, date, startLabel, endLabel){
+    if(!roomId || !date || !startLabel || !endLabel) return null;
+    const newStartMin = toMinutes(startLabel);
+    const newEndMin = toMinutes(endLabel);
+    if(newEndMin <= newStartMin) return { conflictRange: null, type: 'invalid_range' };
+
+    const bookings = state.bookings || [];
+    for(const b of bookings){
+      if(!b || !b.date || !b.timeRange) continue;
+      if(b.id === bookingId) continue; // skip the booking being edited
+      if((b.roomId || '') !== roomId) continue;
+      if(b.date !== date) continue;
+
+      const rng = (b.timeRange || '').trim();
+      if(!rng || !rng.includes(' - ')) continue;
+      const [s,e] = rng.split(' - ').map(x => x.trim());
+      if(!s || !e) continue;
+
+      const existStart = toMinutes(s);
+      const existEnd = toMinutes(e);
+      if(rangesOverlapMinutes(newStartMin, newEndMin, existStart, existEnd)){
+        return { conflictRange: rng, type: 'overlap' };
+      }
+    }
+    return null;
+  }
+
   function applyBookingsToGrid(){
     const root = getRoot();
     const grid = root.querySelector('#allCalendarGrid');
@@ -501,16 +533,43 @@
           return;
         }
 
+        const roomId = roomSelect ? roomSelect.value : '';
+        const dateVal = dateInput ? dateInput.value : '';
+
+        // Client-side validation: ensure end > start and no overlaps on All Bookings edits
+        const overlapInfo = hasOverlapForEdit(
+          bookingId,
+          roomId,
+          dateVal,
+          startSel ? startSel.value : '',
+          endSel ? endSel.value : ''
+        );
+        if (overlapInfo) {
+          let msg = '';
+          if (overlapInfo.type === 'invalid_range') {
+            msg = 'End time must be after start time. Please adjust the start and end times so the booking has a positive duration.';
+          } else if (overlapInfo.type === 'overlap') {
+            const conflict = overlapInfo.conflictRange || 'that time';
+            msg = `This change would overlap with an existing booking for ${conflict} on ${dateVal} in this room. Please choose a different time range or room.`;
+          }
+          if (window.showBookingErrorModal) {
+            window.showBookingErrorModal(msg);
+          } else {
+            alert(msg);
+          }
+          return;
+        }
+
         const timeRange = `${startSel.value} - ${endSel.value}`;
 
         const payload = {
-          date: dateInput ? dateInput.value : '',
+          date: dateVal,
           timeRange,
           repeat: repeatSel ? repeatSel.value : 'Never',
           name: nameInput ? nameInput.value.trim() : '',
           email: emailInput ? emailInput.value.trim() : '',
           purpose: purposeInput ? purposeInput.value.trim() : '',
-          roomId: roomSelect ? roomSelect.value : ''
+          roomId
         };
 
         try{
@@ -521,14 +580,25 @@
           });
           const data = await res.json();
           if(!res.ok || !data.success){
-            alert('Failed to save booking: ' + (data.error || res.statusText));
+            const baseMsg = data && data.error ? data.error : res.statusText;
+            const msg = `We couldnt save this booking. ${baseMsg || ''}`.trim();
+            if (window.showBookingErrorModal) {
+              window.showBookingErrorModal(msg);
+            } else {
+              alert(msg);
+            }
             return;
           }
           // Refresh grid from Firestore
           await update();
         }catch(err){
           console.error('[allbookings] Save error', err);
-          alert('Failed to save booking.');
+          const msg = 'Failed to save booking due to a network or server error. Please try again.';
+          if (window.showBookingErrorModal) {
+            window.showBookingErrorModal(msg);
+          } else {
+            alert(msg);
+          }
         }
       });
     }
