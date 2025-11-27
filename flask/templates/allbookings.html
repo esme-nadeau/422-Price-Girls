@@ -100,7 +100,7 @@
       </div>
 
     </div>
-  </div>
+</div>
 </div>
 
 <!-- Modal chooser for multiple bookings in the same time slot -->
@@ -121,3 +121,31 @@
     </div>
   </div>
 </div>
+
+<!-- Shared booking error modal (matches Calendar / Map styling) -->
+<div class="modal fade" id="bookingErrorModal" tabindex="-1" aria-labelledby="bookingErrorModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bookingErrorModalLabel">Booking Not Possible</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-start fs-5" id="bookingErrorModalBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts for All Bookings page -->
+<script src="{{ url_for('static', filename='js/allbookings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/bookings.js') }}"></script>
+<script src="{{ url_for('static', filename='js/session-debug.js') }}"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', function () {
+    if (window.initAllBookings) {
+      window.initAllBookings();
+    }
+  });
+</script>
