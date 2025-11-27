@@ -5,10 +5,40 @@
   <div class="container-fluid mt-2">
     <div class="row g-3 align-items-start allbookings-layout">
 
-      <!-- LEFT: Side panel for viewing/editing a booking -->
+      <!-- LEFT: Side panel / info for this tab -->
       <div class="col-12 col-lg-3">
+        <!-- Info widget for students / unauthenticated users -->
+        <div
+          class="card shadow-sm mb-3 d-none"
+          id="allBookingsInfoPanel"
+          style="border-left: 4px solid #198754;"
+        >
+          <div class="card-body text-start">
+            <h5 class="fw-semibold mb-2 fs-4 text-success" id="allBookingsInfoTitle">
+              All Bookings Overview
+            </h5>
+            <p class="mb-3 fs-6 text-body" id="allBookingsInfoBody">
+              This tab shows all current and upcoming room reservations so you can see when rooms are busy
+            </p>
+            <ul class="mb-0 ps-3" id="allBookingsInfoList" style="font-size: 1.05rem; line-height: 1.5;">
+              <li class="mb-1">See when rooms are reserved, not who booked them or why</li>
+              <li class="mb-1">Use the Map or Calendar tabs to explore availability and make a reservation</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Admin / faculty booking details panel -->
         <div class="card shadow-sm p-3 allbookings-panel" id="allBookingPanel">
-          <h5 class="fw-semibold mb-3">Booking Details</h5>
+          <h5 class="fw-semibold mb-2" id="allBookingPanelTitle">Booking Details</h5>
+
+          <!-- Shown only for faculty (read-only view) -->
+          <div
+            id="allBookingFacultyNote"
+            class="alert alert-info py-2 px-2 small d-none"
+            role="status"
+          >
+            Faculty view is read-only. To change or cancel your own reservations, use the My Bookings tab.
+          </div>
 
           <form id="allBookingForm">
             <input type="hidden" id="allBookingId" />
@@ -57,7 +87,7 @@
               <input type="text" class="form-control" id="allBookingPurpose" placeholder="e.g. Study session">
             </div>
 
-            <div class="d-flex gap-2 mt-3">
+            <div class="d-flex gap-2 mt-3" id="allBookingActionsRow">
               <button type="button" class="btn btn-danger flex-grow-1" id="allDeleteBookingBtn">Delete</button>
               <button type="button" class="btn btn-green flex-grow-1" id="allSaveBookingBtn">Save</button>
             </div>
@@ -139,6 +169,11 @@
 </div>
 
 <!-- Scripts for All Bookings page -->
+<script>
+  // Expose the authenticated user's role (admin, faculty, student) and login status to JS.
+  window.currentUserRole = "{{ user_role or 'student' }}";
+  window.isLoggedIn = {{ 'true' if is_logged_in else 'false' }};
+</script>
 <script src="{{ url_for('static', filename='js/allbookings.js') }}"></script>
 <script src="{{ url_for('static', filename='js/bookings.js') }}"></script>
 <script src="{{ url_for('static', filename='js/session-debug.js') }}"></script>

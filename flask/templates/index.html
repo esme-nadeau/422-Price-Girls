@@ -12,7 +12,13 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/@coreui/coreui/dist/js/coreui.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+  <!-- Expose current user's role/login to front-end JS (All Bookings, etc.) -->
+  <script>
+    window.currentUserRole = "{{ user_role or 'student' }}";
+    window.isLoggedIn = {{ 'true' if is_logged_in else 'false' }};
+  </script>
+
   <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </head>
 
