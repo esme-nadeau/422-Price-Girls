@@ -373,7 +373,8 @@
     const roomSelect   = root.querySelector('#allBookingRoomId');
     const startSel     = root.querySelector('#allBookingStartTime');
     const endSel       = root.querySelector('#allBookingEndTime');
-    const repeatSel    = root.querySelector('#allBookingRepeat');
+    const repeatDropdown = root.querySelector('#repeatDropdown');
+    const repeatNotesIcon = root.querySelector('#repeatNotesIcon');
     const emailInput   = root.querySelector('#allBookingEmail');
     const purposeInput = root.querySelector('#allBookingPurpose');
     const hint         = root.querySelector('#allBookingHint');
@@ -383,7 +384,11 @@
     if(roomSelect)   roomSelect.value = '';
     if(startSel)     startSel.value = '';
     if(endSel)       endSel.value = '';
-    if(repeatSel)    repeatSel.value = 'Never';
+    if(repeatDropdown) {
+      repeatDropdown.textContent = 'Never';
+      repeatDropdown.dataset.repeatType = 'Never';
+    }
+    if (repeatNotesIcon) repeatNotesIcon.classList.add('d-none');
     if(emailInput)   emailInput.value = '';
     if(purposeInput) purposeInput.value = '';
     if(hint) {
@@ -583,13 +588,28 @@
     const roomSelect = root.querySelector('#allBookingRoomId');
     const startSel = root.querySelector('#allBookingStartTime');
     const endSel = root.querySelector('#allBookingEndTime');
-    const repeatSel = root.querySelector('#allBookingRepeat');
+    const repeatDropdown = root.querySelector('#repeatDropdown');
+    const repeatNotesIcon = root.querySelector('#repeatNotesIcon');
     const emailInput = root.querySelector('#allBookingEmail');
     const purposeInput = root.querySelector('#allBookingPurpose');
 
     if(idInput) idInput.value = booking.id || '';
     if(dateInput && booking.date) dateInput.value = booking.date;
-    if(repeatSel) repeatSel.value = booking.repeat || 'Never';
+    if(repeatDropdown) {
+      const repeatVal = booking.repeat || 'Never';
+      repeatDropdown.textContent = repeatVal;
+      let type = 'Never';
+      if (repeatVal.startsWith('Daily')) type = 'Daily';
+      else if (repeatVal.startsWith('Weekly')) type = 'Weekly';
+      else if (repeatVal.startsWith('Monthly')) type = 'Monthly';
+      else if (repeatVal && repeatVal !== 'Never') type = 'Custom';
+      repeatDropdown.dataset.repeatType = type;
+      if (type !== 'Never' && repeatNotesIcon) {
+        repeatNotesIcon.classList.remove('d-none');
+      } else if (repeatNotesIcon) {
+        repeatNotesIcon.classList.add('d-none');
+      }
+    }
     if(emailInput) emailInput.value = booking.email || booking.userEmail || '';
     if(purposeInput) purposeInput.value = booking.purpose || '';
 
@@ -633,7 +653,7 @@
         const roomSelect = root.querySelector('#allBookingRoomId');
         const startSel = root.querySelector('#allBookingStartTime');
         const endSel = root.querySelector('#allBookingEndTime');
-        const repeatSel = root.querySelector('#allBookingRepeat');
+        const repeatDropdown = root.querySelector('#repeatDropdown');
         const emailInput = root.querySelector('#allBookingEmail');
         const purposeInput = root.querySelector('#allBookingPurpose');
 
@@ -672,10 +692,14 @@
 
         const timeRange = `${startSel.value} - ${endSel.value}`;
 
+        const repeatText = repeatDropdown
+          ? (repeatDropdown.textContent || 'Never').trim()
+          : 'Never';
+
         const payload = {
           date: dateVal,
           timeRange,
-          repeat: repeatSel ? repeatSel.value : 'Never',
+          repeat: repeatText,
           email: emailInput ? emailInput.value.trim() : '',
           purpose: purposeInput ? purposeInput.value.trim() : '',
           roomId

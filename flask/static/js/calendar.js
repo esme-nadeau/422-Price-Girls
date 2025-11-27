@@ -722,6 +722,15 @@ function setRoomPhotoByDigits(digits) {
     }
   }
 
+  // Expose a safe refresh helper for booking flows (Map / Calendar tabs)
+  window.refreshCalendarBookings = async function() {
+    // Only refresh if the calendar grid is present and initialized
+    if (!document.getElementById('calendarGrid') || !state.weekStart) {
+      return;
+    }
+    await update();
+  };
+
   // Expose for dynamic loader
   window.initCalendar = init;
 
