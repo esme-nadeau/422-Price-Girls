@@ -126,6 +126,8 @@ def index():
 def admin():
     error_message = None
     bookings = []
+    rooms = []
+    users = []
     try:
         if db is None:
             error_message = "Firestore is not initialized. Please check your service account and environment variables."
@@ -140,10 +142,32 @@ def admin():
             if not bookings:
                 error_message = "No bookings found in Firestore."
                 print(f"[mybookings] {error_message}")
+            # Load rooms for admin page (server-side render before JS mounts)
+            try:
+                rooms_ref = db.collection("rooms")
+                room_docs = rooms_ref.stream()
+                for rdoc in room_docs:
+                    r = rdoc.to_dict() or {}
+                    r["id"] = rdoc.id
+                    rooms.append(r)
+            except Exception as re:
+                print(f"[admin] Error loading rooms: {re}")
+            # Load users for Pending Accounts
+            try:
+                users_ref = db.collection('users')
+                for udoc in users_ref.stream():
+                    u = udoc.to_dict() or {}
+                    # ensure expected keys
+                    u.setdefault('email', udoc.id)
+                    u.setdefault('name', '')
+                    u.setdefault('role', 'student')
+                    users.append(u)
+            except Exception as ue:
+                print(f"[admin] Error loading users: {ue}")
     except Exception as e:
         error_message = f"Error loading bookings: {e}"
         print(f"[mybookings] {error_message}")
-    return render_template("admin.html", bookings=bookings, error_message=error_message)
+    return render_template("admin.html", bookings=bookings, rooms=rooms, users=users, error_message=error_message)
 
 @app.route("/map")
 def map_tab():
@@ -324,6 +348,41 @@ def api_rooms():
     except Exception as e:
         print(f"[api_rooms] Error: {e}")
         return jsonify({"rooms": [], "error": str(e)}), 500
+
+
+@app.route("/api/rooms", methods=["POST"])
+def api_create_room():
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+    try:
+        data = request.get_json(silent=True) or {}
+        name = (data.get('name') or data.get('room') or '').strip()
+        desc = data.get('room_description', '') or data.get('description', '') or ''
+        active = bool(data.get('active', False))
+        if not name:
+            return jsonify({"success": False, "error": "name_required"}), 400
+        doc_ref = db.collection('rooms').add({
+            'name': name,
+            'room_description': desc,
+            'active': active,
+        })
+        new_id = doc_ref[1].id
+        return jsonify({"success": True, "id": new_id}), 201
+    except Exception as e:
+        print(f"[api_create_room] Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/rooms/<room_id>', methods=['DELETE'])
+def api_delete_room(room_id):
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+    try:
+        db.collection('rooms').document(room_id).delete()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[api_delete_room] Error deleting {room_id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # ----------------------------
 # Helper functions for time overlap checking

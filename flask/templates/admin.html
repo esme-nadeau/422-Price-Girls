@@ -40,6 +40,11 @@
             {% endfor %}
             </div>
         </div>
+
+<!-- Expose users to client JS for filtering -->
+<script>
+  window.ADMIN_USERS = {{ users | tojson | safe }} || [];
+</script>
     </div>
 
     <!-- MIDDLE: Booking Information -->
@@ -96,10 +101,63 @@
     <div class="col-md-4">
         <div class="approve-account card shadow-sm p-3 mb-4" style="width: 100%;">
             <h5 class="fw-semibold mb-3">Pending Accounts</h5>
+
+            <div class="mb-2 d-flex align-items-center gap-2">
+              <label for="userRoleFilter" class="small mb-0">Filter by role:</label>
+              <select id="userRoleFilter" class="form-select form-select-sm" style="width: auto;">
+                <option value="all">All</option>
+                <option value="admin">Admin</option>
+                <option value="faculty">Faculty</option>
+                <option value="student">Student</option>
+              </select>
+            </div>
+
+            <div id="usersList">
+              {% if users and users|length > 0 %}
+                {% for u in users %}
+                  <div class="d-flex align-items-start justify-content-between mb-2 p-2 rounded" style="border:1px solid rgba(0,0,0,0.05);">
+                    <div>
+                      <div class="fw-semibold">{{ u.name or u.email }}</div>
+                      <div class="small text-muted">{{ u.email }}</div>
+                      <div class="small text-muted">Role: {{ u.role or 'student' }}</div>
+                    </div>
+                    <div class="d-flex flex-column align-items-end gap-1">
+                      <button class="btn btn-sm btn-outline-secondary user-manage-btn" data-email="{{ u.email }}">Manage</button>
+                    </div>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="text-muted small">No pending accounts.</div>
+              {% endif %}
+            </div>
         </div>
         
         <div class="room-management card shadow-sm p-3 mb-4" style="width: 100%;">
             <h5 class="fw-semibold mb-3">Room Management</h5>
+
+            <div id="roomsList" class="mb-3">
+              {% if rooms and rooms|length > 0 %}
+                {% for r in rooms %}
+                  <div class="d-flex align-items-start justify-content-between mb-2 p-2 rounded" style="border:1px solid rgba(0,0,0,0.05);">
+                    <div>
+                      <div class="fw-semibold">{{ r.name or r.id }}</div>
+                    </div>
+                    <div class="d-flex flex-column align-items-end gap-1">
+                      <button class="btn btn-sm btn-outline-danger room-manage-btn" data-id="{{ r.id }}">Manage</button>
+                    </div>
+                  </div>
+                {% endfor %}
+              {% else %}
+                <div class="text-muted small">No rooms found.</div>
+              {% endif %}
+            </div>
+
+            <!-- REPLACED INLINE ADD ROOM WITH MODAL TRIGGER -->
+            <div class="mb-3 pt-2 border-top">
+                <button class="btn btn-green" data-bs-toggle="modal" data-bs-target="#addRoomModal">
+                    Add Room
+                </button>
+            </div>
         </div>
 
         <div class="building-management card shadow-sm p-3 mb-4" style="width: 100%;">
@@ -110,4 +168,49 @@
 </div>
 </div>
 
+<!-- ADD ROOM MODAL -->
+<div class="modal fade" id="addRoomModal" tabindex="-1" aria-labelledby="addRoomModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="addRoomModalLabel">Add Room</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <div class="mb-2">
+          <label class="form-label">Deschutes Hall Room Number</label>
+          <input id="newRoomName" class="form-control" type="text" placeholder="e.g. 127">
+        </div>
+
+        <div class="mb-2">
+          <div class="mb-1">
+            <label class="form-label">Room Description</label>
+            <label class="form-label small text-muted d-block">In the form X, Y, Z i.e. Whiteboard, TV (with HDMI), ...</label>
+          </div>
+          <input id="newRoomDescription" class="form-control" type="text" placeholder="Optional description">
+        </div>
+
+        <div class="form-check mb-3">
+          <input id="newRoomActive" class="form-check-input" type="checkbox" checked>
+          <label class="form-check-label">Active</label>
+        </div>
+
+        <div id="roomsMessage" class="small text-muted"></div>
+
+      </div>
+
+      <div class="modal-footer d-flex gap-2">
+        <button id="addRoomBtn" class="btn btn-green">Add Room</button>
+        <button id="refreshRoomsBtn" class="btn btn-secondary">Refresh</button>
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 <script src="{{ url_for('static', filename='js/session-debug.js') }}"></script>

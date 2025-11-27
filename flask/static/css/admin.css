@@ -1,0 +1,21 @@
+/* Admin page styles */
+
+/* Make the Pending Accounts user list compact and scrollable */
+#usersList {
+	max-height: 220px; /* adjust as needed */
+	overflow-y: auto;
+	padding-right: 6px; /* space for scrollbar */
+}
+
+#usersList .d-flex {
+	padding: 6px 8px;
+	background: #fff;
+}
+
+/* Slightly smaller text for the compact list */
+#usersList .fw-semibold { font-size: 0.95rem; }
+#usersList .small { font-size: 0.8rem; }
+
+/* Make the room list also compact */
+#roomsList { max-height: 220px; overflow-y: auto; padding-right: 6px; }
+
