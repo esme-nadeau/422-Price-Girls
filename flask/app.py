@@ -163,15 +163,38 @@ def my_bookings():
             error_message = "Firestore is not initialized. Please check your service account and environment variables."
             print(f"[mybookings] {error_message}")
         else:
+            # Get user's email from session
+            session_id = request.cookies.get("sessionId")
+            user_email = None
+            
+            if session_id:
+                try:
+                    session_doc = db.collection("sessions").document(session_id).get()
+                    if session_doc.exists:
+                        session_data = session_doc.to_dict()
+                        user_email = session_data.get("email")
+                except Exception as e:
+                    print(f"[mybookings] Error retrieving session: {e}")
+            
+            # If no session, return empty bookings list (user not logged in)
+            if not user_email:
+                print(f"[mybookings] No session found, returning empty bookings list")
+                return render_template("mybookings.html", bookings=[], error_message=None)
+            
+            # Filter bookings by user's email
             bookings_ref = db.collection("bookings")
             docs = bookings_ref.stream()
             for doc in docs:
                 data = doc.to_dict()
-                data["id"] = doc.id
-                bookings.append(data)
+                # Check if booking email matches user's email
+                booking_email = data.get("email") or data.get("userEmail", "")
+                if booking_email.lower() == user_email.lower():
+                    data["id"] = doc.id
+                    bookings.append(data)
+            
             if not bookings:
-                error_message = "No bookings found in Firestore."
-                print(f"[mybookings] {error_message}")
+                error_message = "No bookings found for your account."
+                print(f"[mybookings] No bookings found for {user_email}")
     except Exception as e:
         error_message = f"Error loading bookings: {e}"
         print(f"[mybookings] {error_message}")
@@ -250,6 +273,23 @@ def delete_booking(booking_id):
 def update_booking(booking_id):
     try:
         data = request.get_json(force=True) or {}
+        
+        # Extract fields for overlap checking
+        room_id = data.get("roomId", "")
+        date = data.get("date", "")
+        time_range = data.get("timeRange", "")
+        
+        # Validate required fields for overlap check
+        if room_id and date and time_range:
+            # Check for overlapping bookings (excluding the current booking being updated)
+            overlap_check = check_booking_overlap(db, room_id, date, time_range, exclude_booking_id=booking_id)
+            if overlap_check.get("overlap"):
+                conflicting_time = overlap_check.get("conflicting_time", "unknown time")
+                return jsonify({
+                    "success": False,
+                    "error": f"This room is already booked for {conflicting_time} on {date}."
+                }), 409  # 409 Conflict status code
+        
         # Only allow updating editable fields
         update_fields = {
             "date": data.get("date", ""),
@@ -317,8 +357,16 @@ def times_overlap(start1, end1, start2, end2):
     # Overlap occurs when: start1 < end2 AND start2 < end1
     return s1 < e2 and s2 < e1
 
-def check_booking_overlap(db, room_id, date, time_range_str):
-    """Check if a new booking would overlap with existing bookings."""
+def check_booking_overlap(db, room_id, date, time_range_str, exclude_booking_id=None):
+    """Check if a new booking would overlap with existing bookings.
+    
+    Args:
+        db: Firestore client
+        room_id: Room ID to check
+        date: Date string (YYYY-MM-DD)
+        time_range_str: Time range string (e.g., "8:00 AM - 9:00 AM")
+        exclude_booking_id: Optional booking ID to exclude from overlap check (for updates)
+    """
     try:
         # Parse the new booking's time range
         new_start, new_end = parse_time_string(time_range_str)
@@ -327,6 +375,10 @@ def check_booking_overlap(db, room_id, date, time_range_str):
         existing_bookings = db.collection("bookings").where("roomId", "==", room_id).where("date", "==", date).stream()
         
         for booking_doc in existing_bookings:
+            # Skip the booking being updated
+            if exclude_booking_id and booking_doc.id == exclude_booking_id:
+                continue
+                
             booking = booking_doc.to_dict()
             existing_time_range = booking.get("timeRange", "")
             

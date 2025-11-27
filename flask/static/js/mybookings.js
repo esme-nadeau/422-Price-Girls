@@ -184,6 +184,23 @@ function setBookingFormEditable(editable) {
 // Track edit mode
 let isEditing = false;
 
+// Function to enable/disable booking card clicks
+function setBookingCardsClickable(clickable) {
+  // Query for cards each time to handle dynamically loaded content
+  const cards = document.querySelectorAll('.booking-card');
+  cards.forEach(card => {
+    if (clickable) {
+      card.style.pointerEvents = '';
+      card.style.opacity = '';
+      card.style.cursor = '';
+    } else {
+      card.style.pointerEvents = 'none';
+      card.style.opacity = '0.6';
+      card.style.cursor = 'not-allowed';
+    }
+  });
+}
+
 if (editBtn) {
   editBtn.addEventListener('click', async () => {
     if (!isEditing) {
@@ -191,6 +208,7 @@ if (editBtn) {
       setBookingFormEditable(true);
       editBtn.textContent = 'Save';
       isEditing = true;
+      setBookingCardsClickable(false); // Disable clicking other bookings
     } else {
       // Save edits
       const bookingId = bookingForm.dataset.id;
@@ -263,6 +281,7 @@ if (editBtn) {
           }
           editBtn.textContent = 'Edit Reservation';
           isEditing = false;
+          setBookingCardsClickable(true); // Re-enable clicking other bookings
           // Optionally update the booking card info in DOM
           const card = document.querySelector(`.booking-card[data-id="${bookingId}"]`);
           if (card) {
@@ -308,6 +327,11 @@ if (!bookingCards.length) {
 // Add click listeners to booking cards
 bookingCards.forEach(card => {
   card.addEventListener('click', () => {
+    // Prevent clicking other bookings while in edit mode
+    if (isEditing) {
+      return;
+    }
+    
     console.log(`🟢 Clicked booking ${card.dataset.id}`);
 
     // Highlight selected
