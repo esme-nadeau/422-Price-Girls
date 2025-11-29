@@ -7,8 +7,8 @@
         <div class="approve-bookings card shadow-sm p-3 mb-4" style="width: 100%;">
             <h5 class="fw-semibold mb-3">Bookings to Approve</h5>
             {% if error_message %}
-            <div style="color: #b00020; background: #fff3f3; border: 1px solid #f8b6b6; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">
-            <strong>Error:</strong> {{ error_message }}
+            <div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">
+            {{ error_message }}
             </div>
             {% endif %}
             <div id="bookingsList">
@@ -39,17 +39,12 @@
             {% endfor %}
             </div>
         </div>
-
-<!-- Expose users to client JS for filtering -->
-<script>
-  window.ADMIN_USERS = {{ users | tojson | safe }} || [];
-</script>
     </div>
 
     <!-- MIDDLE: Booking Information -->
     <div class="col-md-4" id="bookingInfoWidget">
       <div class="card shadow-sm p-4" id="bookingInfoCard" style="display: none;">
-        <h4 class="fw-semibold mb-3">Booking Information</h4>
+        <h5 class="fw-semibold mb-3">Booking Information</h5>
         <form id="bookingForm" data-id="">
 
           <div class="mb-3">
@@ -109,16 +104,22 @@
             <div id="usersList">
               {% if users and users|length > 0 %}
                 {% for u in users %}
-                  <div class="d-flex align-items-start justify-content-between mb-2 p-2 rounded" style="border:1px solid rgba(0,0,0,0.05);">
-                    <div>
-                      <div class="fw-semibold">{{ u.name or u.email }}</div>
-                      <div class="small text-muted">{{ u.email }}</div>
-                      <div class="small text-muted">Role: {{ u.role or 'student' }}</div>
-                    </div>
-                    <div class="d-flex flex-column align-items-end gap-1">
-                      <button class="btn btn-sm btn-outline-secondary user-manage-btn" data-email="{{ u.email }}">Manage</button>
-                    </div>
+                <div class="d-flex align-items-start justify-content-between mb-2 p-2 rounded"
+                    style="border:1px solid rgba(0,0,0,0.05);">
+
+                  <div class="flex-grow-1 text-start">
+                    <div class="fw-semibold">{{ u.name or u.email }}</div>
+                    <div class="small text-muted">{{ u.email }}</div>
+                    <div class="small text-muted">Role: {{ u.role or 'student' }}</div>
                   </div>
+
+                  <div class="d-flex flex-column align-items-end gap-1">
+                    <button class="btn btn-sm btn-outline-secondary user-manage-btn"
+                            data-email="{{ u.email }}">
+                      <i class="bi bi-gear me-1"></i>Edit
+                    </button>
+                  </div>
+                </div>
                 {% endfor %}
               {% else %}
                 <div class="text-muted small">No All Users.</div>
@@ -126,9 +127,9 @@
             </div>
         </div>
         
+        <!-- Rooom management card -->
         <div class="room-management card shadow-sm p-3 mb-4" style="width: 100%;">
             <h5 class="fw-semibold mb-3">Room Management</h5>
-
             <div id="roomsList" class="mb-3">
               {% if rooms and rooms|length > 0 %}
                 {% for r in rooms %}
@@ -137,7 +138,13 @@
                       <div class="fw-semibold">{{ r.name or r.id }}</div>
                     </div>
                     <div class="d-flex flex-column align-items-end gap-1">
-                      <button class="btn btn-sm btn-outline-danger room-manage-btn" data-id="{{ r.id }}">Manage</button>
+                      <button class="btn btn-sm btn-outline-secondary user-manage-btn"
+                        data-id="{{ r.id }}"
+                        data-name="{{ r.name or r.id }}"
+                        data-description="{{ r.room_description or '' }}"
+                        data-active="{{ 'true' if r.active else 'false' }}">
+                          <i class="bi bi-gear me-1"></i>Edit
+                      </button>
                     </div>
                   </div>
                 {% endfor %}
@@ -147,11 +154,11 @@
             </div>
 
             <!-- REPLACED INLINE ADD ROOM WITH MODAL TRIGGER -->
-            <div class="mb-3 pt-2 border-top">
-                <button class="btn btn-green" data-bs-toggle="modal" data-bs-target="#addRoomModal">
-                    Add Room
-                </button>
-            </div>
+        <div class="mb-3 pt-2 border-top d-flex justify-content-end">
+            <button class="btn btn-green" data-bs-toggle="modal" data-bs-target="#addRoomModal">
+                Add Room
+            </button>
+        </div>
         </div>
 
         <div class="building-management card shadow-sm p-3 mb-4" style="width: 100%;">
@@ -187,9 +194,9 @@
           <input id="newRoomDescription" class="form-control" type="text" placeholder="Optional description">
         </div>
 
-        <div class="form-check mb-3">
+        <div class="form-check d-flex align-items-center gap-2 mb-3">
           <input id="newRoomActive" class="form-check-input" type="checkbox" checked>
-          <label class="form-check-label">Active</label>
+          <label class="form-check-label" for="newRoomActive">Active</label>
         </div>
 
         <div id="roomsMessage" class="small text-muted"></div>
@@ -198,7 +205,50 @@
 
       <div class="modal-footer d-flex gap-2">
         <button id="addRoomBtn" class="btn btn-green">Add Room</button>
-        <button id="refreshRoomsBtn" class="btn btn-secondary">Refresh</button>
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE ROOM MODAL -->
+<div class="modal fade" id="manageRoomModal" tabindex="-1" aria-labelledby="manageRoomModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="manageRoomModalLabel">Manage room</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <div class="mb-2">
+          <label class="form-label">Deschutes Hall Room Number</label>
+          <input id="manageRoomName" class="form-control" type="text" placeholder="e.g. 127">
+        </div>
+
+        <div class="mb-2">
+          <div class="mb-1">
+            <label class="form-label">Room Description</label>
+            <label class="form-label small text-muted d-block">In the form X, Y, Z i.e. Whiteboard, TV (with HDMI), ...</label>
+          </div>
+          <input id="manageRoomDescription" class="form-control" type="text" placeholder="Optional description">
+        </div>
+
+        <div class="form-check d-flex align-items-center gap-2 mb-3">
+          <input id="manageRoomActive" class="form-check-input" type="checkbox" checked>
+          <label class="form-check-label" for="manageRoomActive">Active</label>
+        </div>
+
+        <div id="manageRoomMessage" class="small text-muted"></div>
+
+      </div>
+
+      <div class="modal-footer d-flex gap-2">
+        <button id="deleteRoomBtn" class="btn btn-red">Delete Room</button>
+        <button id="changeRoomBtn" class="btn btn-green">Confirm Changes</button>
         <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
       </div>
 

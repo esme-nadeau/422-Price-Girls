@@ -425,13 +425,15 @@ function showMessage(msg, isError = false) {
       const actions = document.createElement("div");
       actions.className = "d-flex flex-column align-items-end gap-1";
 
-      const del = document.createElement("button");
-      del.className = "btn btn-sm btn-outline-danger room-delete-btn";
-      del.textContent = "Delete";
-      del.dataset.id = r.id;
-      del.dataset.name = r.name || r.id;
+      const manage = document.createElement("button");
+      manage.className = "btn btn-sm btn-outline-danger room-manage-btn";
+      manage.textContent = "Manage";
+      manage.dataset.id = r.id;
+      manage.dataset.name = r.name || r.id;
+      manage.dataset.description = r.room_description || "";
+      manage.dataset.active = r.active ? "true" : "false";
 
-      actions.appendChild(del);
+      actions.appendChild(manage);
       row.appendChild(actions);
       listWrap.appendChild(row);
     });
@@ -531,11 +533,195 @@ function showMessage(msg, isError = false) {
     });
   }
 
+  // Manage room modal setup
+  let manageModalEl = null;
+  let manageRoomName = null;
+  let manageRoomDesc = null;
+  let manageRoomActive = null;
+  let manageRoomMessage = null;
+  let deleteRoomBtn = null;
+  let changeRoomBtn = null;
+
+  let currentRoomId = null;
+
+  // Function to initialize modal elements (call after DOM is ready)
+  function initManageModalElements() {
+    manageModalEl = document.getElementById("manageRoomModal");
+    manageRoomName = document.getElementById("manageRoomName");
+    manageRoomDesc = document.getElementById("manageRoomDescription");
+    manageRoomActive = document.getElementById("manageRoomActive");
+    manageRoomMessage = document.getElementById("manageRoomMessage");
+    deleteRoomBtn = document.getElementById("deleteRoomBtn");
+    changeRoomBtn = document.getElementById("changeRoomBtn");
+  }
+
+  // Function to get or create modal instance
+  function getManageModalInstance() {
+    if (!manageModalEl) {
+      initManageModalElements();
+    }
+    if (!manageModalEl) {
+      console.error("manageRoomModal element not found");
+      return null;
+    }
+    if (window.bootstrap && bootstrap.Modal) {
+      return bootstrap.Modal.getInstance(manageModalEl) || new bootstrap.Modal(manageModalEl, {
+        backdrop: true,
+        keyboard: true
+      });
+    }
+    console.error("Bootstrap Modal not available");
+    return null;
+  }
+
+  // Initialize modal elements
+  initManageModalElements();
+
+  // Handle Manage button clicks - open modal with room data
   listWrap.addEventListener("click", (e) => {
-    const btn = e.target.closest(".room-delete-btn");
+    const btn = e.target.closest(".room-manage-btn");
     if (!btn) return;
-    deleteRoom(btn.dataset.id, btn.dataset.name);
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    console.log("Manage button clicked", btn);
+    
+    currentRoomId = btn.dataset.id;
+    const roomName = btn.dataset.name || btn.dataset.id || "";
+    const roomDesc = btn.dataset.description || "";
+    const roomActive = btn.dataset.active === "true";
+
+    console.log("Room data:", { currentRoomId, roomName, roomDesc, roomActive });
+
+    // Ensure modal elements are initialized
+    if (!manageRoomName || !manageRoomDesc || !manageRoomActive) {
+      initManageModalElements();
+    }
+
+    // Populate modal with room data
+    if (manageRoomName) manageRoomName.value = roomName;
+    if (manageRoomDesc) manageRoomDesc.value = roomDesc;
+    if (manageRoomActive) manageRoomActive.checked = roomActive;
+    if (manageRoomMessage) manageRoomMessage.textContent = "";
+
+    // Open the modal
+    const modalInstance = getManageModalInstance();
+    if (modalInstance) {
+      console.log("Opening modal");
+      modalInstance.show();
+    } else {
+      console.error("Could not open modal. Bootstrap or modal element not found.", {
+        manageModalEl: !!manageModalEl,
+        bootstrap: !!window.bootstrap,
+        bootstrapModal: !!(window.bootstrap && bootstrap.Modal)
+      });
+    }
   });
+
+  // Handle delete button in modal
+  if (deleteRoomBtn) {
+    deleteRoomBtn.addEventListener("click", async () => {
+      if (!currentRoomId) return;
+      
+      const roomName = manageRoomName?.value || currentRoomId;
+      const ok = confirm(
+        `Delete room "${roomName}"?\nThis action cannot be undone.`
+      );
+      if (!ok) return;
+
+      try {
+        const resp = await fetch(`/api/rooms/${encodeURIComponent(currentRoomId)}`, {
+          method: "DELETE",
+        });
+
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+          if (manageRoomMessage) {
+            manageRoomMessage.textContent = data.error || "Failed to delete room";
+            manageRoomMessage.style.color = "#b00020";
+          }
+          return;
+        }
+
+        if (manageRoomMessage) {
+          manageRoomMessage.textContent = "Room deleted";
+          manageRoomMessage.style.color = "#666";
+        }
+
+        // Close modal and reload rooms
+        const modalInstance = getManageModalInstance();
+        if (modalInstance) modalInstance.hide();
+        await loadRooms();
+        currentRoomId = null;
+      } catch (err) {
+        console.error("deleteRoom error:", err);
+        if (manageRoomMessage) {
+          manageRoomMessage.textContent = "Failed to delete room (network error)";
+          manageRoomMessage.style.color = "#b00020";
+        }
+      }
+    });
+  }
+
+  // Handle confirm changes button in modal
+  if (changeRoomBtn) {
+    changeRoomBtn.addEventListener("click", async () => {
+      if (!currentRoomId) return;
+
+      const name = manageRoomName?.value.trim();
+      const desc = manageRoomDesc?.value.trim();
+      const active = manageRoomActive?.checked;
+
+      if (!name) {
+        if (manageRoomMessage) {
+          manageRoomMessage.textContent = "Room name is required";
+          manageRoomMessage.style.color = "#b00020";
+        }
+        return;
+      }
+
+      const payload = { name, room_description: desc, active };
+
+      try {
+        const resp = await fetch(`/api/rooms/${encodeURIComponent(currentRoomId)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+          if (manageRoomMessage) {
+            manageRoomMessage.textContent = data.error || "Failed to update room";
+            manageRoomMessage.style.color = "#b00020";
+          }
+          return;
+        }
+
+        if (manageRoomMessage) {
+          manageRoomMessage.textContent = "Room updated";
+          manageRoomMessage.style.color = "#666";
+        }
+
+        // Close modal and reload rooms
+        setTimeout(async () => {
+          const modalInstance = getManageModalInstance();
+          if (modalInstance) modalInstance.hide();
+          await loadRooms();
+          currentRoomId = null;
+        }, 500);
+      } catch (err) {
+        console.error("updateRoom error:", err);
+        if (manageRoomMessage) {
+          manageRoomMessage.textContent = "Failed to update room (network error)";
+          manageRoomMessage.style.color = "#b00020";
+        }
+      }
+    });
+  }
 
   // --------------------------------
   // Refresh button
@@ -726,6 +912,22 @@ window.initUserSearch = function() {
       card.addEventListener('click', () => {
         console.log(`Admin: Clicked booking ${card.dataset.id}`);
 
+        const bookingInfoCard = document.getElementById('bookingInfoCard');
+        const currentBookingId = bookingForm.dataset.id;
+        const clickedBookingId = card.dataset.id;
+
+        // Check if the same booking is clicked again
+        if (currentBookingId === clickedBookingId && bookingInfoCard && bookingInfoCard.style.display === 'block') {
+          // Hide the booking information card
+          bookingInfoCard.style.display = 'none';
+          // Remove selection highlight
+          document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+          // Clear the form ID
+          bookingForm.dataset.id = '';
+          console.log('Admin: Booking card hidden');
+          return;
+        }
+
         // Highlight selected
         document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
@@ -768,7 +970,6 @@ window.initUserSearch = function() {
         setSpan('roomId', bookingData.roomId || card.dataset.roomid || '');
 
         // Show the booking information card
-        const bookingInfoCard = document.getElementById('bookingInfoCard');
         if (bookingInfoCard) {
           bookingInfoCard.style.display = 'block';
         }

@@ -133,14 +133,14 @@ def admin():
             error_message = "Firestore is not initialized. Please check your service account and environment variables."
             print(f"[admin] {error_message}")
         else:
-            bookings_ref = db.collection("bookings")
+            bookings_ref = db.collection("pending_bookings")
             docs = bookings_ref.stream()
             for doc in docs:
                 data = doc.to_dict()
                 data["id"] = doc.id
                 bookings.append(data)
             if not bookings:
-                error_message = "No bookings found in Firestore."
+                error_message = "No bookings to approve."
                 print(f"[admin] {error_message}")
             # Load rooms for admin page (server-side render before JS mounts)
             try:
@@ -382,6 +382,32 @@ def api_delete_room(room_id):
         return jsonify({"success": True}), 200
     except Exception as e:
         print(f"[api_delete_room] Error deleting {room_id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/rooms/<room_id>', methods=['PUT'])
+def api_update_room(room_id):
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+    try:
+        data = request.get_json(silent=True) or {}
+        name = (data.get('name') or '').strip()
+        desc = data.get('room_description', '') or ''
+        active = bool(data.get('active', False))
+        
+        if not name:
+            return jsonify({"success": False, "error": "name_required"}), 400
+        
+        update_data = {
+            'name': name,
+            'room_description': desc,
+            'active': active,
+        }
+        
+        db.collection('rooms').document(room_id).update(update_data)
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[api_update_room] Error updating {room_id}: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ----------------------------
