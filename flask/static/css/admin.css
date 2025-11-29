@@ -1,6 +1,7 @@
-/* Admin page styles */
+/* ==============================
+   Admin page
+============================== */
 
-/* Make the Pending Accounts user list compact and scrollable */
 #usersList {
 	max-height: 220px; /* adjust as needed */
 	overflow-y: auto;
@@ -18,4 +19,18 @@
 
 /* Make the room list also compact */
 #roomsList { max-height: 220px; overflow-y: auto; padding-right: 6px; }
+
+/* Make the bookings to approve list scrollable */
+.approve-bookings #bookingsList {
+	max-height: 850px; /* adjust as needed */
+	overflow-y: auto;
+	padding-right: 6px; /* space for scrollbar */
+}
+
+/* Make bookings to approve card same height as booking information card */
+.approve-bookings.card {
+	min-height: 850px; /* match the booking information card height */
+	display: flex;
+	flex-direction: column;
+}
 

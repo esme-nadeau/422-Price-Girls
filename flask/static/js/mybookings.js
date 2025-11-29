@@ -1,8 +1,4 @@
-if (!document.getElementById("mybookings-root")) {
-  console.log("mybookings.js: exiting (not on mybookings page)");
-  return;
-}
-else { console.log("📜 mybookings.js loaded and executing"); }
+console.log("📜 mybookings.js loaded and executing");
 
 // Initialize Flatpickr on the date field
 const dateInput = document.getElementById('date');

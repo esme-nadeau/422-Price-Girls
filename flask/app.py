@@ -131,7 +131,7 @@ def admin():
     try:
         if db is None:
             error_message = "Firestore is not initialized. Please check your service account and environment variables."
-            print(f"[mybookings] {error_message}")
+            print(f"[admin] {error_message}")
         else:
             bookings_ref = db.collection("bookings")
             docs = bookings_ref.stream()
@@ -141,7 +141,7 @@ def admin():
                 bookings.append(data)
             if not bookings:
                 error_message = "No bookings found in Firestore."
-                print(f"[mybookings] {error_message}")
+                print(f"[admin] {error_message}")
             # Load rooms for admin page (server-side render before JS mounts)
             try:
                 rooms_ref = db.collection("rooms")
@@ -166,7 +166,7 @@ def admin():
                 print(f"[admin] Error loading users: {ue}")
     except Exception as e:
         error_message = f"Error loading bookings: {e}"
-        print(f"[mybookings] {error_message}")
+        print(f"[admin] {error_message}")
     return render_template("admin.html", bookings=bookings, rooms=rooms, users=users, error_message=error_message)
 
 @app.route("/map")

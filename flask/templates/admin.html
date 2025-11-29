@@ -1,5 +1,4 @@
 <!-- Admin Content -->
-<div id="admin-page-root">
 <div id="mybookings-tab-content" class="mybookings-container">
 <div class="row g-4 align-items-start">
 
@@ -48,8 +47,8 @@
     </div>
 
     <!-- MIDDLE: Booking Information -->
-    <div class="col-md-4">
-      <div class="card shadow-sm p-4">
+    <div class="col-md-4" id="bookingInfoWidget">
+      <div class="card shadow-sm p-4" id="bookingInfoCard" style="display: none;">
         <h4 class="fw-semibold mb-3">Booking Information</h4>
         <form id="bookingForm" data-id="">
 
@@ -97,19 +96,14 @@
       </div>
     </div>
 
-    <!-- RIGHT: Pending accounts to approve -->
+    <!-- RIGHT: Management Cards -->
     <div class="col-md-4">
-        <div class="approve-account card shadow-sm p-3 mb-4" style="width: 100%;">
-            <h5 class="fw-semibold mb-3">Pending Accounts</h5>
+        <div class="all-users card shadow-sm p-3 mb-4" style="width: 100%;">
+            <h5 class="fw-semibold mb-3">All Users</h5>
 
-            <div class="mb-2 d-flex align-items-center gap-2">
-              <label for="userRoleFilter" class="small mb-0">Filter by role:</label>
-              <select id="userRoleFilter" class="form-select form-select-sm" style="width: auto;">
-                <option value="all">All</option>
-                <option value="admin">Admin</option>
-                <option value="faculty">Faculty</option>
-                <option value="student">Student</option>
-              </select>
+            <div class="mb-2">
+              <label for="userSearch" class="small mb-1 d-block">Search by name or email:</label>
+              <input type="text" id="userSearch" class="form-control form-control-sm" placeholder="Type to search...">
             </div>
 
             <div id="usersList">
@@ -127,7 +121,7 @@
                   </div>
                 {% endfor %}
               {% else %}
-                <div class="text-muted small">No pending accounts.</div>
+                <div class="text-muted small">No All Users.</div>
               {% endif %}
             </div>
         </div>
@@ -166,7 +160,7 @@
     </div>
 </div>
 </div>
-</div>
+
 
 <!-- ADD ROOM MODAL -->
 <div class="modal fade" id="addRoomModal" tabindex="-1" aria-labelledby="addRoomModalLabel" aria-hidden="true">
