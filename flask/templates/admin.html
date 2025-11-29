@@ -251,7 +251,45 @@
         <button id="changeRoomBtn" class="btn btn-green">Confirm Changes</button>
         <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
       </div>
+    </div>
+  </div>
+</div>
 
+<!-- USER MODAL -->
+<div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="userModalLabel">Manage User Information</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label">Name</label>
+          <input id="userId" class="form-control" type="text" placeholder="e.g. Jane Smith">
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">Email (@uoregon.edu)</label>
+          <input id="userEmail" class="form-control" type="text" placeholder="e.g. jsmith@uoregon.edu">
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">Role</label>
+          <select id="userRole" class="form-select">
+            <option value="student">Student</option>
+            <option value="faculty">Faculty</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="modal-footer d-flex gap-2">
+        <button id="deleteUserBtn" class="btn btn-red">Delete User</button>
+        <button id="changeUserBtn" class="btn btn-green">Confirm Changes</button>
+      </div>
     </div>
   </div>
 </div>

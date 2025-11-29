@@ -379,7 +379,7 @@ function showMessage(msg, isError = false) {
 /* ==============================
     Rooms Management (Admin Page Only)
 ============================== */
-(async function () {
+async function initAdminTools() {
   const listWrap = document.getElementById("roomsList");
   const addBtn = document.getElementById("addRoomBtn");
   const refreshBtn = document.getElementById("refreshRoomsBtn");
@@ -413,25 +413,22 @@ function showMessage(msg, isError = false) {
       row.style.border = "1px solid rgba(0,0,0,0.05)";
 
       row.innerHTML = `
-        <div>
-          <div class="fw-semibold">${escapeHtml(r.name || r.id)}</div>
-          <div class="small text-muted">${
-            escapeHtml(r.room_description || "")
-          }</div>
-          <div class="small mt-1">Active: ${r.active ? "Yes" : "No"}</div>
-        </div>
-      `;
+          <div>
+            <div class="fw-semibold">${escapeHtml(r.name || r.id)}</div>
+          </div>
+        `;
 
-      const actions = document.createElement("div");
-      actions.className = "d-flex flex-column align-items-end gap-1";
+        const actions = document.createElement("div");
+        actions.className = "d-flex flex-column align-items-end gap-1";
 
-      const manage = document.createElement("button");
-      manage.className = "btn btn-sm btn-outline-danger room-manage-btn";
-      manage.textContent = "Manage";
-      manage.dataset.id = r.id;
-      manage.dataset.name = r.name || r.id;
-      manage.dataset.description = r.room_description || "";
-      manage.dataset.active = r.active ? "true" : "false";
+        const manage = document.createElement("button");
+        // Match server template appearance: secondary outline, gear icon, 'Edit' text
+        manage.className = "btn btn-sm btn-outline-secondary user-manage-btn";
+        manage.innerHTML = `<i class="bi bi-gear me-1"></i>Edit`;
+        manage.dataset.id = r.id;
+        manage.dataset.name = r.name || r.id;
+        manage.dataset.description = r.room_description || "";
+        manage.dataset.active = r.active ? "true" : "false";
 
       actions.appendChild(manage);
       row.appendChild(actions);
@@ -577,16 +574,66 @@ function showMessage(msg, isError = false) {
   // Initialize modal elements
   initManageModalElements();
 
+  // ----------------------------
+  // User modal elements
+  // ----------------------------
+  let userModalEl = null;
+  let userNameInput = null;
+  let userEmailInput = null;
+  let userRoleSelect = null;
+  let deleteUserBtnEl = null;
+  let changeUserBtnEl = null;
+
+  function initUserModalElements() {
+    userModalEl = document.getElementById('userModal');
+    userNameInput = document.getElementById('userId');
+    userEmailInput = document.getElementById('userEmail');
+    userRoleSelect = document.getElementById('userRole');
+    deleteUserBtnEl = document.getElementById('deleteUserBtn');
+    changeUserBtnEl = document.getElementById('changeUserBtn');
+  }
+
+  function getUserModalInstance() {
+    if (!userModalEl) initUserModalElements();
+    if (!userModalEl) return null;
+    return bootstrap.Modal.getInstance(userModalEl) || new bootstrap.Modal(userModalEl, { backdrop: true, keyboard: true });
+  }
+
+  // Ensure user modal elements are initialized and move modals to body
+  function moveModalToBody(el) {
+    if (!el) return;
+    try {
+      if (el.parentElement !== document.body) {
+        document.body.appendChild(el);
+      }
+    } catch (err) {
+      console.warn('Could not move modal to body', err, el);
+    }
+  }
+
+  // initialize user modal references now that variables are declared
+  initUserModalElements();
+  moveModalToBody(document.getElementById('addRoomModal'));
+  moveModalToBody(document.getElementById('manageRoomModal'));
+  moveModalToBody(document.getElementById('userModal'));
+
   // Handle Manage button clicks - open modal with room data
   listWrap.addEventListener("click", (e) => {
-    const btn = e.target.closest(".room-manage-btn");
+    // Accept either room-manage-btn (preferred) or user-manage-btn (templates may vary)
+    const btn = e.target.closest(".room-manage-btn, .user-manage-btn");
     if (!btn) return;
-    
+
+    // Ensure this button has an id (rooms have data-id). If not, ignore.
+    if (!btn.dataset || !btn.dataset.id) {
+      console.warn("Manage button clicked but missing data-id, ignoring", btn);
+      return;
+    }
+
     e.preventDefault();
     e.stopPropagation();
-    
+
     console.log("Manage button clicked", btn);
-    
+
     currentRoomId = btn.dataset.id;
     const roomName = btn.dataset.name || btn.dataset.id || "";
     const roomDesc = btn.dataset.description || "";
@@ -618,6 +665,50 @@ function showMessage(msg, isError = false) {
       });
     }
   });
+
+    // ----------------------------
+    // Users: open user modal when Edit clicked
+    // ----------------------------
+    const usersListEl = document.getElementById('usersList');
+    if (usersListEl) {
+      usersListEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('.user-manage-btn');
+        if (!btn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Ensure user modal elements are ready
+        if (!userModalEl) initUserModalElements();
+        if (!userModalEl) {
+          console.error('User modal element (#userModal) not found in DOM');
+          return;
+        }
+
+        // Find the containing row to extract displayed values
+        const row = btn.closest('.d-flex') || btn.parentElement;
+        const nameEl = row ? row.querySelector('.fw-semibold') : null;
+        const emailEls = row ? row.querySelectorAll('.small.text-muted') : null;
+        const emailEl = emailEls && emailEls.length > 0 ? emailEls[0] : null;
+        const roleEl = emailEls && emailEls.length > 1 ? emailEls[1] : null;
+
+        const displayName = nameEl ? nameEl.textContent.trim() : '';
+        const displayEmail = btn.dataset.email || (emailEl ? emailEl.textContent.trim() : '');
+        let displayRole = '';
+        if (roleEl) {
+          // roleEl text may be "Role: student"
+          const txt = roleEl.textContent || '';
+          displayRole = txt.replace(/^Role:\s*/i, '').trim();
+        }
+
+        if (userNameInput) userNameInput.value = displayName || '';
+        if (userEmailInput) userEmailInput.value = displayEmail || '';
+        if (userRoleSelect && displayRole) userRoleSelect.value = displayRole;
+
+        const instance = getUserModalInstance();
+        if (instance) instance.show();
+      });
+    }
 
   // Handle delete button in modal
   if (deleteRoomBtn) {
@@ -744,7 +835,23 @@ function showMessage(msg, isError = false) {
   // First load
   // --------------------------------
   await loadRooms();
-})();
+}
+
+// Expose initializer so the dynamic tab loader can call it after injecting admin HTML
+window.initAdminTools = initAdminTools;
+
+// Auto-run when admin content already present on page
+if (document.readyState !== 'loading') {
+  if (document.getElementById('roomsList')) {
+    initAdminTools().catch(err => console.error('initAdminTools error:', err));
+  }
+} else {
+  document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('roomsList')) {
+      initAdminTools().catch(err => console.error('initAdminTools error:', err));
+    }
+  });
+}
 
 /* ==============================
     Account Management - User Search
