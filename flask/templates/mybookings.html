@@ -3,7 +3,7 @@
 <div id="mybookings-tab-content" class="mybookings-container">
   <div class="row g-4 align-items-start">
     <!-- LEFT: My Bookings List -->
-    <div class="col-md-5">
+    <div class="col-12 col-md-4">
       <div class="card shadow-sm p-3">
         <h4 class="fw-semibold mb-3">My Bookings</h4>
         {% if error_message %}
@@ -41,8 +41,8 @@
       </div>
     </div>
 
-    <!-- RIGHT: Booking Information -->
-    <div class="col-md-7">
+    <!-- MIDDLE: Booking Information -->
+    <div class="col-12 col-md-4">
       <div class="card shadow-sm p-4">
         <h4 class="fw-semibold mb-3">Booking Information</h4>
         <form id="bookingForm" data-id="">
@@ -83,11 +83,31 @@
             <span id="roomId" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
-          <div class="d-flex gap-3">
-            <button type="button" id="editBookingBtn" class="btn btn-green flex-grow-1">Edit Reservation</button>
-            <button type="button" id="cancelBookingBtn" class="btn btn-red flex-grow-1">Cancel Reservation</button>
+          <div id="bookingActions" class="d-flex gap-3" style="display:none;">
+            <button type="button" id="editBookingBtn" class="btn btn-green flex-grow-1" disabled>Edit Reservation</button>
+            <button type="button" id="cancelBookingBtn" class="btn btn-red flex-grow-1" disabled>Cancel Reservation</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- RIGHT: My Bookings Overview -->
+    <div class="col-12 col-md-4">
+      <div
+        class="card shadow-sm mb-3"
+        id="myBookingsInfoPanel"
+        style="border-left: 4px solid #198754;"
+      >
+        <div class="card-body text-start">
+          <h5 class="fw-semibold mb-2 fs-4 text-success">
+            My Bookings Overview
+          </h5>
+          <ul class="mb-0 ps-3" style="font-size: 1.05rem; line-height: 1.5;">
+            <li class="mb-1">This tab shows all bookings you have made under your email.</li>
+            <li class="mb-1">You must be logged in to view your bookings.</li>
+            <li class="mb-1">Select a booking to see its information, modify, or cancel.</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
