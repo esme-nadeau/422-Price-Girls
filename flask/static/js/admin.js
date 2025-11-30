@@ -12,7 +12,13 @@ function showMessage(msg, isError = false) {
   const roomsMessage = document.getElementById('roomsMessage');
   if (!roomsMessage) return;
   roomsMessage.textContent = msg || '';
-  roomsMessage.style.color = isError ? '#b00020' : '#666';
+  if (isError) {
+    roomsMessage.style.color = '#F28380';
+    roomsMessage.classList.remove('text-muted');
+  } else {
+    roomsMessage.style.color = '#666';
+    roomsMessage.classList.add('text-muted');
+  }
 }
 
 /* ==============================
@@ -427,7 +433,16 @@ async function initAdminTools() {
         manage.innerHTML = `<i class="bi bi-gear me-1"></i>Edit`;
         manage.dataset.id = r.id;
         manage.dataset.name = r.name || r.id;
-        manage.dataset.description = r.room_description || "";
+        // Convert array description to comma-separated string for display
+        let descStr = "";
+        if (r.room_description) {
+          if (Array.isArray(r.room_description)) {
+            descStr = r.room_description.join(", ");
+          } else {
+            descStr = String(r.room_description);
+          }
+        }
+        manage.dataset.description = descStr;
         manage.dataset.active = r.active ? "true" : "false";
 
       actions.appendChild(manage);
@@ -540,7 +555,13 @@ async function initAdminTools() {
   function showAddUserMessage(msg, isError = false) {
     if (!addUserMessage) return;
     addUserMessage.textContent = msg || '';
-    addUserMessage.style.color = isError ? '#b00020' : '#666';
+    if (isError) {
+      addUserMessage.style.color = '#F28380';
+      addUserMessage.classList.remove('text-muted');
+    } else {
+      addUserMessage.style.color = '#666';
+      addUserMessage.classList.add('text-muted');
+    }
   }
 
   function renderUsers(users) {
@@ -806,9 +827,7 @@ async function initAdminTools() {
     }
   });
 
-    // ----------------------------
     // Users: open user modal when Edit clicked
-    // ----------------------------
     const usersListEl = document.getElementById('usersList');
     if (usersListEl) {
       usersListEl.addEventListener('click', (e) => {
@@ -886,7 +905,8 @@ async function initAdminTools() {
         if (!resp.ok) {
           if (manageRoomMessage) {
             manageRoomMessage.textContent = data.error || "Failed to delete room";
-            manageRoomMessage.style.color = "#b00020";
+            manageRoomMessage.style.color = "#F28380";
+            manageRoomMessage.classList.remove('text-muted');
           }
           return;
         }
@@ -894,6 +914,7 @@ async function initAdminTools() {
         if (manageRoomMessage) {
           manageRoomMessage.textContent = "Room deleted";
           manageRoomMessage.style.color = "#666";
+          manageRoomMessage.classList.add('text-muted');
         }
 
         // Close modal and reload rooms
@@ -905,7 +926,8 @@ async function initAdminTools() {
         console.error("deleteRoom error:", err);
         if (manageRoomMessage) {
           manageRoomMessage.textContent = "Failed to delete room (network error)";
-          manageRoomMessage.style.color = "#b00020";
+          manageRoomMessage.style.color = "#F28380";
+          manageRoomMessage.classList.remove('text-muted');
         }
       }
     });
@@ -932,7 +954,8 @@ async function initAdminTools() {
         if (!resp.ok) {
           if (userModalMessage) {
             userModalMessage.textContent = data.error || "Failed to delete user";
-            userModalMessage.style.color = "#b00020";
+            userModalMessage.style.color = "#F28380";
+            userModalMessage.classList.remove('text-muted');
           }
           return;
         }
@@ -940,6 +963,7 @@ async function initAdminTools() {
         if (userModalMessage) {
           userModalMessage.textContent = "User deleted";
           userModalMessage.style.color = "#666";
+          userModalMessage.classList.add('text-muted');
         }
 
         // Close modal and reload users
@@ -951,7 +975,91 @@ async function initAdminTools() {
         console.error("deleteUser error:", err);
         if (userModalMessage) {
           userModalMessage.textContent = "Failed to delete user (network error)";
-          userModalMessage.style.color = "#b00020";
+          userModalMessage.style.color = "#F28380";
+          userModalMessage.classList.remove('text-muted');
+        }
+      }
+    });
+  }
+
+  // Handle confirm changes button for user modal
+  if (!changeUserBtnEl) {
+    initUserModalElements();
+  }
+  if (changeUserBtnEl) {
+    changeUserBtnEl.addEventListener("click", async () => {
+      if (!currentUserEmail) return;
+
+      const name = userNameInput?.value.trim();
+      const email = userEmailInput?.value.trim().toLowerCase();
+      const role = userRoleSelect?.value || 'student';
+
+      if (!name) {
+        if (userModalMessage) {
+          userModalMessage.textContent = "Name is required";
+          userModalMessage.style.color = "#F28380";
+          userModalMessage.classList.remove('text-muted');
+        }
+        return;
+      }
+
+      if (!email) {
+        if (userModalMessage) {
+          userModalMessage.textContent = "Email is required";
+          userModalMessage.style.color = "#F28380";
+          userModalMessage.classList.remove('text-muted');
+        }
+        return;
+      }
+
+      if (!email.endsWith("@uoregon.edu")) {
+        if (userModalMessage) {
+          userModalMessage.textContent = "Email must end with @uoregon.edu";
+          userModalMessage.style.color = "#F28380";
+          userModalMessage.classList.remove('text-muted');
+        }
+        return;
+      }
+
+      const payload = { name, email, role };
+
+      try {
+        const resp = await fetch(`/api/users/${encodeURIComponent(currentUserEmail)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+          if (userModalMessage) {
+            userModalMessage.textContent = data.error || "Failed to update user";
+            userModalMessage.style.color = "#F28380";
+            userModalMessage.classList.remove('text-muted');
+          }
+          return;
+        }
+
+        if (userModalMessage) {
+          userModalMessage.textContent = "User updated";
+          userModalMessage.style.color = "#666";
+          userModalMessage.classList.add('text-muted');
+        }
+
+        // Close modal and reload users
+        setTimeout(async () => {
+          const modalInstance = getUserModalInstance();
+          if (modalInstance) modalInstance.hide();
+          await loadUsers();
+          currentUserEmail = null;
+        }, 500);
+      } catch (err) {
+        console.error("updateUser error:", err);
+        if (userModalMessage) {
+          userModalMessage.textContent = "Failed to update user (network error)";
+          userModalMessage.style.color = "#F28380";
+          userModalMessage.classList.remove('text-muted');
         }
       }
     });
@@ -969,7 +1077,8 @@ async function initAdminTools() {
       if (!name) {
         if (manageRoomMessage) {
           manageRoomMessage.textContent = "Room name is required";
-          manageRoomMessage.style.color = "#b00020";
+          manageRoomMessage.style.color = "#F28380";
+          manageRoomMessage.classList.remove('text-muted');
         }
         return;
       }
@@ -988,7 +1097,8 @@ async function initAdminTools() {
         if (!resp.ok) {
           if (manageRoomMessage) {
             manageRoomMessage.textContent = data.error || "Failed to update room";
-            manageRoomMessage.style.color = "#b00020";
+            manageRoomMessage.style.color = "#F28380";
+            manageRoomMessage.classList.remove('text-muted');
           }
           return;
         }
@@ -996,6 +1106,7 @@ async function initAdminTools() {
         if (manageRoomMessage) {
           manageRoomMessage.textContent = "Room updated";
           manageRoomMessage.style.color = "#666";
+          manageRoomMessage.classList.add('text-muted');
         }
 
         // Close modal and reload rooms
@@ -1009,21 +1120,16 @@ async function initAdminTools() {
         console.error("updateRoom error:", err);
         if (manageRoomMessage) {
           manageRoomMessage.textContent = "Failed to update room (network error)";
-          manageRoomMessage.style.color = "#b00020";
+          manageRoomMessage.style.color = "#F28380";
+          manageRoomMessage.classList.remove('text-muted');
         }
       }
     });
   }
 
-  // --------------------------------
-  // Refresh button
-  // --------------------------------
-  refreshBtn?.addEventListener("click", loadRooms);
+  refreshBtn?.addEventListener("click", loadRooms); // refresh
 
-  // --------------------------------
-  // Reset modal when opened
-  // --------------------------------
-  if (modalEl) {
+  if (modalEl) { // reset modal when opened
     modalEl.addEventListener("show.bs.modal", () => {
       inputName.value = "";
       inputDesc.value = "";
@@ -1032,9 +1138,6 @@ async function initAdminTools() {
     });
   }
 
-  // --------------------------------
-  // First load
-  // --------------------------------
   await loadRooms();
 }
 
@@ -1057,133 +1160,30 @@ if (document.readyState !== 'loading') {
 /* ==============================
     Account Management - User Search
 ============================== */
-// Global function to initialize search - can be called after admin content loads
-window.initUserSearch = function() {
-  console.log('admin.js: initUserSearch called');
-  
-  // Don't run if on mybookings page
-  if (document.getElementById('mybookings-root')) {
-    return false;
-  }
-  
-  const usersListEl = document.getElementById('usersList');
-  const userSearchEl = document.getElementById('userSearch');
-  
-  if (!usersListEl || !userSearchEl) {
-    console.log('admin.js: Search elements not found', { usersList: !!usersListEl, userSearch: !!userSearchEl });
-    return false;
-  }
+document.addEventListener("DOMContentLoaded", function () {
+    const userSearchInput = document.getElementById("userSearch");
+    const usersList = document.getElementById("usersList");
 
-  console.log('admin.js: FOUND SEARCH ELEMENTS! Setting up search...');
+    userSearchInput.addEventListener("input", function () {
+        const searchValue = userSearchInput.value.toLowerCase().trim();
 
-  // Remove any existing listeners by cloning the element
-  const newSearchEl = userSearchEl.cloneNode(true);
-  userSearchEl.parentNode.replaceChild(newSearchEl, userSearchEl);
-  const freshSearchEl = document.getElementById('userSearch');
-  
-  if (!freshSearchEl) {
-    console.log('admin.js: Failed to get fresh search element');
-    return false;
-  }
+        // Get all user items
+        const userItems = usersList.querySelectorAll("div.d-flex");
 
-  // Create search function that gets fresh rows each time
-  function performSearch() {
-    console.log('admin.js: SEARCH FUNCTION CALLED!');
-    
-    const list = document.getElementById('usersList');
-    const search = document.getElementById('userSearch');
-    
-    if (!list || !search) {
-      console.log('admin.js: Elements missing during search');
-      return;
-    }
+        userItems.forEach(item => {
+            const name = item.querySelector(".fw-semibold")?.textContent.toLowerCase() || "";
+            const email = item.querySelector(".small.text-muted")?.textContent.toLowerCase() || "";
 
-    const searchTerm = (search.value || '').trim().toLowerCase();
-    console.log('admin.js: Searching for:', searchTerm);
-
-    // Get fresh rows each time
-    const rows = Array.from(list.children).filter(el => 
-      el.classList.contains('d-flex') && 
-      el.querySelector('.user-manage-btn') !== null
-    );
-
-    console.log('admin.js: Processing', rows.length, 'rows');
-
-    rows.forEach(row => {
-      // Get searchable text
-      const nameEl = row.querySelector('.fw-semibold');
-      const emailEls = row.querySelectorAll('.small.text-muted');
-      const emailEl = emailEls && emailEls.length > 0 ? emailEls[0] : null;
-      
-      const name = nameEl ? nameEl.textContent.trim() : '';
-      const email = emailEl ? emailEl.textContent.trim() : '';
-      const searchText = `${name} ${email}`.toLowerCase();
-      
-      // Filter
-      if (!searchTerm || searchText.includes(searchTerm)) {
-        row.style.display = '';
-      } else {
-        row.style.display = 'none';
-      }
+            // Match name OR email
+            if (name.includes(searchValue) || email.includes(searchValue)) {
+                item.style.display = "flex";  // show it
+            } else {
+                item.style.display = "none";  // hide it
+            }
+        });
     });
-    
-    console.log('admin.js: Search complete');
-  }
+});
 
-  // Attach listeners
-  freshSearchEl.addEventListener('input', performSearch);
-  freshSearchEl.addEventListener('keyup', performSearch);
-  freshSearchEl.oninput = performSearch;
-  freshSearchEl.onkeyup = performSearch;
-  
-  console.log('admin.js: Search initialized! Listeners attached.');
-  performSearch(); // Initial run
-  
-  return true;
-};
-
-// Auto-initialize when admin content loads
-(function(){
-  // Don't run if on mybookings page
-  if (document.getElementById('mybookings-root')) {
-    return;
-  }
-
-  // Try immediately
-  if (window.initUserSearch && window.initUserSearch()) {
-    console.log('admin.js: Search initialized immediately');
-    return;
-  }
-
-  // Retry with delays - check if search is already initialized
-  [100, 300, 500, 1000, 2000, 3000].forEach(delay => {
-    setTimeout(() => {
-      if (document.getElementById('mybookings-root')) return;
-      if (window.initUserSearch) {
-        const searchEl = document.getElementById('userSearch');
-        // Only initialize if search element exists and doesn't have listeners
-        if (searchEl && !searchEl.oninput) {
-          window.initUserSearch();
-        }
-      }
-    }, delay);
-  });
-
-  // MutationObserver - watch for admin content to load
-  const observer = new MutationObserver(() => {
-    if (document.getElementById('mybookings-root')) return;
-    if (window.initUserSearch) {
-      const searchEl = document.getElementById('userSearch');
-      if (searchEl && !searchEl.oninput) {
-        if (window.initUserSearch()) {
-          observer.disconnect();
-        }
-      }
-    }
-  });
-  
-  observer.observe(document.body, { childList: true, subtree: true });
-})();
 
 /* ==============================
     Admin Page Booking Card Clicks (Same as MyBookings)

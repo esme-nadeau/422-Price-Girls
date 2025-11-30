@@ -135,6 +135,17 @@ def index():
 
 @app.route("/admin")
 def admin():
+    # Check if user is an admin
+    session_data = get_current_session_data()
+    if not session_data:
+        # Not logged in - redirect to login or show error
+        return render_template("admin.html", bookings=[], rooms=[], users=[], error_message="You must be logged in to access admin tools."), 403
+    
+    user_role = (session_data.get("role") or "student").strip().lower()
+    if user_role != "admin":
+        # Not an admin - deny access
+        return render_template("admin.html", bookings=[], rooms=[], users=[], error_message="Access denied. Administrator role required."), 403
+    
     error_message = None
     bookings = []
     rooms = []
@@ -452,9 +463,21 @@ def api_create_room():
         active = bool(data.get('active', False))
         if not name:
             return jsonify({"success": False, "error": "name_required"}), 400
+        
+        # Check for duplicate room name
+        rooms_ref = db.collection('rooms')
+        existing_rooms = rooms_ref.where('name', '==', name).stream()
+        if any(existing_rooms):
+            return jsonify({"success": False, "error": "ERROR: A room with this name already exists"}), 409
+        
+        # Split description by commas and store as a list
+        desc_list = []
+        if desc:
+            desc_list = [item.strip() for item in desc.split(',') if item.strip()]
+        
         doc_ref = db.collection('rooms').add({
             'name': name,
-            'room_description': desc,
+            'room_description': desc_list,
             'active': active,
         })
         new_id = doc_ref[1].id
@@ -489,9 +512,21 @@ def api_update_room(room_id):
         if not name:
             return jsonify({"success": False, "error": "name_required"}), 400
         
+        # Check for duplicate room name (excluding current room)
+        rooms_ref = db.collection('rooms')
+        existing_rooms = rooms_ref.where('name', '==', name).stream()
+        for existing_room in existing_rooms:
+            if existing_room.id != room_id:
+                return jsonify({"success": False, "error": "A room with this name already exists"}), 409
+        
+        # Split description by commas and store as a list
+        desc_list = []
+        if desc:
+            desc_list = [item.strip() for item in desc.split(',') if item.strip()]
+        
         update_data = {
             'name': name,
-            'room_description': desc,
+            'room_description': desc_list,
             'active': active,
         }
         
@@ -836,15 +871,66 @@ def api_add_user():
         return {"ok": False, "error": str(e)}, 400
 
 
-@app.route('/api/users/<user_email>', methods=['DELETE'])
-def api_delete_user(user_email):
+@app.route('/api/users/<user_email>', methods=['PUT', 'DELETE'])
+def api_update_or_delete_user(user_email):
     if db is None:
         return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+    
+    if request.method == 'DELETE':
+        try:
+            db.collection('users').document(user_email).delete()
+            return jsonify({"success": True}), 200
+        except Exception as e:
+            print(f"[api_delete_user] Error deleting {user_email}: {e}")
+            return jsonify({"success": False, "error": str(e)}), 500
+    
+    # PUT method - update user
     try:
-        db.collection('users').document(user_email).delete()
+        data = request.get_json(silent=True) or {}
+        name = (data.get('name') or '').strip()
+        email = (data.get('email') or '').strip().lower()
+        role = (data.get('role') or 'student').strip().lower()
+        
+        if not name:
+            return jsonify({"success": False, "error": "Name is required"}), 400
+        
+        if not email:
+            return jsonify({"success": False, "error": "Email is required"}), 400
+        
+        if not email.endswith("@uoregon.edu"):
+            return jsonify({"success": False, "error": "Email must end with @uoregon.edu"}), 400
+        
+        # Validate role
+        valid_roles = {"student", "faculty", "admin"}
+        if role not in valid_roles:
+            return jsonify({"success": False, "error": f"Invalid role. Must be one of: {', '.join(valid_roles)}"}), 400
+        
+        # If email changed, we need to create new document and delete old one
+        if email != user_email:
+            # Check if new email already exists
+            new_user_ref = db.collection('users').document(email)
+            if new_user_ref.get().exists:
+                return jsonify({"success": False, "error": "A user with this email already exists"}), 409
+            
+            # Create new document with new email
+            new_user_ref.set({
+                "email": email,
+                "name": name,
+                "role": role,
+            })
+            
+            # Delete old document
+            db.collection('users').document(user_email).delete()
+        else:
+            # Just update the existing document
+            db.collection('users').document(user_email).update({
+                "name": name,
+                "role": role,
+            })
+        
         return jsonify({"success": True}), 200
     except Exception as e:
-        print(f"[api_delete_user] Error deleting {user_email}: {e}")
+        print(f"[api_update_user] Error updating {user_email}: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 

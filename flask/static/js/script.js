@@ -44,6 +44,24 @@ async function loadTabContent(targetId, url, initFunction = null) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Check user role and hide admin tab if not admin
+    const userRole = (window.currentUserRole || 'student').trim().toLowerCase();
+    const isAdmin = userRole === 'admin';
+    
+    const adminTabButton = document.getElementById('nav-admin-tab');
+    const adminTabPane = document.getElementById('nav-admin');
+    
+    if (!isAdmin) {
+        // Hide admin tab button if it exists
+        if (adminTabButton) {
+            adminTabButton.style.display = 'none';
+        }
+        // Hide admin tab pane if it exists
+        if (adminTabPane) {
+            adminTabPane.style.display = 'none';
+        }
+    }
+
     // Load the default tab (Map) immediately after DOM ready
     loadTabContent('nav-allbookings', '/allbookings', window.initAllBookings);
 
@@ -60,8 +78,18 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.keys(tabMap).forEach(tabId => {
         const tabButton = document.getElementById(tabId);
         if (tabButton) {
+            // Skip admin tab if user is not admin
+            if (tabId === 'nav-admin-tab' && !isAdmin) {
+                return;
+            }
+            
             tabButton.addEventListener('shown.bs.tab', () => {
                 const { target, url, init } = tabMap[tabId];
+                // Double-check admin access before loading admin content
+                if (tabId === 'nav-admin-tab' && !isAdmin) {
+                    console.warn('Access denied: Admin role required');
+                    return;
+                }
                 loadTabContent(target, url, init);
             });
         }

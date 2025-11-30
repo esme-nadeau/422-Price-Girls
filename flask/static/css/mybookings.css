@@ -147,7 +147,7 @@
 }
 
 .mybookings-container .btn-red {
-  background-color: #F8B6B6;
+  background-color: #F28380;
   color: #222;
   border-radius: 12px;
   font-family: 'EB Garamond', serif;
@@ -155,7 +155,7 @@
 }
 
 .mybookings-container .btn-red:hover {
-  background-color: #F28C8C;
+  background-color: #c25956;
 }
 
 /* Make the My Bookings list scrollable, mirroring Admin Tools bookings list */
