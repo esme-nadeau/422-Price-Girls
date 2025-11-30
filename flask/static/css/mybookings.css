@@ -157,3 +157,10 @@
 .mybookings-container .btn-red:hover {
   background-color: #F28C8C;
 }
+
+/* Make the My Bookings list scrollable, mirroring Admin Tools bookings list */
+.mybookings-container #bookingsList {
+  max-height: 850px; /* match admin.css .approve-bookings #bookingsList */
+  overflow-y: auto;
+  padding-right: 6px; /* space for scrollbar */
+}

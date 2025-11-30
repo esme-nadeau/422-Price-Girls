@@ -420,12 +420,44 @@ function bindBookingCardClicks() {
     if (isEditing) {
       return;
     }
-    
+
     console.log(`🟢 Clicked booking ${card.dataset.id}`);
+
+    const currentBookingId = bookingForm ? bookingForm.dataset.id : '';
+    const clickedBookingId = card.dataset.id;
+
+    // If clicking the same booking again, deselect and clear the Booking Information
+    if (currentBookingId && currentBookingId === clickedBookingId) {
+      // Remove selection highlight
+      document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+      // Clear stored id
+      bookingForm.dataset.id = '';
+      // Clear all info fields
+      const clearSpan = (id) => {
+        const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
+        if (el) el.textContent = '';
+      };
+      ['date', 'time', 'repeat', 'name', 'email', 'purpose', 'roomId'].forEach(clearSpan);
+      // Hide and disable actions when no booking is selected
+      if (bookingActions) {
+        bookingActions.style.display = 'none';
+      }
+      if (editBtn) editBtn.disabled = true;
+      if (cancelBtn) cancelBtn.disabled = true;
+      console.log('🟡 Booking deselected and info cleared');
+      return;
+    }
 
     // Highlight selected
     document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
+
+    // Show and enable actions when a booking is selected
+    if (bookingActions) {
+      bookingActions.style.display = 'flex';
+    }
+    if (editBtn) editBtn.disabled = false;
+    if (cancelBtn) cancelBtn.disabled = false;
 
     // Parse structured booking data (preferred) with fallback to individual data-* attributes
     let bookingData = {};
