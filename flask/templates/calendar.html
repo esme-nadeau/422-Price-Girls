@@ -97,15 +97,16 @@
               Never
             </button>
             <ul class="dropdown-menu w-100">
-              <li><a class="dropdown-item" href="#" onclick="document.getElementById('repeatDropdown').textContent='Never'">Never</a></li>
-              <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Daily')">Daily</a></li>
-              <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Weekly')">Weekly</a></li>
-              <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Monthly')">Monthly</a></li>
-              <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Custom')">Custom</a></li>
+              <li><a class="dropdown-item" href="#" onclick="setRepeatToNever(event)">Never</a></li>
+              <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Daily', event)">Daily</a></li>
+              <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Weekly', event)">Weekly</a></li>
+              <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Monthly', event)">Monthly</a></li>
+              <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Custom', event)">Custom</a></li>
             </ul>
           </div>
           <div class="text-end">
-            <button id="repeatNotesIcon" class="btn btn-outline-secondary btn-sm d-none" type="button" title="View repeat details" onclick="openRepeatModal(document.getElementById('repeatDropdown').dataset.repeatType)">
+            <button id="repeatNotesIcon" class="btn btn-outline-secondary btn-sm d-none" type="button" 
+                    title="View repeat details" onclick="openRepeatModal(null, event)">
               <i class="bi bi-pencil-square"></i>
             </button>
           </div>
@@ -211,8 +212,6 @@
             <div class="form-check"><input class="form-check-input" type="checkbox" value="Wed" id="dayWed"><label class="form-check-label" for="dayWed">Wed</label></div>
             <div class="form-check"><input class="form-check-input" type="checkbox" value="Thu" id="dayThu"><label class="form-check-label" for="dayThu">Thu</label></div>
             <div class="form-check"><input class="form-check-input" type="checkbox" value="Fri" id="dayFri"><label class="form-check-label" for="dayFri">Fri</label></div>
-            <div class="form-check"><input class="form-check-input" type="checkbox" value="Sat" id="daySat"><label class="form-check-label" for="daySat">Sat</label></div>
-            <div class="form-check"><input class="form-check-input" type="checkbox" value="Sun" id="daySun"><label class="form-check-label" for="daySun">Sun</label></div>
           </div>
           <label for="weeklyEndDate" class="form-label w-100 mt-2">End Date</label>
           <input type="date" id="weeklyEndDate" class="form-control">

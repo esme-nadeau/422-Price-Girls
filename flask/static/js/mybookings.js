@@ -1,19 +1,37 @@
 console.log("📜 mybookings.js loaded and executing");
 
-// Initialize Flatpickr on the date field
-const dateInput = document.getElementById('date');
+// Variables that will be initialized when DOM is ready
+let dateInput = null;
 let datePicker = null;
-if (dateInput) {
-  datePicker = flatpickr(dateInput, { dateFormat: "m/d/Y" });
-} else {
-  console.warn("⚠️ Date input not found");
-}
+let bookingForm = null;
+let cancelBtn = null;
+let editBtn = null;
 
-// Grab other elements
-const bookingCards = document.querySelectorAll('.booking-card');
-const bookingForm = document.getElementById('bookingForm');
-const cancelBtn = document.getElementById('cancelBookingBtn');
-const editBtn = document.getElementById('editBookingBtn');
+// Initialize elements - call this when DOM is ready
+function initMyBookingsElements() {
+  dateInput = document.getElementById('date');
+  if (dateInput && typeof flatpickr !== 'undefined') {
+    datePicker = flatpickr(dateInput, { dateFormat: "m/d/Y" });
+  } else if (dateInput) {
+    console.warn("⚠️ Date input found but flatpickr not loaded");
+  } else {
+    console.warn("⚠️ Date input not found");
+  }
+
+  bookingForm = document.getElementById('bookingForm');
+  cancelBtn = document.getElementById('cancelBookingBtn');
+  editBtn = document.getElementById('editBookingBtn');
+  
+  if (!bookingForm) {
+    console.warn("⚠️ bookingForm not found");
+  }
+  if (!cancelBtn) {
+    console.warn("⚠️ cancelBtn not found");
+  }
+  if (!editBtn) {
+    console.warn("⚠️ editBtn not found");
+  }
+}
 
 // Helper to switch between display and edit mode
 function setBookingFormEditable(editable) {
@@ -197,8 +215,15 @@ function setBookingCardsClickable(clickable) {
   });
 }
 
-if (editBtn) {
-  editBtn.addEventListener('click', async () => {
+// Initialize edit and cancel button handlers
+function initMyBookingsButtons() {
+  if (editBtn) {
+    // Remove existing listener if any by cloning
+    const newEditBtn = editBtn.cloneNode(true);
+    editBtn.parentNode.replaceChild(newEditBtn, editBtn);
+    editBtn = newEditBtn;
+    
+    editBtn.addEventListener('click', async () => {
     if (!isEditing) {
       // Enter edit mode
       setBookingFormEditable(true);
@@ -312,17 +337,85 @@ if (editBtn) {
       }
     }
   });
+  }
+
+  // Cancel button handler
+  if (cancelBtn) {
+    // Remove existing listener if any by cloning
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    cancelBtn = newCancelBtn;
+    
+    cancelBtn.addEventListener('click', async () => {
+      if (!bookingForm) {
+        alert("Booking form not found.");
+        return;
+      }
+      const bookingId = bookingForm.dataset.id;
+      if (!bookingId) {
+        alert("Please select a booking first.");
+        return;
+      }
+
+      const confirmDelete = confirm("Are you sure you want to cancel this reservation?");
+      if (!confirmDelete) return;
+
+      console.log(`🗑️ Deleting booking ${bookingId}...`);
+
+      try {
+        const response = await fetch(`/delete_booking/${bookingId}`, { method: 'DELETE' });
+        const result = await response.json();
+
+        if (result.success) {
+          alert("Booking canceled successfully!");
+          document.querySelector(`.booking-card[data-id="${bookingId}"]`)?.remove();
+          bookingForm.reset();
+          bookingForm.dataset.id = "";
+        } else {
+          alert("Error canceling booking: " + (result.error || "unknown error"));
+        }
+      } catch (err) {
+        console.error("❌ Error deleting booking:", err);
+        alert("Failed to cancel booking.");
+      }
+    });
+  } else {
+    console.warn("⚠️ Cancel button not found");
+  }
 }
 
-if (!bookingCards.length) {
-  console.warn("⚠️ No booking cards found in DOM when mybookings.js ran");
-} else {
-  console.log(`✅ Found ${bookingCards.length} booking cards`);
-}
+// Store the handler function so we can remove it if needed
+let bookingCardClickHandler = null;
 
-// Add click listeners to booking cards
-bookingCards.forEach(card => {
-  card.addEventListener('click', () => {
+// Use event delegation to handle clicks on booking cards (works even if cards are added dynamically)
+function bindBookingCardClicks() {
+  const bookingsList = document.getElementById('bookingsList');
+  if (!bookingsList) {
+    console.warn("⚠️ bookingsList container not found - will retry");
+    // Retry after a short delay
+    setTimeout(bindBookingCardClicks, 200);
+    return;
+  }
+
+  // Remove old handler if it exists
+  if (bookingsList.dataset.clickBound === 'true' && bookingCardClickHandler) {
+    console.log("🔄 Removing old click handler before re-binding");
+    bookingsList.removeEventListener('click', bookingCardClickHandler);
+  }
+  
+  console.log("🔗 Binding click handler to bookingsList container");
+  bookingsList.dataset.clickBound = 'true';
+
+  // Create the handler function
+  bookingCardClickHandler = (e) => {
+    console.log("🖱️ Click detected in bookingsList", e.target);
+    const card = e.target.closest('.booking-card');
+    if (!card) {
+      console.log("   (not on a booking card, ignoring)");
+      return;
+    }
+    console.log("✅ Clicked on booking card:", card.dataset.id);
+
     // Prevent clicking other bookings while in edit mode
     if (isEditing) {
       return;
@@ -344,7 +437,9 @@ bookingCards.forEach(card => {
     }
 
     // Save the ID
-    bookingForm.dataset.id = bookingData.id || card.dataset.id || '';
+    if (bookingForm) {
+      bookingForm.dataset.id = bookingData.id || card.dataset.id || '';
+    }
 
     // Handle the date format safely
     let dateValue = bookingData.date || card.dataset.date || '';
@@ -357,23 +452,27 @@ bookingCards.forEach(card => {
       }
     }
 
-
     // Populate <span> fields for non-editable display
     const setSpan = (id, value) => {
-      const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
-      if (el) el.textContent = value || '';
+      const el = bookingForm ? bookingForm.querySelector(`#${id}`) : null;
+      if (!el) {
+        const el2 = document.getElementById(id);
+        if (el2) el2.textContent = value || '';
+      } else {
+        el.textContent = value || '';
+      }
     };
 
     setSpan('date', bookingData.date || card.dataset.date || '');
     setSpan('time', bookingData.time || card.dataset.time || '');
     setSpan('repeat', bookingData.repeat || card.dataset.repeat || 'Never');
-  setSpan('name', bookingData.name || bookingData.userId || card.dataset.name || '');
-  setSpan('email', bookingData.email || card.dataset.email || '');
+    setSpan('name', bookingData.name || bookingData.userId || card.dataset.name || '');
+    setSpan('email', bookingData.email || card.dataset.email || '');
     setSpan('purpose', bookingData.purpose || card.dataset.purpose || '');
     setSpan('roomId', bookingData.roomId || card.dataset.roomid || '');
 
     console.log('📋 Form populated with:', {
-      id: bookingForm.dataset.id,
+      id: bookingForm ? bookingForm.dataset.id : '',
       date: bookingData.date || card.dataset.date,
       time: bookingData.time || card.dataset.time,
       repeat: bookingData.repeat || card.dataset.repeat,
@@ -381,40 +480,48 @@ bookingCards.forEach(card => {
       purpose: bookingData.purpose || card.dataset.purpose,
       roomId: bookingData.roomId || card.dataset.roomid
     });
-  });
-});
+  };
+  
+  // Attach the handler
+  bookingsList.addEventListener('click', bookingCardClickHandler);
 
-// Cancel button handler
-if (cancelBtn) {
-  cancelBtn.addEventListener('click', async () => {
-    const bookingId = bookingForm.dataset.id;
-    if (!bookingId) {
-      alert("Please select a booking first.");
-      return;
-    }
-
-    const confirmDelete = confirm("Are you sure you want to cancel this reservation?");
-    if (!confirmDelete) return;
-
-    console.log(`🗑️ Deleting booking ${bookingId}...`);
-
-    try {
-      const response = await fetch(`/delete_booking/${bookingId}`, { method: 'DELETE' });
-      const result = await response.json();
-
-      if (result.success) {
-        alert("Booking canceled successfully!");
-        document.querySelector(`.booking-card[data-id="${bookingId}"]`)?.remove();
-        bookingForm.reset();
-        bookingForm.dataset.id = "";
-      } else {
-        alert("Error canceling booking: " + (result.error || "unknown error"));
-      }
-    } catch (err) {
-      console.error("❌ Error deleting booking:", err);
-      alert("Failed to cancel booking.");
-    }
-  });
-} else {
-  console.warn("⚠️ Cancel button not found");
+  // Log how many cards were found
+  const cards = bookingsList.querySelectorAll('.booking-card');
+  if (!cards.length) {
+    console.warn("⚠️ No booking cards found in DOM when mybookings.js ran");
+  } else {
+    console.log(`✅ Found ${cards.length} booking cards and bound click handler via event delegation`);
+  }
 }
+
+// Main initialization function - call this when DOM is ready
+function initMyBookings() {
+  console.log("🔧 Initializing My Bookings...");
+  
+  // Step 1: Initialize DOM element references
+  initMyBookingsElements();
+  
+  // Step 2: Initialize button handlers
+  initMyBookingsButtons();
+  
+  // Step 3: Bind click handlers for booking cards
+  bindBookingCardClicks();
+  
+  console.log("✅ My Bookings initialization complete");
+}
+
+// Expose functions globally so they can be called from tab handler
+window.bindBookingCardClicks = bindBookingCardClicks;
+window.initMyBookings = initMyBookings;
+
+// Auto-initialize when script loads (if DOM is ready)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initMyBookings);
+} else {
+  // DOM already loaded, try immediately
+  initMyBookings();
+}
+
+// Also try after a short delay in case content loads asynchronously
+setTimeout(initMyBookings, 100);
+

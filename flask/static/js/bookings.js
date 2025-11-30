@@ -100,7 +100,12 @@ window.initBookingButton = function(containerId) {
             const startTime = startTimeEl ? startTimeEl.textContent.trim() : '';
             const endTime = endTimeEl ? endTimeEl.textContent.trim() : '';
             const timeRange = `${startTime} - ${endTime}`;
-            const repeat = repeatEl ? repeatEl.textContent.trim() : '';
+            const repeatType = (repeatEl && repeatEl.dataset && repeatEl.dataset.repeatType)
+                ? repeatEl.dataset.repeatType
+                : 'Never';
+            const repeatLabel = repeatEl
+                ? (repeatEl.textContent.trim() || repeatType)
+                : repeatType;
             const nameEl = getElement('name');
             const name = nameEl ? nameEl.value.trim() : '';
             const email = emailEl ? emailEl.value.trim() : '';
@@ -254,41 +259,158 @@ window.initBookingButton = function(containerId) {
                 return; // stop submission
             }
             
-            // Prepare booking data
-            const bookingData = {
+            // Expand the requested booking into one or more dates based on repeat settings
+            function parseISODate(str) {
+                if (!str) return null;
+                const parts = str.split('-');
+                if (parts.length !== 3) return null;
+                const y = parseInt(parts[0], 10);
+                const m = parseInt(parts[1], 10) - 1;
+                const d = parseInt(parts[2], 10);
+                if (Number.isNaN(y) || Number.isNaN(m) || Number.isNaN(d)) return null;
+                return new Date(y, m, d);
+            }
+
+            function toISODate(d) {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            }
+
+            function buildOccurrenceDates() {
+                const baseDate = parseISODate(date);
+                if (!baseDate) return [date];
+
+                // If no repeat or unsupported type, just return the base date
+                if (!repeatType || repeatType === 'Never') {
+                    return [date];
+                }
+
+                const dates = [];
+                const seen = new Set();
+
+                function addDate(d) {
+                    const iso = toISODate(d);
+                    if (!seen.has(iso)) {
+                        seen.add(iso);
+                        dates.push(iso);
+                    }
+                }
+
+                if (repeatType === 'Daily') {
+                    const endStr = document.getElementById('dailyEndDate')?.value;
+                    const endDate = parseISODate(endStr);
+                    if (!endDate || endDate < baseDate) {
+                        return [date];
+                    }
+                    const cur = new Date(baseDate);
+                    while (cur <= endDate) {
+                        addDate(cur);
+                        cur.setDate(cur.getDate() + 1);
+                    }
+                    return dates;
+                }
+
+                if (repeatType === 'Weekly') {
+                    const endStr = document.getElementById('weeklyEndDate')?.value;
+                    const endDate = parseISODate(endStr);
+                    const dayIds = ['Mon','Tue','Wed','Thu','Fri'];
+                    const jsDayFor = { Mon:1, Tue:2, Wed:3, Thu:4, Fri:5 };
+                    const selectedCodes = dayIds.filter(code => {
+                        const cb = document.getElementById('day' + code);
+                        return cb && cb.checked;
+                    });
+                    if (!endDate || endDate < baseDate || selectedCodes.length === 0) {
+                        return [date];
+                    }
+                    const selectedJsDays = selectedCodes.map(code => jsDayFor[code]);
+                    const cur = new Date(baseDate);
+                    while (cur <= endDate) {
+                        if (selectedJsDays.includes(cur.getDay())) {
+                            addDate(cur);
+                        }
+                        cur.setDate(cur.getDate() + 1);
+                    }
+                    return dates.length ? dates : [date];
+                }
+
+                if (repeatType === 'Monthly') {
+                    const endStr = document.getElementById('monthlyEndDate')?.value;
+                    const endDate = parseISODate(endStr);
+                    if (!endDate || endDate < baseDate) {
+                        return [date];
+                    }
+                    const cur = new Date(baseDate);
+                    while (cur <= endDate) {
+                        addDate(cur);
+                        cur.setMonth(cur.getMonth() + 1);
+                    }
+                    return dates;
+                }
+
+                // Custom and other types: just single booking for now
+                return [date];
+            }
+
+            const occurrenceDates = buildOccurrenceDates();
+
+            // Prepare base booking data (date is filled per occurrence)
+            const baseBookingData = {
                 room: room,
-                date: date,
                 timeRange: timeRange,
-                repeat: repeat,
+                repeat: repeatLabel,
                 name: name, // will be stored as userId on the server
                 email: email,
                 purpose: purpose
             };
             
-            console.log('Sending booking data:', bookingData);
+            console.log('Repeat type:', repeatType, 'occurrence dates:', occurrenceDates);
             
             try {
-                const response = await fetch('/api/bookings', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(bookingData)
-                });
-                
-                console.log('Response status:', response.status);
-                
-                const result = await response.json();
-                console.log('Response data:', result);
-                
-                if (response.ok && result.success) {
-                    alert('Room booked successfully!');
-                    // Send confirmation email automatically
+                const created = [];
+                const failures = [];
+
+                for (const dateISO of occurrenceDates) {
+                    const bookingData = { ...baseBookingData, date: dateISO };
+                    console.log('Sending booking data:', bookingData);
+
+                    const response = await fetch('/api/bookings', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(bookingData)
+                    });
+
+                    const result = await response.json();
+                    console.log('Response for', dateISO, ':', response.status, result);
+
+                    if (response.ok && result.success) {
+                        created.push({ id: result.id, date: dateISO });
+                    } else {
+                        failures.push({
+                            date: dateISO,
+                            status: response.status,
+                            error: result.error || 'Failed to book room.'
+                        });
+                    }
+                }
+
+                if (created.length > 0) {
+                    if (created.length === 1) {
+                        alert('Room booked successfully!');
+                    } else {
+                        alert(`Room booked successfully on ${created.length} date(s).`);
+                    }
+
+                    // Send confirmation email for the first created booking only
+                    const first = created[0];
                     try {
                         const emailResp = await fetch('/api/send-booking-confirmation', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ bookingId: result.id })
+                            body: JSON.stringify({ bookingId: first.id })
                         });
                         const emailResult = await emailResp.json();
                         if (emailResp.ok && emailResult.ok) {
@@ -299,6 +421,7 @@ window.initBookingButton = function(containerId) {
                     } catch (emailError) {
                         console.error('Email send error:', emailError);
                     }
+
                     // Refresh map bookings to update room colors
                     if (typeof window.refreshMapBookings === 'function') {
                         window.refreshMapBookings();
@@ -307,21 +430,29 @@ window.initBookingButton = function(containerId) {
                     if (typeof window.refreshCalendarBookings === 'function') {
                         window.refreshCalendarBookings();
                     }
-                    // Clear form
+                    // Clear form fields that should be reset
                     const emailInput = getElement('email');
                     const purposeInput = getElement('purpose');
                     if (emailInput) emailInput.value = '';
                     if (purposeInput) purposeInput.value = '';
-                } else {
-                    // Handle different error types
-                    const errorMsg = result.error || 'Failed to book room. Please try again.';
-                    console.error('Booking failed:', errorMsg);
-                    
-                    // Special handling for overlap conflicts (409)
-                    if (response.status === 409) {
-                        alert('Booking Conflict:\n\n' + errorMsg + '\n\nPlease select a different time slot.');
-                    } else {
-                        alert('Error: ' + errorMsg);
+                }
+
+                if (failures.length > 0) {
+                    const conflictFailures = failures.filter(f => f.status === 409);
+                    const otherFailures = failures.filter(f => f.status !== 409);
+
+                    let msg = '';
+                    if (conflictFailures.length) {
+                        msg += 'Some repeated dates could not be booked due to conflicts:\n' +
+                               conflictFailures.map(f => `  - ${f.date}: ${f.error}`).join('\n') +
+                               '\n\n';
+                    }
+                    if (otherFailures.length) {
+                        msg += 'Some repeated dates failed to book:\n' +
+                               otherFailures.map(f => `  - ${f.date}: ${f.error}`).join('\n');
+                    }
+                    if (msg) {
+                        alert(msg);
                     }
                 }
             } catch (error) {

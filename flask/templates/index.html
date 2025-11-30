@@ -11,7 +11,13 @@
   <link href="{{ url_for('static', filename='css/login.css') }}" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+  <!-- Expose current user's role/login to front-end JS (All Bookings, etc.) -->
+  <script>
+    window.currentUserRole = "{{ user_role or 'student' }}";
+    window.isLoggedIn = {{ 'true' if is_logged_in else 'false' }};
+  </script>
+
   <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </head>
 
@@ -111,12 +117,39 @@ document.addEventListener('DOMContentLoaded', () => {
         bookingsContent.dataset.loaded = "true";
         console.log("My Bookings HTML loaded");
 
-        const script = document.createElement('script');
-        script.src = "{{ url_for('static', filename='js/mybookings.js') }}";
-        script.dataset.loaded = "mybookings";
-        document.body.appendChild(script);
+        // Only load script if not already loaded
+        if (!document.querySelector('script[data-loaded="mybookings"]')) {
+          const script = document.createElement('script');
+          script.src = "{{ url_for('static', filename='js/mybookings.js') }}";
+          script.dataset.loaded = "mybookings";
+          script.onload = () => {
+            console.log("mybookings.js script loaded");
+            // Wait a bit for DOM to be ready, then initialize
+            setTimeout(() => {
+              if (window.bindBookingCardClicks && typeof window.bindBookingCardClicks === 'function') {
+                window.bindBookingCardClicks();
+              }
+              if (window.initMyBookings && typeof window.initMyBookings === 'function') {
+                window.initMyBookings();
+              }
+            }, 50);
+          };
+          document.body.appendChild(script);
+        } else {
+          // Script already loaded, just re-bind click handlers
+          setTimeout(() => {
+            if (window.bindBookingCardClicks && typeof window.bindBookingCardClicks === 'function') {
+              window.bindBookingCardClicks();
+            }
+          }, 50);
+        }
       } catch (err) {
         console.error("Failed to load My Bookings:", err);
+      }
+    } else {
+      // Content already loaded, just re-bind click handlers if needed
+      if (window.bindBookingCardClicks && typeof window.bindBookingCardClicks === 'function') {
+        window.bindBookingCardClicks();
       }
     }
   });

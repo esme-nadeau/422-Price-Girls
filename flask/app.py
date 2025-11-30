@@ -120,7 +120,18 @@ def login_page():
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    """Main SPA shell.
+
+    We also inject the current user's role/login status so front-end JS (e.g. All Bookings)
+    can render role-aware views without extra round-trips.
+    """
+    session_data = get_current_session_data()
+    is_logged_in = bool(session_data)
+    if session_data:
+        user_role = (session_data.get("role") or "student").strip().lower()
+    else:
+        user_role = "student"
+    return render_template("index.html", user_role=user_role, is_logged_in=is_logged_in)
 
 @app.route("/admin")
 def admin():
@@ -229,7 +240,17 @@ def my_bookings():
 def all_bookings():
     error_message = None
     bookings = []
+    # Default everyone to "student" unless we can prove otherwise from the Firestore session.
+    user_role = "student"
     try:
+        session_data = get_current_session_data()
+        is_logged_in = bool(session_data)
+        if session_data:
+            # Normalize whitespace/casing so "Admin ", "ADMIN", etc. are treated as "admin".
+            user_role = (session_data.get("role") or "student").strip().lower()
+        else:
+            user_role = "student"
+
         if db is None:
             error_message = "Firestore is not initialized. Please check your service account and environment variables."
             print(f"[allbookings] {error_message}")
@@ -276,15 +297,44 @@ def all_bookings():
     except Exception as e:
         error_message = f"Error loading all bookings: {e}"
         print(f"[allbookings] {error_message}")
-    return render_template("allbookings.html", bookings=bookings, error_message=error_message)
+    # Pass both role and login status so the template/JS can show the right guidance.
+    return render_template(
+        "allbookings.html",
+        bookings=bookings,
+        error_message=error_message,
+        user_role=user_role,
+        is_logged_in=is_logged_in,
+    )
 
 # ----------------------------
-# MyBookings DELETE endpoint (Esmé's addition)
+# MyBookings DELETE endpoint (Esm's addition)
 # ----------------------------
 @app.route("/delete_booking/<booking_id>", methods=["DELETE"])
 def delete_booking(booking_id):
     try:
-        db.collection("bookings").document(booking_id).delete()
+        if db is None:
+            return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+
+        session_data = get_current_session_data()
+        if not session_data:
+            return jsonify({"success": False, "error": "unauthenticated"}), 401
+
+        user_email = (session_data.get("email") or "").strip().lower()
+        user_role = (session_data.get("role") or "student").strip().lower()
+
+        doc_ref = db.collection("bookings").document(booking_id)
+        snap = doc_ref.get()
+        if not snap.exists:
+            return jsonify({"success": False, "error": "booking_not_found"}), 404
+
+        booking = snap.to_dict() or {}
+        booking_email = (booking.get("email") or booking.get("userEmail") or "").strip().lower()
+
+        # Admins may delete any booking; other users may only delete their own bookings.
+        if user_role != "admin" and (not user_email or user_email != booking_email):
+            return jsonify({"success": False, "error": "forbidden"}), 403
+
+        doc_ref.delete()
         return jsonify({"success": True}), 200
     except Exception as e:
         print(e)
@@ -296,6 +346,29 @@ def delete_booking(booking_id):
 @app.route("/update_booking/<booking_id>", methods=["POST"])
 def update_booking(booking_id):
     try:
+        if db is None:
+            return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+
+        session_data = get_current_session_data()
+        if not session_data:
+            return jsonify({"success": False, "error": "unauthenticated"}), 401
+
+        user_email = (session_data.get("email") or "").strip().lower()
+        user_role = (session_data.get("role") or "student").strip().lower()
+
+        # Load existing booking so we can enforce ownership / admin permissions
+        doc_ref = db.collection("bookings").document(booking_id)
+        existing_snap = doc_ref.get()
+        if not existing_snap.exists:
+            return jsonify({"success": False, "error": "booking_not_found"}), 404
+
+        existing_booking = existing_snap.to_dict() or {}
+        booking_email = (existing_booking.get("email") or existing_booking.get("userEmail") or "").strip().lower()
+
+        # Admins may edit any booking; other users may only edit their own bookings.
+        if user_role != "admin" and (not user_email or user_email != booking_email):
+            return jsonify({"success": False, "error": "forbidden"}), 403
+
         data = request.get_json(force=True) or {}
         
         # Extract fields for overlap checking
@@ -325,7 +398,7 @@ def update_booking(booking_id):
             # roomId is included for completeness, but you may want to restrict editing this
             "roomId": data.get("roomId", "")
         }
-        db.collection("bookings").document(booking_id).update(update_fields)
+        doc_ref.update(update_fields)
         return jsonify({"success": True}), 200
     except Exception as e:
         print(f"[update_booking] Error: {e}")
@@ -548,13 +621,48 @@ def bookings():
             traceback.print_exc()
             return jsonify({"success": False, "error": str(e)}), 500
 
-    # GET all bookings
+    # GET all bookings (role-aware)
     try:
+        if db is None:
+            return jsonify({"bookings": [], "error": "firestore_unavailable"}), 500
+
+        session_data = get_current_session_data()
+        role = (session_data.get("role") if session_data else "student") or "student"
+        role = str(role).strip().lower()
+
         items = []
+        today = datetime.utcnow().date()
+
         for doc in db.collection("bookings").stream():
-            b = doc.to_dict()
-            b["id"] = doc.id
-            items.append(b)
+            raw = doc.to_dict() or {}
+            raw["id"] = doc.id
+
+            # Parse date to filter to current and upcoming bookings
+            date_str = raw.get("date")
+            parsed_date = None
+            if isinstance(date_str, str) and date_str:
+                try:
+                    parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+                except ValueError:
+                    parsed_date = None
+
+            if parsed_date is None or parsed_date < today:
+                continue
+
+            if role == "student":
+                # Students can only see that a slot is reserved; omit identifying details.
+                safe = {
+                    "id": raw["id"],
+                    "date": raw.get("date"),
+                    "timeRange": raw.get("timeRange"),
+                    "roomId": raw.get("roomId"),
+                    "repeat": raw.get("repeat"),
+                }
+                items.append(safe)
+            else:
+                # Faculty and admins can see full booking data.
+                items.append(raw)
+
         return jsonify({"bookings": items})
     except Exception as e:
         print(f"[bookings] Error fetching bookings: {e}")
@@ -954,6 +1062,34 @@ def cleanup_sessions_older_than(days=30):
 
     print(f"[session_cleanup] Deleted {deleted} sessions older than {days} days.")
     return deleted
+
+
+def get_current_session_data():
+    """Return the current session document from Firestore, or None.
+
+    The document contains at least email, role, and name keys when available.
+    Roles are stored in the users collection (admin, faculty, student) and
+    copied into sessions when a user logs in.
+    """
+    if db is None:
+        return None
+
+    session_id = request.cookies.get("sessionId")
+    if not session_id:
+        return None
+
+    try:
+        snap = db.collection("sessions").document(session_id).get()
+        if not snap.exists:
+            return None
+        data = snap.to_dict() or {}
+        data.setdefault("email", "")
+        data.setdefault("role", "student")
+        data.setdefault("name", "")
+        return data
+    except Exception as e:
+        print(f"[session_helper] Failed to load session: {e}")
+        return None
 
 
 @app.post("/auth/cleanup-sessions")

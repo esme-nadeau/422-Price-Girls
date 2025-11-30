@@ -6,6 +6,50 @@
   const START_HOUR = 8; // 8 AM
   const END_HOUR = 19;  // 7 PM end boundary (last slot starts 6:30 PM)
 
+  // Role + login state (resolved from /auth/session, with template values as a fallback).
+  let userRole = 'student';
+  let isAdmin = false;
+  let isFaculty = false;
+  let isStudent = true;
+  let isLoggedIn = false;
+
+  async function resolveRoleFromSession(){
+    // If we have already resolved a non-default role, skip extra work.
+    if (userRole !== 'student' || isLoggedIn) return userRole;
+
+    try {
+      const res = await fetch('/auth/session', { credentials: 'include' });
+      const data = await res.json().catch(() => null);
+      if (res.ok && data && data.session) {
+        const sessionRoleRaw = data.session.role || 'student';
+        const normalized = String(sessionRoleRaw).trim().toLowerCase();
+        userRole = normalized || 'student';
+        isAdmin = userRole === 'admin';
+        isFaculty = userRole === 'faculty';
+        isStudent = userRole === 'student';
+        isLoggedIn = true;
+        return userRole;
+      }
+    } catch (err) {
+      console.warn('[allbookings] Failed to resolve role from /auth/session', err);
+    }
+
+    // Fallback: use any template-injected values if present.
+    if (typeof window.currentUserRole === 'string') {
+      const normalized = window.currentUserRole.trim().toLowerCase();
+      userRole = normalized || 'student';
+      isAdmin = userRole === 'admin';
+      isFaculty = userRole === 'faculty';
+      isStudent = userRole === 'student';
+    }
+    if (typeof window.isLoggedIn === 'boolean') {
+      isLoggedIn = window.isLoggedIn;
+    } else if (typeof window.isLoggedIn === 'string') {
+      isLoggedIn = window.isLoggedIn.toLowerCase() === 'true';
+    }
+    return userRole;
+  }
+
   let state = {
     weekStart: null, // Date object for Monday of visible week
     bookings: [],    // all bookings from /api/bookings
@@ -246,33 +290,49 @@
 
         const wrapper = createEl('div','booked-label-list');
 
-        if(startersSorted.length === 1){
-          // Single booking starting in this slot: show room + purpose
+        if (startersSorted.length === 1) {
           const b = startersSorted[0];
           const room = b.roomId || b.roomName || 'Room';
-          const purpose = b.purpose || 'Booked';
-          const line = createEl('div','booked-label');
-          line.textContent = `${room}: ${purpose}`;
-          wrapper.appendChild(line);
+
+          if (isStudent) {
+            // Students/unauthenticated: show only the room identifier, no purpose or names.
+            const line = createEl('div','booked-label');
+            line.textContent = room;
+            wrapper.appendChild(line);
+          } else {
+            // Faculty/admin: single booking starting in this slot: show room + purpose.
+            const purpose = b.purpose || 'Booked';
+            const line = createEl('div','booked-label');
+            line.textContent = `${room}: ${purpose}`;
+            wrapper.appendChild(line);
+          }
         } else {
-          // Multiple bookings starting here: show a concise message
-          const count = startersSorted.length;
+          // Two or more bookings starting here: concise multi-booking label.
           const line = createEl('div','booked-label');
-          line.textContent = `${count} bookings – click to choose`;
+          line.style.whiteSpace = "pre-line";
+          line.textContent = "Multiple room bookings\nClick for details";
           wrapper.appendChild(line);
         }
 
         cell.appendChild(wrapper);
       }
 
-      // Tooltip always lists all bookings for this cell
-      const tooltipLines = bookings.map(b => {
-        const r = b.roomId || b.roomName || 'Room';
-        const p = b.purpose || 'Booked';
-        const rng = b.timeRange || '';
-        return `${r} – ${p}${rng ? ' ('+rng+')' : ''}`;
-      });
-      cell.title = tooltipLines.join('\n');
+      if (isStudent) {
+        // Students/unauthenticated: only room is shown in the cell, no identifying details in tooltip.
+        // Keep tooltip minimal to avoid leaking purpose or user identity.
+        const first = bookings[0];
+        const room = first && (first.roomId || first.roomName);
+        cell.title = room ? String(room) : '';
+      } else {
+        // Tooltip lists all bookings for this cell for faculty/admin.
+        const tooltipLines = bookings.map(b => {
+          const r = b.roomId || b.roomName || 'Room';
+          const p = b.purpose || 'Booked';
+          const rng = b.timeRange || '';
+          return `${r} – ${p}${rng ? ' ('+rng+')' : ''}`;
+        });
+        cell.title = tooltipLines.join('\n');
+      }
     });
 
     cellBookingLookup = lookup;
@@ -313,7 +373,8 @@
     const roomSelect   = root.querySelector('#allBookingRoomId');
     const startSel     = root.querySelector('#allBookingStartTime');
     const endSel       = root.querySelector('#allBookingEndTime');
-    const repeatSel    = root.querySelector('#allBookingRepeat');
+    const repeatDropdown = root.querySelector('#repeatDropdown');
+    const repeatNotesIcon = root.querySelector('#repeatNotesIcon');
     const emailInput   = root.querySelector('#allBookingEmail');
     const nameInput   = root.querySelector('#allBookingName');
     const purposeInput = root.querySelector('#allBookingPurpose');
@@ -324,11 +385,23 @@
     if(roomSelect)   roomSelect.value = '';
     if(startSel)     startSel.value = '';
     if(endSel)       endSel.value = '';
-    if(repeatSel)    repeatSel.value = 'Never';
+    if(repeatDropdown) {
+      repeatDropdown.textContent = 'Never';
+      repeatDropdown.dataset.repeatType = 'Never';
+    }
+    if (repeatNotesIcon) repeatNotesIcon.classList.add('d-none');
     if(emailInput)   emailInput.value = '';
     if(nameInput)    nameInput.value = '';
     if(purposeInput) purposeInput.value = '';
-    if(hint)         hint.textContent = 'Select a booking in the calendar to view or edit details.';
+    if(hint) {
+      if (isAdmin) {
+        hint.textContent = 'Select a booking in the calendar to view or edit details.';
+      } else if (isFaculty) {
+        hint.textContent = 'Faculty can view any reservation here. To change your own, use the My Bookings tab.';
+      } else {
+        hint.textContent = '';
+      }
+    }
   }
 
   // Modal-based chooser for multi-booking cells
@@ -345,27 +418,47 @@
 
     list.innerHTML = '';
 
+    // Adjust modal copy based on role
+    const titleEl = modalEl.querySelector('#allBookingsChooserLabel');
+    const blurbEl = modalEl.querySelector('.modal-body p');
+    if (isStudent) {
+      if (titleEl) titleEl.textContent = 'Rooms booked in this time slot';
+      if (blurbEl) blurbEl.textContent = 'These rooms are booked during this time. You cannot view or edit reservation details.';
+    } else {
+      if (titleEl) titleEl.textContent = 'Multiple bookings in this time slot';
+      if (blurbEl) blurbEl.textContent = 'Select a booking below to view or edit its details.';
+    }
+
     bookings.forEach(b => {
       const room = b.roomId || b.roomName || 'Room';
       const purpose = b.purpose || 'Booked';
       const rng = b.timeRange || '';
-      const labelText = `${room}: ${purpose}${rng ? ' ('+rng+')' : ''}`;
+
+      // Students/unauth: show only room (plus optional time), no purpose or names.
+      const labelText = isStudent
+        ? `${room}${rng ? ' ('+rng+')' : ''}`
+        : `${room}: ${purpose}${rng ? ' ('+rng+')' : ''}`;
 
       const item = createEl('button','list-group-item list-group-item-action');
       item.type = 'button';
       item.textContent = labelText;
-      item.addEventListener('click', () => {
-        openBookingPanel(b);
-        if(window.bootstrap && bootstrap.Modal){
-          const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-          modalInstance.hide();
-        } else {
-          // Basic hide fallback if Bootstrap JS is unavailable
-          modalEl.classList.remove('show');
-          modalEl.style.display = 'none';
-          modalEl.setAttribute('aria-hidden','true');
-        }
-      });
+
+      // Only faculty/admin can drill into an individual booking record.
+      if (!isStudent) {
+        item.addEventListener('click', () => {
+          openBookingPanel(b);
+          if(window.bootstrap && bootstrap.Modal){
+            const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+            modalInstance.hide();
+          } else {
+            // Basic hide fallback if Bootstrap JS is unavailable
+            modalEl.classList.remove('show');
+            modalEl.style.display = 'none';
+            modalEl.setAttribute('aria-hidden','true');
+          }
+        });
+      }
+
       list.appendChild(item);
     });
 
@@ -373,8 +466,8 @@
     if(window.bootstrap && bootstrap.Modal){
       const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
       modalInstance.show();
-    } else {
-      // Fallback: open the first booking directly if we can't show a proper modal
+    } else if (!isStudent) {
+      // Fallback for non-students: open the first booking directly if we can't show a proper modal
       if(bookings.length === 1){
         openBookingPanel(bookings[0]);
       }
@@ -396,13 +489,19 @@
       const key = `${cell.dataset.date}-${cell.dataset.idx}`;
       const bookings = cellBookingLookup[key];
 
-      // Empty cell or no bookings: clear panel
+      // Empty cell or no bookings: clear panel (for non-students this also clears the detail pane)
       if(!cell.classList.contains('booked') || !bookings || !bookings.length){
         clearBookingPanel();
         return;
       }
 
-      // Single booking: open directly in side panel
+      // Student / unauthenticated view: show rooms for this slot only, no editing.
+      if (isStudent) {
+        openMultiBookingModal(bookings);
+        return;
+      }
+
+      // Faculty/Admin: existing behavior
       if(bookings.length === 1){
         openBookingPanel(bookings[0]);
         return;
@@ -491,14 +590,29 @@
     const roomSelect = root.querySelector('#allBookingRoomId');
     const startSel = root.querySelector('#allBookingStartTime');
     const endSel = root.querySelector('#allBookingEndTime');
-    const repeatSel = root.querySelector('#allBookingRepeat');
+    const repeatDropdown = root.querySelector('#repeatDropdown');
+    const repeatNotesIcon = root.querySelector('#repeatNotesIcon');
     const emailInput = root.querySelector('#allBookingEmail');
     const nameInput = root.querySelector('#allBookingName');
     const purposeInput = root.querySelector('#allBookingPurpose');
 
     if(idInput) idInput.value = booking.id || '';
     if(dateInput && booking.date) dateInput.value = booking.date;
-    if(repeatSel) repeatSel.value = booking.repeat || 'Never';
+    if(repeatDropdown) {
+      const repeatVal = booking.repeat || 'Never';
+      repeatDropdown.textContent = repeatVal;
+      let type = 'Never';
+      if (repeatVal.startsWith('Daily')) type = 'Daily';
+      else if (repeatVal.startsWith('Weekly')) type = 'Weekly';
+      else if (repeatVal.startsWith('Monthly')) type = 'Monthly';
+      else if (repeatVal && repeatVal !== 'Never') type = 'Custom';
+      repeatDropdown.dataset.repeatType = type;
+      if (type !== 'Never' && repeatNotesIcon) {
+        repeatNotesIcon.classList.remove('d-none');
+      } else if (repeatNotesIcon) {
+        repeatNotesIcon.classList.add('d-none');
+      }
+    }
     if(emailInput) emailInput.value = booking.email || booking.userEmail || '';
     if(nameInput) nameInput.value = booking.name || booking.userId || '';
     if(purposeInput) purposeInput.value = booking.purpose || '';
@@ -507,13 +621,34 @@
     populateRoomSelect(roomSelect, booking.roomId || '');
 
     const hint = root.querySelector('#allBookingHint');
-    if(hint) hint.textContent = 'Editing booking ' + (booking.id || '');
+    if (hint) {
+      if (isAdmin) {
+        hint.textContent = 'Editing booking ' + (booking.id || '');
+      } else if (isFaculty) {
+        hint.textContent = 'Faculty view is read-only. To change your own bookings, use the My Bookings tab.';
+      } else {
+        hint.textContent = '';
+      }
+    }
   }
 
   function wirePanelActions(){
     const root = getRoot();
     const saveBtn = root.querySelector('#allSaveBookingBtn');
     const deleteBtn = root.querySelector('#allDeleteBookingBtn');
+
+    // Only admins can modify bookings from the All Bookings view.
+    if (!isAdmin) {
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.classList.add('disabled');
+      }
+      if (deleteBtn) {
+        deleteBtn.disabled = true;
+        deleteBtn.classList.add('disabled');
+      }
+      return;
+    }
 
     if(saveBtn){
       saveBtn.addEventListener('click', async () => {
@@ -522,7 +657,7 @@
         const roomSelect = root.querySelector('#allBookingRoomId');
         const startSel = root.querySelector('#allBookingStartTime');
         const endSel = root.querySelector('#allBookingEndTime');
-        const repeatSel = root.querySelector('#allBookingRepeat');
+        const repeatDropdown = root.querySelector('#repeatDropdown');
         const emailInput = root.querySelector('#allBookingEmail');
         const nameInput = root.querySelector('#allBookingName');
         const purposeInput = root.querySelector('#allBookingPurpose');
@@ -561,6 +696,10 @@
         }
 
         const timeRange = `${startSel.value} - ${endSel.value}`;
+
+        const repeatText = repeatDropdown
+          ? (repeatDropdown.textContent || 'Never').trim()
+          : 'Never';
 
         const payload = {
           date: dateVal,
@@ -666,12 +805,107 @@
   }
 
   async function initAllBookings(){
+    // Ensure we know the current user's role before drawing role-specific UI.
+    await resolveRoleFromSession();
+
     const now = new Date();
     state.weekStart = computeWeekStart(now);
 
     const root = getRoot();
     const picker = root.querySelector('#allWeekPicker');
     if(picker) picker.value = toISODate(state.weekStart);
+
+    // Role-based UI adjustments for the side panel / info widget.
+    const panel = root.querySelector('#allBookingPanel');
+    const infoPanel = root.querySelector('#allBookingsInfoPanel');
+
+    if (isStudent) {
+      // Students/unauthenticated: hide the edit panel and show the guidance widget.
+      if (panel) panel.classList.add('d-none');
+      if (infoPanel) {
+        infoPanel.classList.remove('d-none');
+        const titleEl = infoPanel.querySelector('#allBookingsInfoTitle');
+        const bodyEl = infoPanel.querySelector('#allBookingsInfoBody');
+        const listEl = infoPanel.querySelector('#allBookingsInfoList');
+
+        if (titleEl) titleEl.textContent = 'All Bookings Overview';
+
+        if (bodyEl) {
+          if (isLoggedIn) {
+            // Logged-in student
+            bodyEl.textContent =
+              'This tab shows all current and upcoming room reservations so you can see when rooms are busy.';
+          } else {
+            // Not logged in
+            bodyEl.textContent =
+              'This tab shows all current and upcoming room reservations. You can browse availability even without logging in.';
+          }
+        }
+
+        if (listEl) {
+          listEl.innerHTML = '';
+
+          const mkItem = (text) => {
+            const li = document.createElement('li');
+            li.textContent = text;
+            return li;
+          };
+
+          // Everyone (student or not logged in)
+          listEl.appendChild(
+            mkItem('See when rooms are reserved, not who booked them or why')
+          );
+
+          if (isLoggedIn) {
+            // Logged-in student
+            listEl.appendChild(
+              mkItem('To make a reservation, go to the Map or Calendar tabs and select an available time')
+            );
+          } else {
+            // Anonymous visitor
+            listEl.appendChild(
+              mkItem('To create or manage a booking, log in with your uoregon.edu email from the Login button in the header')
+            );
+            listEl.appendChild(
+              mkItem('Students can create reservations from the Map or Calendar tabs once logged in')
+            );
+            listEl.appendChild(
+              mkItem('Faculty and admins, once logged in, may have access to additional booking management tools')
+            );
+          }
+        }
+      }
+    } else {
+      // Faculty/Admin: hide the info widget and show the details panel.
+      if (infoPanel) infoPanel.classList.add('d-none');
+      if (panel) {
+        panel.classList.remove('d-none');
+
+        const titleEl = panel.querySelector('#allBookingPanelTitle');
+        const facultyNote = panel.querySelector('#allBookingFacultyNote');
+        const actionsRow = panel.querySelector('#allBookingActionsRow');
+
+        if (isAdmin) {
+          if (titleEl) titleEl.textContent = 'Booking Details';
+          if (facultyNote) facultyNote.classList.add('d-none');
+          if (actionsRow) actionsRow.classList.remove('d-none');
+        } else if (isFaculty) {
+          // Faculty: clearly indicate read-only and hide action buttons.
+          if (titleEl) titleEl.textContent = 'Booking Details (Faculty View – Read Only)';
+          if (facultyNote) facultyNote.classList.remove('d-none');
+          if (actionsRow) actionsRow.classList.add('d-none');
+
+          const inputs = panel.querySelectorAll('#allBookingForm input, #allBookingForm select');
+          inputs.forEach(el => {
+            if (el.tagName === 'SELECT') {
+              el.setAttribute('disabled', 'disabled');
+            } else if (el.type !== 'hidden') {
+              el.setAttribute('readonly', 'readonly');
+            }
+          });
+        }
+      }
+    }
 
     bindControls();
     bindCellClickHandler();
