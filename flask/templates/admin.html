@@ -125,7 +125,14 @@
                 <div class="text-muted small">No All Users.</div>
               {% endif %}
             </div>
+
+            <div class="mb-3 pt-2 border-top d-flex justify-content-end">
+              <button class="btn btn-green" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                  + Add User
+              </button>
+            </div>
         </div>
+
         
         <!-- Rooom management card -->
         <div class="room-management card shadow-sm p-3 mb-4" style="width: 100%;">
@@ -153,10 +160,9 @@
               {% endif %}
             </div>
 
-            <!-- REPLACED INLINE ADD ROOM WITH MODAL TRIGGER -->
         <div class="mb-3 pt-2 border-top d-flex justify-content-end">
             <button class="btn btn-green" data-bs-toggle="modal" data-bs-target="#addRoomModal">
-                Add Room
+                + Add Room
             </button>
         </div>
         </div>
@@ -205,7 +211,6 @@
 
       <div class="modal-footer d-flex gap-2">
         <button id="addRoomBtn" class="btn btn-green">Add Room</button>
-        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
       </div>
 
     </div>
@@ -232,7 +237,7 @@
         <div class="mb-2">
           <div class="mb-1">
             <label class="form-label">Room Description</label>
-            <label class="form-label small text-muted d-block">In the form X, Y, Z i.e. Whiteboard, TV (with HDMI), ...</label>
+            <label class="form-label small text-muted d-block">In the form X,Y,Z i.e. Whiteboard,TV (with HDMI), ...</label>
           </div>
           <input id="manageRoomDescription" class="form-control" type="text" placeholder="Optional description">
         </div>
@@ -249,13 +254,52 @@
       <div class="modal-footer d-flex gap-2">
         <button id="deleteRoomBtn" class="btn btn-red">Delete Room</button>
         <button id="changeRoomBtn" class="btn btn-green">Confirm Changes</button>
-        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- USER MODAL -->
+<!-- ADD USER MODAL -->
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-labelledby="addUserModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="addUserModalLabel">Add User</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label">Name</label>
+          <input id="addUserName" class="form-control" type="text" placeholder="e.g. Jane Smith">
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">Email (@uoregon.edu)</label>
+          <input id="addUserEmail" class="form-control" type="text" placeholder="e.g. jsmith@uoregon.edu">
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">Role</label>
+          <select id="addUserRole" class="form-select">
+            <option value="student">Student</option>
+            <option value="faculty">Faculty</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+
+        <div id="addUserMessage" class="small text-muted"></div>
+      </div>
+
+      <div class="modal-footer d-flex gap-2">
+        <button id="addUserBtn" class="btn btn-green">Add User</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MANAGE USER MODAL -->
 <div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -284,6 +328,8 @@
             <option value="admin">Admin</option>
           </select>
         </div>
+
+        <div id="userModalMessage" class="small text-muted"></div>
       </div>
 
       <div class="modal-footer d-flex gap-2">

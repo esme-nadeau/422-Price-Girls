@@ -29,10 +29,10 @@ function showMessage(msg, isError = false) {
       return false; // Elements not loaded yet
     }
 
-    // Initialize Flatpickr on the date field
+    // Initialize Flatpickr on the date field (only if flatpickr is loaded)
     const dateInput = document.getElementById('date');
     let datePicker = null;
-    if (dateInput) {
+    if (dateInput && typeof flatpickr !== 'undefined') {
       datePicker = flatpickr(dateInput, { dateFormat: "m/d/Y" });
     }
 
@@ -376,9 +376,9 @@ function showMessage(msg, isError = false) {
 })(); // End of admin-only booking management IIFE
 
 
-/* ==============================
-    Rooms Management (Admin Page Only)
-============================== */
+  /* ==============================
+      Room Management Modal
+  ============================== */
 async function initAdminTools() {
   const listWrap = document.getElementById("roomsList");
   const addBtn = document.getElementById("addRoomBtn");
@@ -448,40 +448,31 @@ async function initAdminTools() {
         return;
       }
 
-      renderRooms(data.rooms || []);
+      // Sort rooms by number (lowest first)
+      const rooms = data.rooms || [];
+      rooms.sort((a, b) => {
+        const nameA = (a.name || a.id || '').toString();
+        const nameB = (b.name || b.id || '').toString();
+        
+        // Extract numeric part from room name (e.g., "127" from "127" or "Room 127")
+        const numA = parseInt(nameA.match(/\d+/)?.[0] || '0', 10);
+        const numB = parseInt(nameB.match(/\d+/)?.[0] || '0', 10);
+        
+        // If both have numbers, sort numerically
+        if (numA !== 0 || numB !== 0) {
+          return numA - numB;
+        }
+        
+        // Otherwise, sort alphabetically
+        return nameA.localeCompare(nameB);
+      });
+
+      renderRooms(rooms);
       showMessage("");
     } catch (err) {
       console.error("loadRooms error:", err);
       showMessage("Failed to load rooms (network error)", true);
       renderRooms([]);
-    }
-  }
-
-  async function deleteRoom(id, name) {
-    if (!id) return;
-
-    const ok = confirm(
-      `Delete room "${name || id}"?\nThis action cannot be undone.`
-    );
-    if (!ok) return;
-
-    try {
-      const resp = await fetch(`/api/rooms/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      });
-
-      const data = await resp.json().catch(() => ({}));
-
-      if (!resp.ok) {
-        showMessage(data.error || "Failed to delete room", true);
-        return;
-      }
-
-      showMessage("Room deleted");
-      await loadRooms();
-    } catch (err) {
-      console.error("deleteRoom error:", err);
-      showMessage("Failed to delete room (network error)", true);
     }
   }
 
@@ -530,6 +521,150 @@ async function initAdminTools() {
     });
   }
 
+
+  /* ==============================
+      Add user modal
+  ============================== */
+  const usersListWrap = document.getElementById("usersList");
+  const addUserBtn = document.getElementById("addUserBtn");
+  const addUserModalEl = document.getElementById("addUserModal");
+  const addUserNameInput = document.getElementById("addUserName");
+  const addUserEmailInput = document.getElementById("addUserEmail");
+  const addUserRoleSelect = document.getElementById("addUserRole");
+  const addUserMessage = document.getElementById("addUserMessage");
+  const addUserModal = addUserModalEl ? new bootstrap.Modal(addUserModalEl, {
+    backdrop: true,
+    keyboard: true
+  }) : null;
+
+  function showAddUserMessage(msg, isError = false) {
+    if (!addUserMessage) return;
+    addUserMessage.textContent = msg || '';
+    addUserMessage.style.color = isError ? '#b00020' : '#666';
+  }
+
+  function renderUsers(users) {
+    if (!usersListWrap) return;
+    usersListWrap.innerHTML = "";
+
+    if (!users || users.length === 0) {
+      usersListWrap.innerHTML = '<div class="text-muted small">No users found.</div>';
+      return;
+    }
+
+    users.forEach((u) => {
+      const row = document.createElement("div");
+      row.className = "d-flex align-items-start justify-content-between mb-2 p-2 rounded";
+      row.style.border = "1px solid rgba(0,0,0,0.05)";
+
+      const leftSide = document.createElement("div");
+      leftSide.className = "flex-grow-1 text-start";
+      leftSide.innerHTML = `
+        <div class="fw-semibold">${escapeHtml(u.name || u.email)}</div>
+        <div class="small text-muted">${escapeHtml(u.email)}</div>
+        <div class="small text-muted">Role: ${escapeHtml(u.role || 'student')}</div>
+      `;
+
+      const actions = document.createElement("div");
+      actions.className = "d-flex flex-column align-items-end gap-1";
+
+      const manage = document.createElement("button");
+      manage.className = "btn btn-sm btn-outline-secondary user-manage-btn";
+      manage.innerHTML = `<i class="bi bi-gear me-1"></i>Edit`;
+      manage.dataset.email = u.email;
+
+      actions.appendChild(manage);
+      row.appendChild(leftSide);
+      row.appendChild(actions);
+      usersListWrap.appendChild(row);
+    });
+  }
+
+  async function loadUsers() {
+    if (!usersListWrap) return;
+    try {
+      const resp = await fetch("/api/users");
+      const data = resp.ok ? await resp.json() : null;
+
+      if (!resp.ok) {
+        console.error("Failed to load users:", data?.error);
+        renderUsers([]);
+        return;
+      }
+
+      renderUsers(data.users || []);
+    } catch (err) {
+      console.error("loadUsers error:", err);
+      renderUsers([]);
+    }
+  }
+
+  if (addUserBtn) {
+    addUserBtn.addEventListener("click", async () => {
+      const name = addUserNameInput?.value.trim();
+      const email = addUserEmailInput?.value.trim();
+      const role = addUserRoleSelect?.value || 'student';
+
+      if (!name) {
+        showAddUserMessage("Name is required", true);
+        return;
+      }
+
+      if (!email) {
+        showAddUserMessage("Email is required", true);
+        return;
+      }
+
+      if (!email.endsWith("@uoregon.edu")) {
+        showAddUserMessage("Email must end with @uoregon.edu", true);
+        return;
+      }
+
+      const payload = { name, email: email.toLowerCase(), role };
+
+      try {
+        const resp = await fetch("/api/add-user", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok || !data.ok) {
+          showAddUserMessage(data.error || "Failed to add user", true);
+          return;
+        }
+
+        showAddUserMessage("User added successfully");
+
+        // Reset inputs
+        addUserNameInput.value = "";
+        addUserEmailInput.value = "";
+        addUserRoleSelect.value = "student";
+
+        // Hide modal and reload users list
+        setTimeout(() => {
+          addUserModal?.hide();
+          loadUsers();
+        }, 500);
+      } catch (err) {
+        console.error("addUser error:", err);
+        showAddUserMessage("Failed to add user (network error)", true);
+      }
+    });
+  }
+
+  // Reset modal when opened
+  if (addUserModalEl) {
+    addUserModalEl.addEventListener("show.bs.modal", () => {
+      if (addUserNameInput) addUserNameInput.value = "";
+      if (addUserEmailInput) addUserEmailInput.value = "";
+      if (addUserRoleSelect) addUserRoleSelect.value = "student";
+      showAddUserMessage("");
+    });
+  }
+
   // Manage room modal setup
   let manageModalEl = null;
   let manageRoomName = null;
@@ -574,15 +709,18 @@ async function initAdminTools() {
   // Initialize modal elements
   initManageModalElements();
 
-  // ----------------------------
-  // User modal elements
-  // ----------------------------
+/* ==============================
+    Manage User Modal
+============================== */
   let userModalEl = null;
   let userNameInput = null;
   let userEmailInput = null;
   let userRoleSelect = null;
   let deleteUserBtnEl = null;
   let changeUserBtnEl = null;
+  let userModalMessage = null;
+
+  let currentUserEmail = null;
 
   function initUserModalElements() {
     userModalEl = document.getElementById('userModal');
@@ -591,6 +729,7 @@ async function initAdminTools() {
     userRoleSelect = document.getElementById('userRole');
     deleteUserBtnEl = document.getElementById('deleteUserBtn');
     changeUserBtnEl = document.getElementById('changeUserBtn');
+    userModalMessage = document.getElementById('userModalMessage');
   }
 
   function getUserModalInstance() {
@@ -616,6 +755,7 @@ async function initAdminTools() {
   moveModalToBody(document.getElementById('addRoomModal'));
   moveModalToBody(document.getElementById('manageRoomModal'));
   moveModalToBody(document.getElementById('userModal'));
+  moveModalToBody(document.getElementById('addUserModal'));
 
   // Handle Manage button clicks - open modal with room data
   listWrap.addEventListener("click", (e) => {
@@ -686,24 +826,39 @@ async function initAdminTools() {
         }
 
         // Find the containing row to extract displayed values
-        const row = btn.closest('.d-flex') || btn.parentElement;
-        const nameEl = row ? row.querySelector('.fw-semibold') : null;
-        const emailEls = row ? row.querySelectorAll('.small.text-muted') : null;
-        const emailEl = emailEls && emailEls.length > 0 ? emailEls[0] : null;
-        const roleEl = emailEls && emailEls.length > 1 ? emailEls[1] : null;
+        // btn is inside .d-flex.flex-column, which is inside the main row .d-flex
+        const mainRow = btn.closest('.d-flex.align-items-start.justify-content-between');
+        console.log('Main row found:', mainRow);
+        
+        // Look inside the row's left side (flex-grow-1) for name and email/role
+        const leftSide = mainRow ? mainRow.querySelector('.flex-grow-1') : null;
+        console.log('Left side found:', leftSide);
+        
+        const nameEl = leftSide ? leftSide.querySelector('.fw-semibold') : null;
+        const textMutedEls = leftSide ? leftSide.querySelectorAll('.small.text-muted') : [];
 
+        // Extract name (first fw-semibold)
         const displayName = nameEl ? nameEl.textContent.trim() : '';
-        const displayEmail = btn.dataset.email || (emailEl ? emailEl.textContent.trim() : '');
+
+        // Extract email (first .small.text-muted)
+        const displayEmail = textMutedEls.length > 0 ? textMutedEls[0].textContent.trim() : '';
+
+        // Extract role (second .small.text-muted, strip "Role: " prefix)
         let displayRole = '';
-        if (roleEl) {
-          // roleEl text may be "Role: student"
-          const txt = roleEl.textContent || '';
+        if (textMutedEls.length > 1) {
+          const txt = textMutedEls[1].textContent || '';
           displayRole = txt.replace(/^Role:\s*/i, '').trim();
         }
 
+        console.log('User modal population:', { displayName, displayEmail, displayRole, nameEl, textMutedEls });
+
+        // Set current user email for delete/update operations
+        currentUserEmail = displayEmail || btn.dataset.email || '';
+
         if (userNameInput) userNameInput.value = displayName || '';
         if (userEmailInput) userEmailInput.value = displayEmail || '';
-        if (userRoleSelect && displayRole) userRoleSelect.value = displayRole;
+        if (userRoleSelect) userRoleSelect.value = displayRole || 'student';
+        if (userModalMessage) userModalMessage.textContent = '';
 
         const instance = getUserModalInstance();
         if (instance) instance.show();
@@ -751,6 +906,52 @@ async function initAdminTools() {
         if (manageRoomMessage) {
           manageRoomMessage.textContent = "Failed to delete room (network error)";
           manageRoomMessage.style.color = "#b00020";
+        }
+      }
+    });
+  }
+
+  // Handle delete user button in modal
+  if (deleteUserBtnEl) {
+    deleteUserBtnEl.addEventListener("click", async () => {
+      if (!currentUserEmail) return;
+      
+      const userName = userNameInput?.value || currentUserEmail;
+      const ok = confirm(
+        `Delete user "${userName}"?\nThis action cannot be undone.`
+      );
+      if (!ok) return;
+
+      try {
+        const resp = await fetch(`/api/users/${encodeURIComponent(currentUserEmail)}`, {
+          method: "DELETE",
+        });
+
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+          if (userModalMessage) {
+            userModalMessage.textContent = data.error || "Failed to delete user";
+            userModalMessage.style.color = "#b00020";
+          }
+          return;
+        }
+
+        if (userModalMessage) {
+          userModalMessage.textContent = "User deleted";
+          userModalMessage.style.color = "#666";
+        }
+
+        // Close modal and reload users
+        const modalInstance = getUserModalInstance();
+        if (modalInstance) modalInstance.hide();
+        await loadUsers();
+        currentUserEmail = null;
+      } catch (err) {
+        console.error("deleteUser error:", err);
+        if (userModalMessage) {
+          userModalMessage.textContent = "Failed to delete user (network error)";
+          userModalMessage.style.color = "#b00020";
         }
       }
     });

@@ -1,7 +1,6 @@
 /* ==============================
    Admin page
-============================== */
-
+============================== */	
 #usersList {
 	max-height: 220px; /* adjust as needed */
 	overflow-y: auto;
@@ -33,8 +32,23 @@
 	display: flex;
 	flex-direction: column;
 }
+
 .btn-red {
-  background-color: #F8B6B6;
+	background-color: #F28380;
+	color: #222;
+	border-radius: 12px;
+	font-family: 'EB Garamond', serif;
+	font-weight: 500;
+	min-width: 80px;
+}
+
+.btn-green {
+	padding: 8px 16px;
+	min-width: 80px;
+}
+
+.btn-red:hover{
+  background-color: #c25956;
   color: #222;
   border-radius: 12px;
   font-family: 'EB Garamond', serif;

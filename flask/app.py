@@ -423,6 +423,24 @@ def api_rooms():
         return jsonify({"rooms": [], "error": str(e)}), 500
 
 
+@app.route("/api/users")
+def api_users():
+    try:
+        users_ref = db.collection("users")
+        docs = users_ref.stream()
+        users = []
+        for doc in docs:
+            u = doc.to_dict() or {}
+            u.setdefault('email', doc.id)
+            u.setdefault('name', '')
+            u.setdefault('role', 'student')
+            users.append(u)
+        return jsonify({"users": users})
+    except Exception as e:
+        print(f"[api_users] Error: {e}")
+        return jsonify({"users": [], "error": str(e)}), 500
+
+
 @app.route("/api/rooms", methods=["POST"])
 def api_create_room():
     if db is None:
@@ -823,6 +841,18 @@ def api_add_user():
         return {"ok": True}
     except Exception as e:
         return {"ok": False, "error": str(e)}, 400
+
+
+@app.route('/api/users/<user_email>', methods=['DELETE'])
+def api_delete_user(user_email):
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+    try:
+        db.collection('users').document(user_email).delete()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[api_delete_user] Error deleting {user_email}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.post("/auth/request-code")
