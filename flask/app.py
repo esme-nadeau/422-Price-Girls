@@ -307,7 +307,7 @@ def all_bookings():
     )
 
 # ----------------------------
-# MyBookings DELETE endpoint (Esm's addition)
+# MyBookings DELETE endpoint (Esmé's addition)
 # ----------------------------
 @app.route("/delete_booking/<booking_id>", methods=["DELETE"])
 def delete_booking(booking_id):
@@ -595,6 +595,11 @@ def api_test():
 def bookings():
     if request.method == "POST":
         try:
+            # Require an authenticated session before creating any booking
+            session_data = get_current_session_data()
+            if not session_data:
+                return jsonify({"success": False, "error": "unauthenticated"}), 401
+
             data = request.json or {}
             print(f"[bookings] Received booking data: {data}")
             
@@ -649,26 +654,14 @@ def bookings():
         role = str(role).strip().lower()
 
         items = []
-        today = datetime.utcnow().date()
 
         for doc in db.collection("bookings").stream():
             raw = doc.to_dict() or {}
             raw["id"] = doc.id
 
-            # Parse date to filter to current and upcoming bookings
-            date_str = raw.get("date")
-            parsed_date = None
-            if isinstance(date_str, str) and date_str:
-                try:
-                    parsed_date = datetime.strptime(date_str, "%Y-%m-%d").date()
-                except ValueError:
-                    parsed_date = None
-
-            if parsed_date is None or parsed_date < today:
-                continue
-
             if role == "student":
-                # Students can only see that a slot is reserved; omit identifying details.
+                # Students (and anonymous visitors) see all bookings, but with limited fields
+                # so we do not expose identifying details.
                 safe = {
                     "id": raw["id"],
                     "date": raw.get("date"),
@@ -678,7 +671,7 @@ def bookings():
                 }
                 items.append(safe)
             else:
-                # Faculty and admins can see full booking data.
+                # Faculty and admins can see full booking data for all dates.
                 items.append(raw)
 
         return jsonify({"bookings": items})

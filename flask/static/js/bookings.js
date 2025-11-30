@@ -73,6 +73,40 @@ window.initBookingButton = function(containerId) {
     
     newButton.addEventListener('click', async function(e) {
             e.preventDefault();
+
+            // Require login before creating any booking (Map & Calendar views)
+            async function checkLoggedIn() {
+                // First, try the dedicated session endpoint
+                try {
+                    const res = await fetch('/auth/session', { credentials: 'include' });
+                    const data = await res.json().catch(() => null);
+                    if (res.ok && data && data.success && data.session) {
+                        return true;
+                    }
+                } catch (err) {
+                    console.warn('Login check via /auth/session failed', err);
+                }
+
+                // Fallback: use template-injected flag if available
+                if (typeof window.isLoggedIn === 'boolean') {
+                    return window.isLoggedIn;
+                }
+                if (typeof window.isLoggedIn === 'string') {
+                    return window.isLoggedIn.toLowerCase() === 'true';
+                }
+                return false;
+            }
+
+            const loggedIn = await checkLoggedIn();
+            if (!loggedIn) {
+                const goLogin = window.confirm(
+                    'You need to log in with your uoregon.edu email before making a reservation.\n\nClick OK to go to the login page.'
+                );
+                if (goLogin) {
+                    window.location.href = '/login';
+                }
+                return;
+            }
             
             // Get form values - try to find in the container that has the button
             const getElement = (id) => {
