@@ -31,6 +31,54 @@ window.showBookingErrorModal = function(message) {
     }
 };
 
+// Fetch current session email (if logged in)
+async function fetchSessionEmailForBooking() {
+    try {
+        const res = await fetch('/auth/session', { credentials: 'include' });
+        const data = await res.json().catch(() => null);
+        if (res.ok && data && data.session && data.session.email) {
+            return data.session.email;
+        }
+    } catch (err) {
+        console.warn('Email autofill: failed to load session', err);
+    }
+    return null;
+}
+
+// Find a booking-related element (Map/Calendar) relative to a given button/tab
+function findBookingElement(id, contextButton) {
+    let container = null;
+
+    if (contextButton) {
+        container = contextButton.closest('.tab-pane');
+    }
+    if (!container) {
+        container = document.querySelector('.tab-pane.show.active') ||
+                    document.querySelector('#nav-map.show, #nav-calendar.show');
+    }
+
+    if (container) {
+        const el = container.querySelector('#' + id);
+        if (el) return el;
+    }
+    return document.getElementById(id);
+}
+
+// Autofill the email field with the logged-in session email if it is blank
+async function autofillBookingEmailIfEmpty(contextButton) {
+    const emailInput = findBookingElement('email', contextButton);
+    if (!emailInput) return;
+    if (emailInput.value && emailInput.value.trim() !== '') return;
+
+    const email = await fetchSessionEmailForBooking();
+    if (email) {
+        emailInput.value = email;
+    }
+}
+
+// Expose on window so Map/Calendar code can call it when the widget appears
+window.autofillBookingEmailIfEmpty = autofillBookingEmailIfEmpty;
+
 // Function to initialize booking button - can be called after content loads
 window.initBookingButton = function(containerId) {
     // Try to find button in specified container or active tab, then fall back to document
@@ -107,18 +155,14 @@ window.initBookingButton = function(containerId) {
                 }
                 return;
             }
+
+            // After confirming login, autofill email if we have it
+            await autofillBookingEmailIfEmpty(newButton);
             
             // Get form values - try to find in the container that has the button
             const getElement = (id) => {
-                // Find the tab pane that contains this button (re-evaluate at click time)
-                const buttonContainer = newButton.closest('.tab-pane') || 
-                                       document.querySelector('.tab-pane.show.active') ||
-                                       document.querySelector('#nav-map.show, #nav-calendar.show');
-                if (buttonContainer) {
-                    const el = buttonContainer.querySelector('#' + id);
-                    if (el) return el;
-                }
-                return document.getElementById(id);
+                const el = findBookingElement(id, newButton);
+                return el || null;
             };
             
             const roomEl = getElement('selectedRoom');
@@ -498,10 +542,19 @@ window.initBookingButton = function(containerId) {
 
 // Try to initialize immediately (for static pages)
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', window.initBookingButton);
+    document.addEventListener('DOMContentLoaded', () => {
+        window.initBookingButton();
+        // Autofill email once the DOM is ready (Calendar view, or Map if visible)
+        if (typeof window.autofillBookingEmailIfEmpty === 'function') {
+            window.autofillBookingEmailIfEmpty();
+        }
+    });
 } else {
     // DOM already loaded, try immediately
     window.initBookingButton();
+    if (typeof window.autofillBookingEmailIfEmpty === 'function') {
+        window.autofillBookingEmailIfEmpty();
+    }
 }
 
 // Also try after a short delay (for dynamically loaded content)

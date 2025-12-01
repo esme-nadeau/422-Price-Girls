@@ -720,6 +720,15 @@ function setRoomPhotoByDigits(digits) {
         setTimeout(() => window.initTimeFilter(root), 200);
       }
     }
+
+    // After calendar UI is ready, try autofilling the booking email if the user is logged in.
+    // Use a timeout so this still works even though bookings.js (which defines
+    // window.autofillBookingEmailIfEmpty) loads after calendar.js.
+    setTimeout(() => {
+      if (typeof window.autofillBookingEmailIfEmpty === 'function') {
+        window.autofillBookingEmailIfEmpty();
+      }
+    }, 250);
   }
 
   // Expose a safe refresh helper for booking flows (Map / Calendar tabs)

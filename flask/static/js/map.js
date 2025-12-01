@@ -226,6 +226,11 @@ async function loadRoomsAndPopulateDropdown() {
         if (bookingFields) {
           bookingFields.style.display = 'block';
         }
+
+        // Autofill email for logged-in users when the booking widget appears
+        if (typeof window.autofillBookingEmailIfEmpty === 'function') {
+          window.autofillBookingEmailIfEmpty();
+        }
       });
       li.appendChild(a);
       menu.appendChild(li);
@@ -328,6 +333,11 @@ function clearSelection() {
         const bookingFields = document.getElementById('bookingFormFields');
         if (bookingFields) {
           bookingFields.style.display = 'block';
+        }
+
+        // Autofill email for logged-in users when the booking widget appears via map click
+        if (typeof window.autofillBookingEmailIfEmpty === 'function') {
+          window.autofillBookingEmailIfEmpty();
         }
 
         e.stopPropagation();
