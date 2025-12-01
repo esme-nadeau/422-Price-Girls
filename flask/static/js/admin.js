@@ -1159,166 +1159,523 @@ if (document.readyState !== 'loading') {
 
 /* ==============================
     Account Management - User Search
+   + Admin Booking Search Widget
 ============================== */
 document.addEventListener("DOMContentLoaded", function () {
+  // User list search (right-hand column)
+  (function initUserSearch() {
     const userSearchInput = document.getElementById("userSearch");
     const usersList = document.getElementById("usersList");
+    if (!userSearchInput || !usersList) return;
 
     userSearchInput.addEventListener("input", function () {
-        const searchValue = userSearchInput.value.toLowerCase().trim();
-
-        // Get all user items
-        const userItems = usersList.querySelectorAll("div.d-flex");
-
-        userItems.forEach(item => {
-            const name = item.querySelector(".fw-semibold")?.textContent.toLowerCase() || "";
-            const email = item.querySelector(".small.text-muted")?.textContent.toLowerCase() || "";
-
-            // Match name OR email
-            if (name.includes(searchValue) || email.includes(searchValue)) {
-                item.style.display = "flex";  // show it
-            } else {
-                item.style.display = "none";  // hide it
-            }
-        });
+      const searchValue = userSearchInput.value.toLowerCase().trim();
+      const userItems = usersList.querySelectorAll("div.d-flex");
+      userItems.forEach(item => {
+        const name = item.querySelector(".fw-semibold")?.textContent.toLowerCase() || "";
+        const email = item.querySelector(".small.text-muted")?.textContent.toLowerCase() || "";
+        item.style.display = (name.includes(searchValue) || email.includes(searchValue)) ? "flex" : "none";
+      });
     });
-});
+  })();
 
+  // ----- Admin booking search helpers (uses /api/bookings, not pending list) -----
+  let adminSearchBookingsCache = null;
+  let adminSearchRoomsCache = null;
 
-/* ==============================
-    Admin Page Booking Card Clicks (Same as MyBookings)
-============================== */
-(function() {
-  // Don't run if on mybookings page
-  if (document.getElementById('mybookings-root')) {
-    return;
+  function parseISODate(dateStr) {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return null;
+    const [y, m, d] = parts.map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
   }
 
-  function setupAdminBookingClicks() {
-    const bookingCards = document.querySelectorAll('.booking-card');
-    const bookingForm = document.getElementById('bookingForm');
-    
-    if (!bookingForm) {
-      return false; // Form not loaded yet
+  async function loadAdminSearchBookings() {
+    if (adminSearchBookingsCache) return adminSearchBookingsCache;
+    try {
+      // Match AllBookings pattern: simple same-origin fetch
+      const res = await fetch('/api/bookings');
+      const data = await res.json().catch(() => ({}));
+      adminSearchBookingsCache = data.bookings || [];
+    } catch (err) {
+      console.error('[admin search] Failed to load bookings for search', err);
+      adminSearchBookingsCache = [];
     }
+    return adminSearchBookingsCache;
+  }
 
-    if (!bookingCards.length) {
-      console.warn("Admin: No booking cards found");
-      return true;
+  async function loadAdminSearchRooms() {
+    if (adminSearchRoomsCache) return adminSearchRoomsCache;
+    try {
+      // Match existing admin tools pattern for rooms
+      const res = await fetch('/api/rooms');
+      const data = await res.json().catch(() => ({}));
+      adminSearchRoomsCache = data.rooms || [];
+    } catch (err) {
+      console.error('[admin search] Failed to load rooms for search', err);
+      adminSearchRoomsCache = [];
     }
+    return adminSearchRoomsCache;
+  }
 
-    console.log(`Admin: Found ${bookingCards.length} booking cards`);
-
-    // Add click listeners to booking cards (same as mybookings)
-    bookingCards.forEach(card => {
-      // Skip if already has click handler
-      if (card.dataset.adminClickBound === 'true') {
-        return;
+  function buildAdminTimeSlots() {
+    const slots = [];
+    for (let h = 8; h <= 19; h++) {
+      for (let m = 0; m < 60; m += 30) {
+        if (h === 19 && m > 0) continue; // stop at 7:00 PM
+        let hour = h > 12 ? h - 12 : h;
+        const ampm = h < 12 ? 'AM' : 'PM';
+        const mm = m === 0 ? '00' : '30';
+        slots.push(`${hour}:${mm} ${ampm}`);
       }
-      card.dataset.adminClickBound = 'true';
-      
-      card.addEventListener('click', () => {
-        console.log(`Admin: Clicked booking ${card.dataset.id}`);
+    }
+    return slots;
+  }
 
-        const bookingInfoCard = document.getElementById('bookingInfoCard');
-        const currentBookingId = bookingForm.dataset.id;
-        const clickedBookingId = card.dataset.id;
+  async function populateAdminRoomSelect(selectEl, currentRoomId) {
+    if (!selectEl) return;
+    const rooms = await loadAdminSearchRooms();
+    selectEl.innerHTML = '';
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = 'Select room';
+    selectEl.appendChild(placeholder);
+    rooms.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.id;
+      opt.textContent = r.name || r.id;
+      selectEl.appendChild(opt);
+    });
+    if (currentRoomId) {
+      selectEl.value = currentRoomId;
+    }
+  }
 
-        // Check if the same booking is clicked again
-        if (currentBookingId === clickedBookingId && bookingInfoCard && bookingInfoCard.style.display === 'block') {
-          // Hide the booking information card
-          bookingInfoCard.style.display = 'none';
-          // Remove selection highlight
-          document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
-          // Clear the form ID
-          bookingForm.dataset.id = '';
-          console.log('Admin: Booking card hidden');
+  function populateAdminTimeSelects(startEl, endEl, range) {
+    if (!startEl || !endEl) return;
+    const slots = buildAdminTimeSlots();
+    startEl.innerHTML = '';
+    endEl.innerHTML = '';
+
+    slots.forEach(s => {
+      const o1 = document.createElement('option');
+      o1.value = s;
+      o1.textContent = s;
+      startEl.appendChild(o1);
+
+      const o2 = document.createElement('option');
+      o2.value = s;
+      o2.textContent = s;
+      endEl.appendChild(o2);
+    });
+
+    let startVal = slots[0], endVal = slots[1];
+    if (range && range.includes(' - ')) {
+      const [s, e] = range.split(' - ');
+      if (slots.includes(s.trim())) startVal = s.trim();
+      if (slots.includes(e.trim())) endVal = e.trim();
+    }
+    startEl.value = startVal;
+    endEl.value = endVal;
+  }
+
+  function openAdminBookingFromSearch(booking) {
+    const detailsCard  = document.getElementById('adminBookingDetailsCard');
+    const form         = document.getElementById('adminBookingForm');
+    const idInput      = document.getElementById('adminBookingId');
+    const dateInput    = document.getElementById('adminBookingDate');
+    const roomSelect   = document.getElementById('adminBookingRoomId');
+    const startSelect  = document.getElementById('adminBookingStartTime');
+    const endSelect    = document.getElementById('adminBookingEndTime');
+    const emailInput   = document.getElementById('adminBookingEmail');
+    const nameInput    = document.getElementById('adminBookingName');
+    const purposeInput = document.getElementById('adminBookingPurpose');
+    const hint         = document.getElementById('adminBookingHint');
+
+    if (!detailsCard || !form || !idInput) return;
+
+    idInput.value = booking.id || '';
+    if (dateInput)    dateInput.value    = booking.date || '';
+    if (emailInput)   emailInput.value   = booking.email || booking.userEmail || '';
+    if (nameInput)    nameInput.value    = booking.name || booking.userId || '';
+    if (purposeInput) purposeInput.value = booking.purpose || '';
+
+    if (roomSelect) {
+      populateAdminRoomSelect(roomSelect, booking.roomId || booking.roomName || '');
+    }
+    if (startSelect && endSelect) {
+      populateAdminTimeSelects(startSelect, endSelect, booking.timeRange || '');
+    }
+
+    if (hint) {
+      hint.textContent = 'Editing booking ' + (booking.id || '');
+    }
+  }
+
+  function renderBookingResults(matches, hasFilters, searchExecuted) {
+    const resultsCard    = document.getElementById("bookingSearchResultsCard");
+    const resultsList    = document.getElementById("bookingSearchResultsList");
+    const resultsSummary = document.getElementById("bookingSearchResultsSummary");
+    const filterChips    = document.getElementById("bookingSearchFilterChips");
+    const emailNameInput = document.getElementById("bookingSearchEmailName");
+    const dateInput      = document.getElementById("bookingSearchDate");
+    const roomInput      = document.getElementById("bookingSearchRoom");
+    const startSelect    = document.getElementById("bookingSearchStart");
+    const endSelect      = document.getElementById("bookingSearchEnd");
+
+    if (!resultsCard || !resultsList || !resultsSummary || !filterChips) return;
+
+    resultsList.innerHTML = "";
+    filterChips.innerHTML = "";
+
+    function buildChips() {
+      const chips = [];
+      const emailNameVal = (emailNameInput?.value || "").trim();
+      const dateVal      = (dateInput?.value || "").trim();
+      const roomVal      = (roomInput?.value || "").trim();
+      const startVal     = document.getElementById("bookingSearchStart")?.value || "";
+      const endVal       = document.getElementById("bookingSearchEnd")?.value || "";
+
+      if (emailNameVal) chips.push(`Email/name: ${emailNameVal}`);
+      if (dateVal)      chips.push(`Date: ${dateVal}`);
+      if (roomVal)      chips.push(`Room: ${roomVal}`);
+      if (startVal || endVal) chips.push(`Time: ${startVal || '?'} – ${endVal || '?'}`);
+
+      chips.forEach(label => {
+        const span = document.createElement('span');
+        span.className = 'badge bg-secondary-subtle border border-secondary-subtle text-secondary-emphasis';
+        span.textContent = label;
+        filterChips.appendChild(span);
+      });
+    }
+
+    if (!searchExecuted) {
+      resultsSummary.textContent = "No search run yet. Enter one or more fields on the left, then press Search.";
+      return;
+    }
+
+    if (hasFilters) {
+      buildChips();
+    }
+
+    if (!hasFilters) {
+      resultsSummary.textContent = matches.length
+        ? `${matches.length} reservation${matches.length === 1 ? '' : 's'} shown (no filters applied).`
+        : "There are no reservations to show.";
+    } else if (!matches.length) {
+      resultsSummary.textContent = "No reservations match your filters.";
+      return;
+    } else {
+      resultsSummary.textContent = `${matches.length} reservation${matches.length === 1 ? '' : 's'} match your filters.`;
+    }
+
+    matches.forEach(booking => {
+      const purpose = booking.purpose || "(no purpose)";
+      const room    = booking.roomId || booking.roomName || "(room)";
+      const date    = booking.date || "";
+      const time    = booking.timeRange || "";
+      const email   = booking.email || booking.userEmail || "";
+
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "list-group-item list-group-item-action text-start";
+      item.innerHTML = `
+        <div class="fw-semibold">${escapeHtml(purpose)}</div>
+        <div class="small text-muted">${escapeHtml(room)} • ${escapeHtml(date)}${time ? ' • ' + escapeHtml(time) : ''}</div>
+        <div class="small text-muted">${escapeHtml(email)}</div>
+      `;
+
+      item.addEventListener("click", () => {
+        openAdminBookingFromSearch(booking);
+      });
+
+      resultsList.appendChild(item);
+    });
+  }
+
+  async function applyBookingFilters() {
+    const emailNameInput = document.getElementById("bookingSearchEmailName");
+    const dateInput      = document.getElementById("bookingSearchDate");
+    const roomInput      = document.getElementById("bookingSearchRoom");
+    const startSelect    = document.getElementById("bookingSearchStart");
+    const endSelect      = document.getElementById("bookingSearchEnd");
+
+    const allBookings = await loadAdminSearchBookings();
+
+    const emailNameVal = (emailNameInput?.value || "").toLowerCase().trim();
+    const dateVal      = (dateInput?.value || "").trim();
+    const roomVal      = (roomInput?.value || "").toLowerCase().trim();
+    const startVal     = (startSelect?.value || "").toLowerCase().trim();
+    const endVal       = (endSelect?.value || "").toLowerCase().trim();
+
+    const hasAnyFilter = !!(emailNameVal || dateVal || roomVal || startVal || endVal);
+
+    // No filters: show all bookings (past + future)
+    if (!hasAnyFilter) {
+      renderBookingResults(allBookings, false, true);
+      return;
+    }
+
+    // With filters: show ONLY bookings that match all filled fields (logical AND)
+    const matches = allBookings.filter(b => {
+      const bEmail   = (b.email || b.userEmail || "").toLowerCase();
+      const bName    = (b.name || b.userId || "").toLowerCase();
+      const bDate    = (b.date || "").trim();
+      const bRoom    = (b.roomId || b.roomName || "").toLowerCase();
+      const bTime    = (b.timeRange || "").toLowerCase();
+
+      if (emailNameVal && !(bEmail.includes(emailNameVal) || bName.includes(emailNameVal))) return false;
+      if (dateVal      && bDate !== dateVal) return false;
+      if (roomVal      && !bRoom.includes(roomVal)) return false;
+
+      if (startVal || endVal) {
+        // Normalize booking time range "Start - End"
+        const parts = bTime.split(' - ').map(s => s.trim());
+        const bStart = (parts[0] || '').toLowerCase();
+        const bEnd   = (parts[1] || '').toLowerCase();
+        if (startVal && bStart !== startVal) return false;
+        if (endVal   && bEnd   !== endVal)   return false;
+      }
+      return true;
+    });
+
+    renderBookingResults(matches, true, true);
+  }
+
+  function initAdminBookingDetails() {
+    const form       = document.getElementById('adminBookingForm');
+    const roomSelect = document.getElementById('adminBookingRoomId');
+    const startSel   = document.getElementById('adminBookingStartTime');
+    const endSel     = document.getElementById('adminBookingEndTime');
+    const saveBtn    = document.getElementById('adminSaveBookingBtn');
+    const deleteBtn  = document.getElementById('adminDeleteBookingBtn');
+
+    if (!form || form.dataset.detailsBound === 'true') return;
+    form.dataset.detailsBound = 'true';
+
+    // Pre-populate room + time dropdowns
+    (async () => {
+      if (roomSelect) {
+        await populateAdminRoomSelect(roomSelect, '');
+      }
+      if (startSel && endSel) {
+        populateAdminTimeSelects(startSel, endSel, '');
+      }
+    })();
+
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async () => {
+        const idInput      = document.getElementById('adminBookingId');
+        const dateInput    = document.getElementById('adminBookingDate');
+        const roomInput    = document.getElementById('adminBookingRoomId');
+        const startInput   = document.getElementById('adminBookingStartTime');
+        const endInput     = document.getElementById('adminBookingEndTime');
+        const emailInput   = document.getElementById('adminBookingEmail');
+        const nameInput    = document.getElementById('adminBookingName');
+        const purposeInput = document.getElementById('adminBookingPurpose');
+
+        const bookingId = idInput ? idInput.value : '';
+        if (!bookingId) {
+          alert('Select a reservation from Search Results first.');
           return;
         }
 
-        // Highlight selected
-        document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
+        const dateVal  = dateInput ? dateInput.value : '';
+        const roomId   = roomInput ? roomInput.value : '';
+        const startVal = startInput ? startInput.value : '';
+        const endVal   = endInput ? endInput.value : '';
 
-        // Parse structured booking data
-        let bookingData = {};
-        try {
-          if (card.dataset.booking) bookingData = JSON.parse(card.dataset.booking);
-        } catch (err) {
-          console.warn('Could not parse data-booking JSON, falling back to data-* attributes', err);
-          bookingData = {};
+        if (!dateVal || !roomId || !startVal || !endVal) {
+          alert('Date, room, start time, and end time are required.');
+          return;
         }
 
-        // Save the ID
-        bookingForm.dataset.id = bookingData.id || card.dataset.id || '';
-
-        // Handle the date format safely
-        let dateValue = bookingData.date || card.dataset.date || '';
-        if (dateValue) {
-          const parsed = new Date(dateValue);
-          if (!isNaN(parsed)) dateValue = parsed;
-          else {
-            console.warn('Could not parse date:', bookingData.date || card.dataset.date);
-            dateValue = null;
-          }
+        const slots = buildAdminTimeSlots();
+        const startIdx = slots.indexOf(startVal);
+        const endIdx   = slots.indexOf(endVal);
+        if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
+          alert('End time must be after start time.');
+          return;
         }
 
-        // Populate <span> fields for non-editable display
-        const setSpan = (id, value) => {
-          const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
-          if (el) el.textContent = value || '';
+        const payload = {
+          date: dateVal,
+          timeRange: `${startVal} - ${endVal}`,
+          name: nameInput ? nameInput.value.trim() : '',
+          email: emailInput ? emailInput.value.trim() : '',
+          purpose: purposeInput ? purposeInput.value.trim() : '',
+          roomId
         };
 
-        setSpan('date', bookingData.date || card.dataset.date || '');
-        setSpan('time', bookingData.time || card.dataset.time || '');
-        setSpan('repeat', bookingData.repeat || card.dataset.repeat || 'Never');
-        setSpan('name', bookingData.name || bookingData.userId || card.dataset.name || '');
-        setSpan('email', bookingData.email || card.dataset.email || '');
-        setSpan('purpose', bookingData.purpose || card.dataset.purpose || '');
-        setSpan('roomId', bookingData.roomId || card.dataset.roomid || '');
+        try {
+          const res = await fetch(`/update_booking/${bookingId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) {
+            alert('Failed to save booking: ' + (data.error || res.statusText));
+            return;
+          }
 
-        // Show the booking information card
-        if (bookingInfoCard) {
-          bookingInfoCard.style.display = 'block';
+          // Update cached bookings so Search Results stay in sync
+          const all = await loadAdminSearchBookings();
+          const idx = all.findIndex(b => b.id === bookingId);
+          if (idx !== -1) {
+            all[idx] = Object.assign({}, all[idx], payload);
+          }
+
+          applyBookingFilters();
+        } catch (err) {
+          console.error('Admin booking save error', err);
+          alert('Failed to save booking.');
         }
-
-        console.log('Admin: Form populated with:', {
-          id: bookingForm.dataset.id,
-          date: bookingData.date || card.dataset.date,
-          time: bookingData.time || card.dataset.time,
-          repeat: bookingData.repeat || card.dataset.repeat,
-          email: bookingData.email || card.dataset.email,
-          purpose: bookingData.purpose || card.dataset.purpose,
-          roomId: bookingData.roomId || card.dataset.roomid
-        });
       });
+    }
+
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async () => {
+        const idInput = document.getElementById('adminBookingId');
+        const bookingId = idInput ? idInput.value : '';
+        if (!bookingId) {
+          alert('Select a reservation from Search Results first.');
+          return;
+        }
+        if (!confirm('Are you sure you want to delete this booking?')) return;
+
+        try {
+          const res = await fetch(`/delete_booking/${bookingId}`, { method: 'DELETE' });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) {
+            alert('Failed to delete booking: ' + (data.error || res.statusText));
+            return;
+          }
+
+          // Remove from cache and refresh results
+          const all = await loadAdminSearchBookings();
+          const remaining = all.filter(b => b.id !== bookingId);
+          adminSearchBookingsCache = remaining;
+
+          // Clear form
+          const formEl = document.getElementById('adminBookingForm');
+          if (formEl) {
+            formEl.reset();
+            const idEl = document.getElementById('adminBookingId');
+            if (idEl) idEl.value = '';
+          }
+
+          applyBookingFilters();
+        } catch (err) {
+          console.error('Admin booking delete error', err);
+          alert('Failed to delete booking.');
+        }
+      });
+    }
+  }
+
+  function initAdminBookingSearch() {
+    const form       = document.getElementById("bookingSearchForm");
+    const searchBtn  = document.getElementById("bookingSearchSubmit");
+    const clearBtn   = document.getElementById("bookingSearchClear");
+    const roomSelect = document.getElementById("bookingSearchRoom");
+    const startSel   = document.getElementById("bookingSearchStart");
+    const endSel     = document.getElementById("bookingSearchEnd");
+    if (!form || form.dataset.searchBound === "true") return;
+    form.dataset.searchBound = "true";
+
+    // Prevent any native submit behaviour
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
     });
 
-    return true;
-  }
-
-  // Try to set up immediately
-  if (setupAdminBookingClicks()) {
-    return;
-  }
-
-  // If not ready, wait for content to load
-  [100, 300, 500, 1000, 2000].forEach(delay => {
-    setTimeout(() => {
-      if (!document.getElementById('mybookings-root')) {
-        setupAdminBookingClicks();
+    // Pressing Enter anywhere in the form should trigger the same search as the button
+    form.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        applyBookingFilters();
       }
-    }, delay);
+    });
+
+    if (searchBtn) {
+      searchBtn.addEventListener("click", function () {
+        applyBookingFilters();
+      });
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener("click", function () {
+        const emailInput = document.getElementById("bookingSearchEmailName");
+        const dateInput  = document.getElementById("bookingSearchDate");
+        if (emailInput) emailInput.value = "";
+        if (dateInput)  dateInput.value  = "";
+        if (roomSelect) roomSelect.value = "";
+        if (startSel)   startSel.value   = "";
+        if (endSel)     endSel.value     = "";
+        // After clearing, show all bookings again
+        applyBookingFilters();
+      });
+    }
+
+    // Populate room and time dropdowns once
+    (async () => {
+      if (roomSelect) {
+        const rooms = await loadAdminSearchRooms();
+        roomSelect.innerHTML = '<option value="">Any room</option>';
+        rooms.forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.id;
+          opt.textContent = r.name || r.id;
+          roomSelect.appendChild(opt);
+        });
+      }
+      if (startSel && endSel) {
+        const allSlots = [];
+        // 8:00 AM through 7:00 PM in 30-minute increments
+        for (let h = 8; h <= 19; h++) {
+          for (let m = 0; m < 60; m += 30) {
+            if (h === 19 && m > 0) continue; // stop at 7:00 PM
+            let hour = h > 12 ? h - 12 : h;
+            const ampm = h < 12 ? 'AM' : 'PM';
+            const mm = m === 0 ? '00' : '30';
+            allSlots.push(`${hour}:${mm} ${ampm}`);
+          }
+        }
+        // Start times: 8:00 AM – 6:30 PM; End times: 8:30 AM – 7:00 PM
+        const startSlots = allSlots.slice(0, allSlots.length - 1);
+        const endSlots   = allSlots.slice(1);
+
+        const fill = (sel, label, slots) => {
+          sel.innerHTML = '';
+          const base = document.createElement('option');
+          base.value = '';
+          base.textContent = label;
+          sel.appendChild(base);
+          slots.forEach(s => {
+            const o = document.createElement('option');
+            o.value = s;
+            o.textContent = s;
+            sel.appendChild(o);
+          });
+        };
+        fill(startSel, 'Start', startSlots);
+        fill(endSel, 'End', endSlots);
+      }
+      // On init, show all bookings in the middle widget
+      applyBookingFilters();
+    })();
+  }
+
+  // First attempt (for direct /admin render)
+  initAdminBookingSearch();
+  initAdminBookingDetails();
+
+  // Also watch for dynamically loaded admin tab content in SPA shell
+  const observer = new MutationObserver(() => {
+    initAdminBookingSearch();
+    initAdminBookingDetails();
   });
-
-  // Watch for dynamically added booking cards
-  const bookingsList = document.getElementById('bookingsList');
-  if (bookingsList) {
-    const observer = new MutationObserver(() => {
-      if (!document.getElementById('mybookings-root')) {
-        setupAdminBookingClicks();
-      }
-    });
-    observer.observe(bookingsList, { childList: true, subtree: true });
-  }
-})();
+  observer.observe(document.body, { childList: true, subtree: true });
+});
