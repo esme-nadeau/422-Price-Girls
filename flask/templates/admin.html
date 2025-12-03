@@ -1,204 +1,224 @@
 <!-- Admin Content -->
 <div id="mybookings-tab-content" class="mybookings-container">
-<div class="row g-3 align-items-stretch" id="adminLayoutRow">
+<div class="row g-4 align-items-start">
 
-    <!-- LEFT: Reservation Search + Bookings to approve -->
-    <div class="col-12 col-md-6 col-lg-3 d-flex flex-column" id="adminLeftCol">
-        <!-- Reservation Search Widget -->
-        <div class="card shadow-sm p-3 mb-4" id="bookingSearchWidget" style="width: 100%;">
-            <h5 class="fw-semibold mb-2">Search Reservations</h5>
-            <form id="bookingSearchForm" class="small">
-                <div class="row g-2 mb-2">
-                    <div class="col-12">
-                        <label for="bookingSearchEmailName" class="small mb-1 d-block">Email or name</label>
-                        <input type="text" id="bookingSearchEmailName" class="form-control form-control-sm" placeholder="e.g. jdoe@uoregon.edu or Jane Doe">
-                    </div>
-                    <div class="col-6">
-                        <label for="bookingSearchDate" class="small mb-1 d-block">Date</label>
-                        <input type="date" id="bookingSearchDate" class="form-control form-control-sm">
-                    </div>
-                    <div class="col-6">
-                        <label for="bookingSearchRoom" class="small mb-1 d-block">Room</label>
-                        <select id="bookingSearchRoom" class="form-select form-select-sm">
-                            <option value="">Any room</option>
-                        </select>
-                    </div>
-                    <div class="col-12">
-                        <label class="small mb-1 d-block">Time</label>
-                        <div class="d-flex align-items-center gap-1">
-                            <select id="bookingSearchStart" class="form-select form-select-sm">
-                                <option value="">Start</option>
-                            </select>
-                            <span class="px-1">–</span>
-                            <select id="bookingSearchEnd" class="form-select form-select-sm">
-                                <option value="">End</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                <div class="d-flex justify-content-end gap-2">
-                    <button type="button" id="bookingSearchSubmit" class="btn btn-sm btn-green">Search</button>
-                    <button type="button" id="bookingSearchClear" class="btn btn-sm btn-outline-secondary">Clear</button>
-                </div>
-                <p class="small text-muted mt-2 mb-0">
-                    Enter one or more fields, then press Enter or click Search to see matching reservations.
-                </p>
-            </form>
-        </div>
-
-        <!-- Bookings to approve list -->
+    <!-- LEFT: Bookings to approve -->
+    <div class="col-md-4">
+        <!-- Approve bookings card -->
         <div class="approve-bookings card shadow-sm p-3 mb-4" style="width: 100%;">
-            <h5 class="fw-semibold mb-3">Bookings to Approve</h5>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-semibold mb-0">Bookings to Approve</h5>
+                <button class="btn p-0 border-0 bg-transparent" type="button" id="bookingsToggleBtn" data-bs-toggle="collapse" data-bs-target="#bookingsListCollapse" aria-expanded="true" aria-controls="bookingsListCollapse">
+                    <i class="bi bi-caret-down-square" id="bookingsToggleIcon"></i>
+                </button>
+            </div>
             {% if error_message %}
             <div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">
             {{ error_message }}
             </div>
             {% endif %}
-            <div id="bookingsList">
-            {% for booking in bookings %}
-        <div class="booking-card mb-3 p-3 rounded" 
-            data-id="{{ booking.id }}"
-            data-date="{{ booking.date }}"
-            data-time="{{ booking.timeRange }}"
-            data-repeat="{{ booking.repeat }}"
-            data-email="{{ booking.email or booking.userEmail }}"
-            data-name="{{ booking.name or booking.userId }}"
-            data-purpose="{{ booking.purpose }}"
-            data-roomid="{{ booking.roomId }}"
-            data-booking='{{ {
-            "id": booking.id or '',
-            "date": booking.date or '',
-            "time": booking.timeRange or '',
-            "repeat": booking.repeat or '',
-            "name": booking.name or booking.userId or '',
-            "email": (booking.email or booking.userEmail or ''),
-            "purpose": booking.purpose or '',
-            "roomId": booking.roomId or ''
-            } | tojson }}'>
-                <h5 class="fw-bold mb-1">{{ booking.purpose }}</h5>
-                <p class="mb-0">{{ booking.roomId }}</p>
-                <p class="mb-0">{{ booking.timeRange }}</p>
-                <p class="text-muted small mb-0">{{ booking.date }}</p>
-            </div>
-            {% endfor %}
+            <div class="collapse show" id="bookingsListCollapse">
+                <div id="bookingsList">
+                {% for booking in bookings %}
+            <div class="booking-card mb-3 p-3 rounded" 
+                data-id="{{ booking.id }}"
+                data-date="{{ booking.date }}"
+                data-time="{{ booking.timeRange }}"
+                data-repeat="{{ booking.repeat }}"
+                data-email="{{ booking.email or booking.userEmail }}"
+                data-purpose="{{ booking.purpose }}"
+                data-roomid="{{ booking.roomId }}"
+                data-booking='{{ {
+                "id": booking.id or '',
+                "date": booking.date or '',
+                "time": booking.timeRange or '',
+                "repeat": booking.repeat or '',
+                "name": booking.name or booking.userId or '',
+                "email": (booking.email or booking.userEmail or ''),
+                "purpose": booking.purpose or '',
+                "roomId": booking.roomId or ''
+                } | tojson }}'>
+                    <h5 class="fw-bold mb-1">{{ booking.purpose }}</h5>
+                    <p class="mb-0">{{ booking.roomId }}</p>
+                    <p class="mb-0">{{ booking.timeRange }}</p>
+                    <p class="text-muted small mb-0">{{ booking.date }}</p>
+                </div>
+                {% endfor %}
+                </div>
             </div>
         </div>
 
-        <!-- Building Closures moved under Bookings to Approve -->
-        <div class="building-management card shadow-sm p-3 mb-4" style="width: 100%;">
-            <h5 class="fw-semibold mb-3">Building Closures</h5>
-              <div id="closureList" class="mb-3">
-                {% if closures and closures|length > 0 %}
-                  {% for c in closures %}
-                    <div class="d-flex align-items-start justify-content-between mb-2 p-2 rounded" style="border:1px solid rgba(0,0,0,0.05);">
-                      <div>
-                        <div class="fw-semibold">{{ c.name or c.id }}</div>
-                      </div>
-                      <div class="d-flex flex-column align-items-end gap-1">
-                        <button class="btn btn-sm btn-outline-secondary user-manage-btn"
-                          data-id="{{ c.id or c.name}}"
-                          data-date="{{ r.date }}"
-                            <i class="bi bi-gear me-1"></i>Edit
-                        </button>
-                      </div>
-                    </div>
-                  {% endfor %}
-                {% else %}
-                  <div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">
-                    No closures found.
-                  </div>
-                {% endif %}
-              </div>
-
-          <div class="mt-auto pt-2 border-top d-flex justify-content-end">
-            <button class="btn btn-green" data-bs-toggle="modal" data-bs-target="#addRoomModal">
-                + Add Closure
-            </button>
+        <!-- All bookings card -->
+        <div class="total-bookings card shadow-sm p-3 mb-4" style="width: 100%;">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-semibold mb-0">All Bookings</h5>
+                <button class="btn p-0 border-0 bg-transparent" type="button" id="allBookingsToggleBtn" data-bs-toggle="collapse" data-bs-target="#allBookingsListCollapse" aria-expanded="false" aria-controls="allBookingsListCollapse">
+                    <i class="bi bi-caret-up-square" id="allBookingsToggleIcon"></i>
+                </button>
+            </div>
+            <div class="collapse" id="allBookingsListCollapse">
+                <!-- Section A: Search Form -->
+                <div id="allBookingsSearchSection" class="mb-3 pb-3 border-bottom">
+                    <h6 class="fw-semibold mb-2 small">Search Reservations</h6>
+                    <form id="allBookingsSearchForm" class="small">
+                        <div class="row g-2 mb-2">
+                            <div class="col-12">
+                                <label for="allBookingsSearchEmailName" class="small mb-1 d-block">Email or name</label>
+                                <input type="text" id="allBookingsSearchEmailName" class="form-control form-control-sm" placeholder="e.g. jdoe@uoregon.edu or Jane Doe">
+                            </div>
+                            <div class="col-6">
+                                <label for="allBookingsSearchDate" class="small mb-1 d-block">Date</label>
+                                <input type="date" id="allBookingsSearchDate" class="form-control form-control-sm">
+                            </div>
+                            <div class="col-6">
+                                <label for="allBookingsSearchRoom" class="small mb-1 d-block">Room</label>
+                                <select id="allBookingsSearchRoom" class="form-select form-select-sm">
+                                    <option value="">Any room</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="small mb-1 d-block">Time</label>
+                                <div class="d-flex align-items-center gap-1">
+                                    <select id="allBookingsSearchStart" class="form-select form-select-sm">
+                                        <option value="">Start</option>
+                                    </select>
+                                    <span class="px-1">–</span>
+                                    <select id="allBookingsSearchEnd" class="form-select form-select-sm">
+                                        <option value="">End</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" id="allBookingsSearchSubmit" class="btn btn-sm btn-green">Search</button>
+                            <button type="button" id="allBookingsSearchClear" class="btn btn-sm btn-grey">Clear</button>
+                        </div>
+                        <p class="small text-muted mt-2 mb-0">
+                            Enter one or more fields, then press Enter or click Search.
+                        </p>
+                    </form>
+                </div>
+                
+                <!-- Section B: Search Results -->
+                <div id="allBookingsResultsSection">
+                    <h6 class="fw-semibold mb-2 small">Results</h6>
+                    <p class="small text-muted mb-2" id="allBookingsResultsSummary">
+                        No search run yet. Enter one or more fields above, then press Search.
+                    </p>
+                    <!-- Active filter chips -->
+                    <div id="allBookingsFilterChips" class="d-flex flex-wrap gap-1 mb-2"></div>
+                    <div id="allBookingsResultsList" class="list-group list-group-flush small" style="max-height: 400px; overflow-y: auto;"></div>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
 
-    <!-- MIDDLE LEFT: Booking Details (edit/cancel like All Bookings) -->
-    <div class="col-12 col-md-6 col-lg-3 d-flex flex-column" id="bookingInfoWidget">
-      <div class="card shadow-sm p-3" id="adminBookingDetailsCard">
-        <h5 class="fw-semibold mb-2">Booking Details</h5>
-        <form id="adminBookingForm">
-          <input type="hidden" id="adminBookingId" />
 
-          <div class="mb-2">
-            <label for="adminBookingDate" class="form-label">Date</label>
-            <input type="date" class="form-control" id="adminBookingDate">
+    <!-- MIDDLE: Booking Information -->
+    <div class="col-md-4" id="bookingInfoWidget">
+      <!-- Approve bookings information -->
+      <div class="card shadow-sm p-4 mb-4" id="bookingInfoCard" style="display: none;">
+        <h5 class="fw-semibold mb-3">Booking Information</h5>
+        <form id="bookingForm" data-id="">
+
+          <div class="mb-3">
+            <label class="form-label">Date</label>
+            <span id="date" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
-          <div class="mb-2">
-            <label for="adminBookingRoomId" class="form-label">Room</label>
-            <select id="adminBookingRoomId" class="form-select"></select>
+          <div class="mb-3">
+            <label class="form-label">Time</label>
+            <span id="time" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
-          <div class="mb-2">
-            <label class="form-label d-block mb-1">Start Time - End Time</label>
-            <div class="d-flex align-items-center gap-2">
-              <div class="flex-fill">
-                <select id="adminBookingStartTime" class="form-select"></select>
-              </div>
-              <div class="d-flex align-items-center">
-                <span class="fw-bold">–</span>
-              </div>
-              <div class="flex-fill">
-                <select id="adminBookingEndTime" class="form-select"></select>
-              </div>
-            </div>
+          <div class="mb-3">
+            <label class="form-label">Does this booking repeat?</label>
+            <span id="repeat" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
-          <div class="mb-2">
-            <label for="adminBookingEmail" class="form-label">Email</label>
-            <input type="email" class="form-control" id="adminBookingEmail" placeholder="user@example.com">
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <span id="name" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
-          <div class="mb-2">
-            <label for="adminBookingName" class="form-label">Name</label>
-            <input type="text" class="form-control" id="adminBookingName" placeholder="First Last">
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <span id="email" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
-          <div class="mb-2">
-            <label for="adminBookingPurpose" class="form-label">Purpose</label>
-            <input type="text" class="form-control" id="adminBookingPurpose" placeholder="e.g. Study session">
+          <div class="mb-3">
+            <label class="form-label">Booking Purpose</label>
+            <span id="purpose" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
-          <div class="d-flex gap-2 mt-3">
-            <button type="button" class="btn btn-red flex-grow-1" id="adminDeleteBookingBtn">Delete</button>
-            <button type="button" class="btn btn-green flex-grow-1" id="adminSaveBookingBtn">Save</button>
+          <!-- Room ID -->
+          <div class="mb-3">
+            <label class="form-label">Room ID</label>
+            <span id="roomId" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
           </div>
 
-          <p class="small text-muted mt-2 mb-0" id="adminBookingHint">
-            Select a reservation in Search Results to view or edit details.
-          </p>
+          <div class="d-flex gap-3">
+            <button type="button" id="confirmBookingBtn" class="btn btn-green flex-grow-1">Confirm Reservation</button>
+            <button type="button" id="denyBookingBtn" class="btn btn-red flex-grow-1">Deny Reservation</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- All bookings information -->
+      <div class="card shadow-sm p-4 mb-4" id="allBookingsInfoCard" style="display: none;">
+        <h5 class="fw-semibold mb-3">Booking Information</h5>
+        <form id="allBookingsForm" data-id="">
+
+          <div class="mb-3">
+            <label class="form-label">Date</label>
+            <span id="allBookingsDate" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Time</label>
+            <span id="allBookingsTime" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Does this booking repeat?</label>
+            <span id="allBookingsRepeat" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <span id="allBookingsName" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <span id="allBookingsEmail" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Booking Purpose</label>
+            <span id="allBookingsPurpose" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+          </div>
+
+          <!-- Room ID -->
+          <div class="mb-3">
+            <label class="form-label">Room ID</label>
+            <span id="allBookingsRoomId" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+          </div>
+
+          <div id="allBookingsActions" class="d-flex gap-3">
+            <button type="button" id="allBookingsEditBtn" class="btn btn-green flex-grow-1">Edit Reservation</button>
+            <button type="button" id="allBookingsCancelBtn" class="btn btn-red flex-grow-1">Cancel Reservation</button>
+          </div>
         </form>
       </div>
     </div>
 
-    <!-- MIDDLE RIGHT: Search Results -->
-    <div class="col-12 col-md-6 col-lg-3 d-flex flex-column" id="adminSearchCol">
-      <div class="card shadow-sm p-3" id="bookingSearchResultsCard">
-        <h5 class="fw-semibold mb-2">Search Results</h5>
-        <p class="small text-muted mb-2" id="bookingSearchResultsSummary">
-          No search run yet. Enter one or more fields on the left, then press Search.
-        </p>
-        <!-- Active filter chips -->
-        <div id="bookingSearchFilterChips" class="d-flex flex-wrap gap-1 mb-2"></div>
-        <div id="bookingSearchResultsList" class="list-group list-group-flush small"></div>
-      </div>
-    </div>
 
     <!-- RIGHT: Management Cards -->
-    <div class="col-12 col-md-6 col-lg-3 d-flex flex-column" id="adminRightCol">
+    <div class="col-md-4">
+        <!-- User management card -->
         <div class="all-users card shadow-sm p-3 mb-4" style="width: 100%;">
             <h5 class="fw-semibold mb-3">All Users</h5>
-
-            <div class="mb-2">
-              <label for="userSearch" class="small mb-1 d-block">Search by name or email:</label>
-              <input type="text" id="userSearch" class="form-control form-control-sm" placeholder="Type to search...">
-            </div>
 
             <div id="usersList">
               {% if users and users|length > 0 %}
@@ -247,7 +267,7 @@
                     </div>
                     <div class="d-flex flex-column align-items-end gap-1">
                       <button class="btn btn-sm btn-outline-secondary user-manage-btn"
-                        data-name="{{ r.name or r.id }}" -->
+                        data-name="{{ r.name or r.id }}">
                           <i class="bi bi-gear me-1"></i>Edit
                       </button>
                     </div>
@@ -267,12 +287,62 @@
         </div>
         </div>
 
-        <!-- Building hours management card (moved to left column) -->
-    </div>
-</div>
+        <!-- Closure management card -->
+        <div class="building-management card shadow-sm p-3 mb-4" style="width: 100%;">
+            <h5 class="fw-semibold mb-3">Building Closures</h5>
+              <div id="closureList" class="mb-3">
+                {% if closures and closures|length > 0 %}
+                  {% for c in closures %}
+                    <div class="d-flex align-items-start justify-content-between mb-2 p-2 rounded" style="border:1px solid rgba(0,0,0,0.05);">
+                      <div class="flex-grow-1 text-start">
+                        {% if c.date %}
+                        <div class="fw-semibold">{{ c.date }}</div>
+                        {% endif %}
+                        <div class="small text-muted">{{ c.name or c.id }}</div>
+                      </div>
+                      <div class="d-flex flex-column align-items-end gap-1">
+                        <button class="btn btn-sm btn-outline-red closure-delete-btn"
+                          data-id="{{ c.id }}"
+                          data-name="{{ c.name or c.id }}"
+                          data-date="{{ c.date or '' }}">
+                            <i class="bi bi-trash me-1"></i>Delete
+                        </button>
+                      </div>
+                    </div>
+                  {% endfor %}
+                {% else %}
+                  <div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">
+                    No closures found.
+                  </div>
+                {% endif %}
+              </div>
+
+          <div class="mb-3 pt-2 border-top d-flex justify-content-end">
+            <button class="btn btn-green" data-bs-toggle="modal" data-bs-target="#addClosureModal">
+                + Add Closure
+            </button>
+        </div>
+      </div>
+
+      <!-- Cleanup Old Bookings Card-->
+      <div class="cleanup-bookings card shadow-sm p-3 mb-4" style="width: 100%;">
+        <h5 class="fw-semibold mb-3">Maintenance</h5>
+
+        <p class="small text-muted mb-3">
+          Delete bookings and pending bookings older than 30 days.
+        </p>
+
+        <button id="cleanupBookingsBtn" class="btn btn-red w-100">
+          Delete Bookings Older Than 30 Days
+        </button>
+
+        <div id="cleanupBookingsMessage" class="small mt-2 text-muted"></div>
+      </div>
+        </div>
 </div>
 
 
+<!-- Modals -->
 <!-- ADD ROOM MODAL -->
 <div class="modal fade" id="addRoomModal" tabindex="-1" aria-labelledby="addRoomModalLabel" aria-hidden="true">
   <div class="modal-dialog">
@@ -438,5 +508,54 @@
   </div>
 </div>
 
+<div class="modal fade" id="addClosureModal" tabindex="-1" aria-labelledby="addClosureModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="addClosureModalLabel">Add Closure</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <div class="mb-2">
+          <label class="form-label">Closure Name (for reference)</label>
+          <input id="newClosureName" class="form-control" type="text" placeholder="e.g. Holiday Closure">
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">Start Date</label>
+          <input id="newClosureDate" class="form-control" type="date">
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">End Date</label>
+          <input id="newClosureDate" class="form-control" type="date">
+        </div>
+
+        <div class="mb-2">
+          <div class="mb-1">
+            <label class="form-label">Notes (Optional)</label>
+            <label class="form-label small text-muted d-block">Anything to note...</label>
+          </div>
+          <input id="newClosureDescription" class="form-control" type="text" placeholder="Optional description">
+        </div>
+
+        <div id="closuresMessage" class="small text-muted"></div>
+
+      </div>
+
+      <div class="modal-footer d-flex gap-2">
+        <button id="addClosureBtn" class="btn btn-green">Add Closure</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 <script src="{{ url_for('static', filename='js/session-debug.js') }}"></script>

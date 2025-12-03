@@ -18,6 +18,61 @@ function getRoot() {
 
   // Room dropdown variables
   let roomDataMap = new Map(); // map: room name/id -> full room data from DB
+  
+  // Closure date ranges cache
+  let closureRanges = [];
+  
+  // Function to load closure date ranges
+  async function loadClosureDates() {
+    try {
+      const resp = await fetch("/api/closures");
+      if (!resp.ok) {
+        console.warn("Failed to load closures for calendar");
+        return;
+      }
+      const data = await resp.json();
+      const closures = data.closures || [];
+      closureRanges = [];
+      closures.forEach(closure => {
+        // Support both new format (startDate/endDate) and old format (date) for backwards compatibility
+        if (closure.startDate && closure.endDate) {
+          closureRanges.push({
+            start: closure.startDate,
+            end: closure.endDate
+          });
+        } else if (closure.date) {
+          // Backwards compatibility: treat single date as a range of one day
+          closureRanges.push({
+            start: closure.date,
+            end: closure.date
+          });
+        }
+      });
+    } catch (err) {
+      console.error("Error loading closures for calendar:", err);
+    }
+  }
+  
+  // Function to check if a date is a weekend
+  function isWeekend(dateISO) {
+    if (!dateISO) return false;
+    const date = new Date(dateISO + 'T00:00:00');
+    const dayOfWeek = date.getDay();
+    return dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
+  }
+  
+  // Function to check if a date falls within any closure range
+  function isClosureDate(dateISO) {
+    if (!dateISO) return false;
+    return closureRanges.some(range => {
+      return dateISO >= range.start && dateISO <= range.end;
+    });
+  }
+  
+  // Function to check if a date is invalid (weekend or closure)
+  function isInvalidDate(dateISO) {
+    return isWeekend(dateISO) || isClosureDate(dateISO);
+  }
 
   // Helper function to extract digits from room name
   function extractDigits(str) {
@@ -111,7 +166,19 @@ function getRoot() {
         if(isCellInPast(dateISO, idx)){
           cell.classList.add('past');
           cell.style.cursor = 'not-allowed';
-        } else {
+        }
+        
+        // Mark invalid dates (weekends or closures) as closed
+        if(isInvalidDate(dateISO)){
+          cell.classList.add('closed');
+          cell.style.cursor = 'not-allowed';
+          // Add "building closed" text in the second timeslot (idx === 1, which is 8:30 AM)
+          if(idx === 1){
+            const closedText = createEl('div', 'closed-text', 'Building Closed');
+            cell.appendChild(closedText);
+          }
+        } else if(!isCellInPast(dateISO, idx)) {
+          // Only add click handler if not past and not invalid
           cell.addEventListener('click', onCellClick);
         }
         
@@ -198,28 +265,29 @@ function getRoot() {
     const cell = e.currentTarget;
     if(cell.classList.contains('booked')) return;
     if(cell.classList.contains('past')) return; // Prevent clicking on past times
+    if(cell.classList.contains('closed')) return; // Prevent clicking on closed dates
     const dateISO = cell.dataset.date;
     const idx = Number(cell.dataset.idx);
 
-    // If extending selection, stop before a booked cell or past time
+    // If extending selection, stop before a booked cell, past time, or closed date
     const clampEnd = (start, end) => {
       const grid = dom('#calendarGrid');
       for(let i=start; i<end; i++){
         const c = grid.querySelector(`.cell[data-date="${dateISO}"][data-idx="${i}"]`);
-        if(c && (c.classList.contains('booked') || c.classList.contains('past'))) return i; // stop here
+        if(c && (c.classList.contains('booked') || c.classList.contains('past') || c.classList.contains('closed'))) return i; // stop here
       }
       return end;
     };
 
     if(!state.selection){
-      // Only allow selection if the start time is not in the past
-      if(!isCellInPast(dateISO, idx)){
+      // Only allow selection if the start time is not in the past and not closed
+      if(!isCellInPast(dateISO, idx) && !isInvalidDate(dateISO)){
         state.selection = { dateISO, startIdx: idx, endIdx: idx+1 };
       }
     } else if(state.selection.dateISO === dateISO) {
       if(idx < state.selection.startIdx){
-        // Only allow moving start earlier if it's not in the past
-        if(!isCellInPast(dateISO, idx)){
+        // Only allow moving start earlier if it's not in the past and not closed
+        if(!isCellInPast(dateISO, idx) && !isInvalidDate(dateISO)){
           state.selection = { dateISO, startIdx: idx, endIdx: idx+1 };
         }
       } else {
@@ -227,8 +295,8 @@ function getRoot() {
         state.selection.endIdx = clampEnd(state.selection.startIdx+1, desired);
       }
     } else {
-      // Only allow selection if the start time is not in the past
-      if(!isCellInPast(dateISO, idx)){
+      // Only allow selection if the start time is not in the past and not closed
+      if(!isCellInPast(dateISO, idx) && !isInvalidDate(dateISO)){
         state.selection = { dateISO, startIdx: idx, endIdx: idx+1 };
       }
     }
@@ -244,7 +312,7 @@ function getRoot() {
     const grid = dom('#calendarGrid');
     for(let i=startIdx;i<endIdx;i++){
       const c = grid.querySelector(`.cell[data-date="${dateISO}"][data-idx="${i}"]`);
-      if(c && !c.classList.contains('booked') && !c.classList.contains('past')){
+      if(c && !c.classList.contains('booked') && !c.classList.contains('past') && !c.classList.contains('closed')){
         c.classList.add('in-range');
         if(i===startIdx) c.classList.add('selected');
       }
@@ -275,6 +343,7 @@ function getRoot() {
   }
 
   async function update(){
+    await loadClosureDates(); // Refresh closures when updating
     await fetchBookings();
     renderGrid();
     scheduleSyncHeights();
@@ -682,6 +751,9 @@ function setRoomPhotoByDigits(digits) {
   }
 
   async function init(){
+    // Load closure dates
+    await loadClosureDates();
+    
     // Load rooms and populate dropdown
     await loadRoomsAndPopulateDropdown();
 
@@ -717,12 +789,12 @@ function setRoomPhotoByDigits(digits) {
     if (typeof window.initTimeFilter === 'function') {
       const root = getRoot();
       if (root) {
-        setTimeout(() => window.initTimeFilter(root), 200);
+        setTimeout(async () => await window.initTimeFilter(root), 200);
       }
     }
 
-    // Wire instructions toggle (Calendar view)
-    const instrBtn = document.getElementById('calendarInstructionsToggle');
+    // Wire instructions toggle (Calendar view) - using header button
+    const instrBtn = document.getElementById('headerInstructionsToggle');
     const instrPanel = document.getElementById('calendarInstructionsPanel');
     const instrClose = document.getElementById('calendarInstructionsClose');
 
@@ -733,9 +805,19 @@ function setRoomPhotoByDigits(digits) {
       document.body.appendChild(instrPanel);
     }
 
-    if (instrBtn && instrPanel) {
-      instrBtn.addEventListener('click', () => {
-        // Same behavior as Map: just show/hide fixed bottom-right card
+    // Remove any existing click handlers to prevent duplicates
+    if (instrBtn) {
+      const newBtn = instrBtn.cloneNode(true);
+      instrBtn.parentNode.replaceChild(newBtn, instrBtn);
+    }
+    
+    const newInstrBtn = document.getElementById('headerInstructionsToggle');
+    if (newInstrBtn && instrPanel) {
+      newInstrBtn.addEventListener('click', () => {
+        // Hide map panel if it's visible
+        const mapPanel = document.getElementById('mapInstructionsPanel');
+        if (mapPanel) mapPanel.classList.add('d-none');
+        // Toggle calendar panel
         instrPanel.classList.toggle('d-none');
       });
     }

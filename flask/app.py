@@ -150,6 +150,7 @@ def admin():
     bookings = []
     rooms = []
     users = []
+    closures = []
     try:
         if db is None:
             error_message = "Firestore is not initialized. Please check your service account and environment variables."
@@ -186,10 +187,19 @@ def admin():
                     users.append(u)
             except Exception as ue:
                 print(f"[admin] Error loading users: {ue}")
+            # Load closures for Building Closures card
+            try:
+                closures_ref = db.collection('closures')
+                for cdoc in closures_ref.stream():
+                    c = cdoc.to_dict() or {}
+                    c["id"] = cdoc.id
+                    closures.append(c)
+            except Exception as ce:
+                print(f"[admin] Error loading closures: {ce}")
     except Exception as e:
         error_message = f"Error loading bookings: {e}"
         print(f"[admin] {error_message}")
-    return render_template("admin.html", bookings=bookings, rooms=rooms, users=users, error_message=error_message)
+    return render_template("admin.html", bookings=bookings, rooms=rooms, users=users, closures=closures, error_message=error_message)
 
 @app.route("/map")
 def map_tab():
@@ -317,6 +327,201 @@ def all_bookings():
         is_logged_in=is_logged_in,
     )
 
+@app.post("/api/pending-bookings/<booking_id>/approve")
+def api_approve_pending_booking(booking_id):
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+
+    # Only admins may approve
+    session_data = get_current_session_data()
+    role = (session_data.get("role") if session_data else "student") or "student"
+    role = str(role).strip().lower()
+    if role != "admin":
+        return jsonify({"success": False, "error": "forbidden"}), 403
+
+    try:
+        pending_ref = db.collection("pending_bookings").document(booking_id)
+        snap = pending_ref.get()
+        if not snap.exists:
+            return jsonify({"success": False, "error": "pending_booking_not_found"}), 404
+
+        pending = snap.to_dict() or {}
+
+        # Build confirmed booking document
+        confirmed = {
+            "roomId": pending.get("roomId") or pending.get("room"),
+            "date": pending.get("date"),
+            "timeRange": pending.get("timeRange") or pending.get("time"),
+            "repeat": pending.get("repeat") or "Never",
+            "userId": pending.get("userId") or pending.get("name"),
+            "purpose": pending.get("purpose"),
+            "email": pending.get("email") or pending.get("userEmail"),
+            "status": "confirmed",
+        }
+
+        bookings_ref = db.collection("bookings").document(booking_id)
+        bookings_ref.set(confirmed)
+
+        # Remove from pending queue
+        pending_ref.delete()
+
+        # --- Send confirmation email (best-effort) ---
+        try:
+            to_email = confirmed.get("email")
+            if to_email:
+                booking_id_str = booking_id
+                manage_url = f"{SITE_URL}/mybookings?bookingId={booking_id_str}"
+                user_name = confirmed.get("userId") or "Guest"
+                room_name = confirmed.get("roomId") or "Unknown Room"
+                date = confirmed.get("date") or ""
+                time_range = confirmed.get("timeRange") or ""
+                repeat_rule = confirmed.get("repeat") or None
+                purpose = confirmed.get("purpose") or None
+                current_year = datetime.now().year
+
+                html = render_template(
+                    "booking_confirmation_email.html",
+                    user_name=user_name,
+                    reservation_id=booking_id_str,
+                    room_name=room_name,
+                    date=date,
+                    time_range=time_range,
+                    repeat_rule=repeat_rule,
+                    purpose=purpose,
+                    manage_url=manage_url,
+                    site_url=SITE_URL,
+                    current_year=current_year,
+                )
+
+                subject = f"Reservation Confirmed – {room_name} on {date}"
+                text_fallback = (
+                    "Reservation confirmed.\n"
+                    f"Reservation ID: {booking_id_str}\n"
+                    f"Name: {user_name}\n"
+                    f"Room: {room_name}\n"
+                    f"Date: {date}\n"
+                    f"Time: {time_range}\n"
+                    f"Manage: {manage_url}\n"
+                )
+
+                send_html_email(to_email, subject, html, text_fallback=text_fallback)
+                bookings_ref.update({
+                    "emailSentAt": firestore.SERVER_TIMESTAMP,
+                    "emailError": firestore.DELETE_FIELD,
+                })
+        except Exception as e:
+            print(f"[pending_approve] Email send failed for {booking_id}: {e}")
+            bookings_ref.update({"emailError": str(e)})
+
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[pending_approve] Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+    
+@app.post("/api/pending-bookings/<booking_id>/deny")
+def api_deny_pending_booking(booking_id):
+    """
+    Admin denies a pending booking:
+      - Move entry from pending_bookings → denied_bookings
+      - Send denial email
+      - Remove the pending booking document
+    """
+
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+
+    # Ensure user is admin
+    session_data = get_current_session_data()
+    role = (session_data.get("role") if session_data else "student") or "student"
+    role = str(role).strip().lower()
+
+    if role != "admin":
+        return jsonify({"success": False, "error": "forbidden"}), 403
+
+    try:
+        pending_ref = db.collection("pending_bookings").document(booking_id)
+        snap = pending_ref.get()
+
+        if not snap.exists:
+            return jsonify({"success": False, "error": "pending_booking_not_found"}), 404
+
+        data = snap.to_dict() or {}
+
+        # Mark this booking as denied
+        data["status"] = "denied"
+        data["deniedAt"] = firestore.SERVER_TIMESTAMP
+
+        # Archive into denied_bookings
+        denied_ref = db.collection("denied_bookings").document(booking_id)
+        denied_ref.set(data)
+
+        # Remove from pending_bookings
+        pending_ref.delete()
+
+        # --- Send denial email ---
+        try:
+            to_email = data.get("email") or data.get("userEmail")
+
+            if to_email:
+                user_name = data.get("userId") or data.get("name") or "Guest"
+                room_name = data.get("roomId") or "Unknown Room"
+                date = data.get("date") or ""
+                time_range = data.get("timeRange") or data.get("time") or ""
+                repeat_rule = data.get("repeat") or None
+                purpose = data.get("purpose") or None
+
+                manage_url = f"{SITE_URL}/mybookings"
+                site_url = SITE_URL
+                year = datetime.now().year
+
+                # Render denial email
+                html = render_template(
+                    "booking_confirmation_email.html",
+                    user_name=user_name,
+                    reservation_id=booking_id,
+                    room_name=room_name,
+                    date=date,
+                    time_range=time_range,
+                    repeat_rule=repeat_rule,
+                    purpose=purpose,
+                    manage_url=manage_url,
+                    site_url=site_url,
+                    current_year=year,
+                    email_status="denied",
+                    actor="the CS department"
+                )
+
+                subject = f"Booking Request Denied – {room_name} on {date}"
+                text_fallback = (
+                    "Your booking request was not approved.\n"
+                    f"Reservation ID: {booking_id}\n"
+                    f"Room: {room_name}\n"
+                    f"Date: {date}\n"
+                    f"Time: {time_range}\n"
+                )
+
+                send_html_email(to_email, subject, html, text_fallback=text_fallback)
+
+                # Store in denied record
+                denied_ref.update({
+                    "emailSentAt": firestore.SERVER_TIMESTAMP,
+                    "emailError": firestore.DELETE_FIELD,
+                })
+
+        except Exception as email_err:
+            print(f"[pending_deny] Email send failed for {booking_id}: {email_err}")
+            try:
+                denied_ref.update({"emailError": str(email_err)})
+            except Exception:
+                pass
+
+        return jsonify({"success": True}), 200
+
+    except Exception as e:
+        print(f"[pending_deny] Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 # ----------------------------
 # MyBookings DELETE endpoint (Esmé's addition)
 # ----------------------------
@@ -345,11 +550,64 @@ def delete_booking(booking_id):
         if user_role != "admin" and (not user_email or user_email != booking_email):
             return jsonify({"success": False, "error": "forbidden"}), 403
 
+        # Decide actor text for email
+        if user_role == "admin":
+            actor = "an administrator"
+        else:
+            actor = "you"
+
+        # Delete the booking
         doc_ref.delete()
+
+        # --- Send "canceled" email (best-effort) ---
+        try:
+            to_email = booking_email
+            if to_email:
+                user_name = booking.get("userId") or booking.get("name") or "Guest"
+                room_name = booking.get("roomId") or "Unknown Room"
+                date = booking.get("date") or ""
+                time_range = booking.get("timeRange") or booking.get("time") or ""
+                repeat_rule = booking.get("repeat") or None
+                purpose = booking.get("purpose") or None
+
+                manage_url = f"{SITE_URL}/mybookings"
+                site_url = SITE_URL
+                current_year = datetime.now().year
+
+                html = render_template(
+                    "booking_confirmation_email.html",
+                    user_name=user_name,
+                    reservation_id=booking_id,
+                    room_name=room_name,
+                    date=date,
+                    time_range=time_range,
+                    repeat_rule=repeat_rule,
+                    purpose=purpose,
+                    manage_url=manage_url,
+                    site_url=site_url,
+                    current_year=current_year,
+                    email_status="canceled",
+                    actor=actor,
+                )
+
+                subject = f"Reservation Canceled – {room_name} on {date}"
+                text_fallback = (
+                    f"Your reservation has been canceled by {actor}.\n"
+                    f"Reservation ID: {booking_id}\n"
+                    f"Room: {room_name}\n"
+                    f"Date: {date}\n"
+                    f"Time: {time_range}\n"
+                )
+
+                send_html_email(to_email, subject, html, text_fallback=text_fallback)
+        except Exception as e:
+            print(f"[delete_booking] Cancel email failed for {booking_id}: {e}")
+
         return jsonify({"success": True}), 200
     except Exception as e:
         print(e)
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 # ----------------------------
 # MyBookings UPDATE endpoint (for Save functionality)
@@ -381,12 +639,12 @@ def update_booking(booking_id):
             return jsonify({"success": False, "error": "forbidden"}), 403
 
         data = request.get_json(force=True) or {}
-        
+
         # Extract fields for overlap checking
         room_id = data.get("roomId", "")
         date = data.get("date", "")
         time_range = data.get("timeRange", "")
-        
+
         # Validate required fields for overlap check
         if room_id and date and time_range:
             # Check for overlapping bookings (excluding the current booking being updated)
@@ -397,7 +655,7 @@ def update_booking(booking_id):
                     "success": False,
                     "error": f"This room is already booked for {conflicting_time} on {date}."
                 }), 409  # 409 Conflict status code
-        
+
         # Only allow updating editable fields
         update_fields = {
             "date": data.get("date", ""),
@@ -406,14 +664,67 @@ def update_booking(booking_id):
             "userId": data.get("userId", ""),
             "email": data.get("email", ""),
             "purpose": data.get("purpose", ""),
-            # roomId is included for completeness, but you may want to restrict editing this
-            "roomId": data.get("roomId", "")
+            "roomId": data.get("roomId", ""),
         }
         doc_ref.update(update_fields)
+
+        # --- Send "updated" email ---
+        try:
+            to_email = (update_fields.get("email") or booking_email).strip().lower()
+            if to_email:
+                # Merge existing + updated for email display
+                merged = {**existing_booking, **update_fields}
+
+                user_name = merged.get("userId") or merged.get("name") or "Guest"
+                room_name = merged.get("roomId") or "Unknown Room"
+                date_val = merged.get("date") or ""
+                time_val = merged.get("timeRange") or merged.get("time") or ""
+                repeat_rule = merged.get("repeat") or None
+                purpose = merged.get("purpose") or None
+
+                if user_role == "admin":
+                    actor = "an administrator"
+                else:
+                    actor = "you"
+
+                manage_url = f"{SITE_URL}/mybookings?bookingId={booking_id}"
+                site_url = SITE_URL
+                current_year = datetime.now().year
+
+                html = render_template(
+                    "booking_confirmation_email.html",
+                    user_name=user_name,
+                    reservation_id=booking_id,
+                    room_name=room_name,
+                    date=date_val,
+                    time_range=time_val,
+                    repeat_rule=repeat_rule,
+                    purpose=purpose,
+                    manage_url=manage_url,
+                    site_url=site_url,
+                    current_year=current_year,
+                    email_status="updated",
+                    actor=actor,
+                )
+
+                subject = f"Reservation Updated – {room_name} on {date_val}"
+                text_fallback = (
+                    f"Your reservation has been updated by {actor}.\n"
+                    f"Reservation ID: {booking_id}\n"
+                    f"Room: {room_name}\n"
+                    f"Date: {date_val}\n"
+                    f"Time: {time_val}\n"
+                )
+
+                send_html_email(to_email, subject, html, text_fallback=text_fallback)
+        except Exception as e:
+            print(f"[update_booking] Update email failed for {booking_id}: {e}")
+
         return jsonify({"success": True}), 200
     except Exception as e:
         print(f"[update_booking] Error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 # ----------------------------
 # API endpoint to get available rooms for dropdown
@@ -537,6 +848,118 @@ def api_update_room(room_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ----------------------------
+# Closures API endpoints
+# ----------------------------
+@app.route("/api/closures")
+def api_closures():
+    try:
+        if db is None:
+            return jsonify({"closures": [], "error": "firestore_unavailable"}), 500
+        closures_ref = db.collection("closures")
+        docs = closures_ref.stream()
+        closures = []
+        for doc in docs:
+            c = doc.to_dict() or {}
+            c["id"] = doc.id
+            closures.append(c)
+        return jsonify({"closures": closures})
+    except Exception as e:
+        print(f"[api_closures] Error: {e}")
+        return jsonify({"closures": [], "error": str(e)}), 500
+
+@app.route("/api/closures", methods=["POST"])
+def api_create_closure():
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+    try:
+        data = request.get_json(silent=True) or {}
+        name = (data.get('name') or '').strip()
+        start_date = (data.get('startDate') or '').strip()
+        end_date = (data.get('endDate') or '').strip()
+        description = (data.get('description') or '').strip()
+        
+        if not name:
+            return jsonify({"success": False, "error": "Closure name is required"}), 400
+        if not start_date:
+            return jsonify({"success": False, "error": "Start date is required"}), 400
+        if not end_date:
+            return jsonify({"success": False, "error": "End date is required"}), 400
+        
+        # Validate that end date is not before start date
+        try:
+            from datetime import datetime
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            if end_dt < start_dt:
+                return jsonify({"success": False, "error": "End date cannot be before start date"}), 400
+        except ValueError:
+            return jsonify({"success": False, "error": "Invalid date format. Please use YYYY-MM-DD format"}), 400
+        
+        doc_ref = db.collection('closures').add({
+            'name': name,
+            'startDate': start_date,
+            'endDate': end_date,
+            'description': description,
+        })
+        new_id = doc_ref[1].id
+        return jsonify({"success": True, "id": new_id}), 201
+    except Exception as e:
+        print(f"[api_create_closure] Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/closures/<closure_id>', methods=['DELETE'])
+def api_delete_closure(closure_id):
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+    try:
+        db.collection('closures').document(closure_id).delete()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[api_delete_closure] Error deleting {closure_id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/closures/<closure_id>', methods=['PUT'])
+def api_update_closure(closure_id):
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+    try:
+        data = request.get_json(silent=True) or {}
+        name = (data.get('name') or '').strip()
+        start_date = (data.get('startDate') or '').strip()
+        end_date = (data.get('endDate') or '').strip()
+        description = (data.get('description') or '').strip()
+        
+        if not name:
+            return jsonify({"success": False, "error": "Closure name is required"}), 400
+        if not start_date:
+            return jsonify({"success": False, "error": "Start date is required"}), 400
+        if not end_date:
+            return jsonify({"success": False, "error": "End date is required"}), 400
+        
+        # Validate that end date is not before start date
+        try:
+            from datetime import datetime
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            if end_dt < start_dt:
+                return jsonify({"success": False, "error": "End date cannot be before start date"}), 400
+        except ValueError:
+            return jsonify({"success": False, "error": "Invalid date format. Please use YYYY-MM-DD format"}), 400
+        
+        update_data = {
+            'name': name,
+            'startDate': start_date,
+            'endDate': end_date,
+            'description': description,
+        }
+        
+        db.collection('closures').document(closure_id).update(update_data)
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[api_update_closure] Error updating {closure_id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ----------------------------
 # Helper functions for time overlap checking
 # ----------------------------
 def parse_time_string(time_str):
@@ -654,58 +1077,91 @@ def api_test():
 
 @app.route("/api/bookings", methods=["GET", "POST"])
 def bookings():
+    # -------------------------
+    # POST: Create a booking
+    # -------------------------
     if request.method == "POST":
         try:
-            # Require an authenticated session before creating any booking
+            # Require authentication
             session_data = get_current_session_data()
             if not session_data:
                 return jsonify({"success": False, "error": "unauthenticated"}), 401
 
-            data = request.json or {}
+            if db is None:
+                return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+
+            # Determine role (admin, faculty, student)
+            role = (session_data.get("role") or "student").strip().lower()
+
+            data = request.get_json(silent=True) or {}
             print(f"[bookings] Received booking data: {data}")
-            
-            # Extract booking details
+
+            # Extract booking fields
             room_id = data.get("room")
             date = data.get("date")
             time_range = data.get("timeRange")
-            
+
             # Validate required fields
             if not room_id or not date or not time_range:
                 return jsonify({
                     "success": False,
-                    "error": "Missing required fields: room, date, or timeRange"
+                    "error": "Missing required fields: room, date, timeRange"
                 }), 400
-            
-            # Check for overlapping bookings
-            overlap_check = check_booking_overlap(db, room_id, date, time_range)
-            if overlap_check.get("overlap"):
-                conflicting_time = overlap_check.get("conflicting_time", "unknown time")
+
+            # Check overlap ONLY against confirmed bookings
+            overlap = check_booking_overlap(db, room_id, date, time_range)
+            if overlap.get("overlap"):
+                conflicting_time = overlap.get("conflicting_time", "unknown time")
                 return jsonify({
                     "success": False,
                     "error": f"This room is already booked for {conflicting_time} on {date}."
-                }), 409  # 409 Conflict status code
-            
-            # Create the booking if no overlap
-            booking_ref = db.collection("bookings").add({
+                }), 409
+
+            # Decide if booking is pending or confirmed
+            if role == "student":
+                collection_name = "pending_bookings"
+                status = "pending"
+            else:
+                collection_name = "bookings"
+                status = "confirmed"
+
+            # Build the Firestore document
+            booking_doc = {
                 "roomId": room_id,
                 "date": date,
                 "timeRange": time_range,
                 "repeat": data.get("repeat"),
                 "userId": data.get("name"),
                 "purpose": data.get("purpose"),
-                "status": "confirmed",
+                "status": status,
                 "email": data.get("email", ""),
+                "createdAt": firestore.SERVER_TIMESTAMP,
+                "createdByRole": role,
+                "createdByEmail": session_data.get("email", ""),
+            }
+
+            # Create in Firestore
+            doc_ref = db.collection(collection_name).add(booking_doc)
+            booking_id = doc_ref[1].id
+
+            print(f"[bookings] Created {status} booking in {collection_name} with ID: {booking_id}")
+
+            return jsonify({
+                "success": True,
+                "id": booking_id,
+                "status": status,
+                "collection": collection_name
             })
-            booking_id = booking_ref[1].id
-            print(f"[bookings] Successfully created booking with ID: {booking_id}")
-            return jsonify({"success": True, "id": booking_id})
+
         except Exception as e:
             print(f"[bookings] Error creating booking: {e}")
             import traceback
             traceback.print_exc()
             return jsonify({"success": False, "error": str(e)}), 500
 
-    # GET all bookings (role-aware)
+    # -------------------------
+    # GET: Return bookings (role-aware)
+    # -------------------------
     try:
         if db is None:
             return jsonify({"bookings": [], "error": "firestore_unavailable"}), 500
@@ -714,15 +1170,14 @@ def bookings():
         role = (session_data.get("role") if session_data else "student") or "student"
         role = str(role).strip().lower()
 
-        items = []
+        bookings_list = []
 
         for doc in db.collection("bookings").stream():
             raw = doc.to_dict() or {}
             raw["id"] = doc.id
 
             if role == "student":
-                # Students (and anonymous visitors) see all bookings, but with limited fields
-                # so we do not expose identifying details.
+                # Students see bookings but without personal details
                 safe = {
                     "id": raw["id"],
                     "date": raw.get("date"),
@@ -730,15 +1185,35 @@ def bookings():
                     "roomId": raw.get("roomId"),
                     "repeat": raw.get("repeat"),
                 }
-                items.append(safe)
+                bookings_list.append(safe)
             else:
-                # Faculty and admins can see full booking data for all dates.
-                items.append(raw)
+                # Faculty/Admin see full info
+                bookings_list.append(raw)
 
-        return jsonify({"bookings": items})
+        return jsonify({"bookings": bookings_list})
+
     except Exception as e:
         print(f"[bookings] Error fetching bookings: {e}")
         return jsonify({"bookings": [], "error": str(e)}), 500
+
+@app.post("/admin/cleanup-bookings")
+def admin_cleanup_bookings():
+    """
+    Admin-only endpoint to delete bookings and pending bookings older than 30 days.
+    """
+    session_data = get_current_session_data()
+    role = (session_data.get("role") if session_data else "student") or "student"
+    role = str(role).strip().lower()
+
+    if role != "admin":
+        return jsonify({"success": False, "error": "forbidden"}), 403
+
+    try:
+        deleted = cleanup_bookings_older_than(days=30)
+        return jsonify({"success": True, "deleted": deleted})
+    except Exception as e:
+        print(f"[admin_cleanup_bookings] Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # ----------------------------
 # Email confirmation endpoint
@@ -747,41 +1222,67 @@ def bookings():
 def send_booking_confirmation():
     """
     Body: { "bookingId": "<document_id>" }
-    Fetch booking from Firestore -> render Jinja template 'booking_confirmation_email.html'
-    -> send via SMTP -> mark emailSentAt for idempotency.
+
+    For confirmed bookings:
+      - Look in 'bookings'
+      - Send "Reservation Confirmed" email
+
+    For pending bookings (students):
+      - Look in 'pending_bookings'
+      - Send "Booking Pending" email using email_status="pending"
     """
     payload = request.get_json(silent=True) or {}
     booking_id = payload.get("bookingId")
     if not booking_id:
         return jsonify({"error": "bookingId is required"}), 400
 
-    doc_ref = db.collection("bookings").document(booking_id)
+    if db is None:
+        return jsonify({"error": "firestore_unavailable"}), 500
+
+    # 1) Try confirmed bookings first
+    collection_name = "bookings"
+    doc_ref = db.collection(collection_name).document(booking_id)
     snap = doc_ref.get()
+
+    # 2) If not there, try pending_bookings
     if not snap.exists:
-        return jsonify({"error": f"Booking {booking_id} not found"}), 404
+        collection_name = "pending_bookings"
+        doc_ref = db.collection(collection_name).document(booking_id)
+        snap = doc_ref.get()
+
+        if not snap.exists:
+            return jsonify({"error": f"Booking {booking_id} not found"}), 404
 
     booking = snap.to_dict() or {}
+    status = str(booking.get("status") or "confirmed").lower()
 
     # Idempotency: skip if already sent
     if booking.get("emailSentAt"):
         return jsonify({"ok": True, "skipped": "already_sent"}), 200
 
-    # Map Firestore fields -> template variables
+    # Determine recipient email
     to_email = booking.get("email") or booking.get("userEmail")
-    user_name = booking.get("userId") or booking.get("displayName") or "Guest"
-    room_name = booking.get("roomId") or booking.get("roomName") or "Unknown Room"
+    if not to_email:
+        # Record the error on the document
+        try:
+            doc_ref.update({"emailError": "no_email"})
+        except Exception:
+            pass
+        return jsonify({"error": "Booking has no email address"}), 400
+
+    # Extract booking details
+    user_name = booking.get("userId") or booking.get("name") or "Guest"
+    room_name = booking.get("roomId") or "Unknown Room"
     date = booking.get("date") or ""
-    time_range = booking.get("timeRange") or ""
+    time_range = booking.get("timeRange") or booking.get("time") or ""
     repeat_rule = booking.get("repeat") or None
     purpose = booking.get("purpose") or None
 
-    if not to_email:
-        doc_ref.update({"emailError": "Missing recipient email"})
-        return jsonify({"error": "Missing recipient email on booking"}), 400
-
-    manage_url = f"{SITE_URL}/mybookings?bookingId={booking_id}"
     site_url = SITE_URL
-    current_year = datetime.now().year
+    manage_url = f"{SITE_URL}/mybookings?bookingId={booking_id}"
+
+    # Use template flag for pending vs confirmed
+    email_status = "pending" if status == "pending" else "confirmed"
 
     html = render_template(
         "booking_confirmation_email.html",
@@ -794,30 +1295,50 @@ def send_booking_confirmation():
         purpose=purpose,
         manage_url=manage_url,
         site_url=site_url,
-        current_year=current_year,
+        current_year=datetime.now().year,
+        email_status=email_status,
     )
 
-    subject = f"Reservation Confirmed – {room_name} on {date}"
-    text_fallback = (
-        "Reservation confirmed.\n"
-        f"Reservation ID: {booking_id}\n"
-        f"Name: {user_name}\n"
-        f"Room: {room_name}\n"
-        f"Date: {date}\n"
-        f"Time: {time_range}\n"
-        f"Manage: {manage_url}\n"
-    )
+    if email_status == "pending":
+        subject = f"Booking Request Received – {room_name} on {date}"
+        text_fallback = (
+            "We've received your booking request and it is pending approval.\n"
+            f"Reservation ID: {booking_id}\n"
+            f"Name: {user_name}\n"
+            f"Room: {room_name}\n"
+            f"Date: {date}\n"
+            f"Time: {time_range}\n"
+            "You'll receive another email once your reservation is confirmed.\n"
+        )
+    else:
+        subject = f"Reservation Confirmed – {room_name} on {date}"
+        text_fallback = (
+            "Reservation confirmed.\n"
+            f"Reservation ID: {booking_id}\n"
+            f"Name: {user_name}\n"
+            f"Room: {room_name}\n"
+            f"Date: {date}\n"
+            f"Time: {time_range}\n"
+            f"Manage: {manage_url}\n"
+        )
 
     try:
         send_html_email(to_email, subject, html, text_fallback=text_fallback)
-        doc_ref.update({
-            "emailSentAt": firestore.SERVER_TIMESTAMP,
-            "emailError": firestore.DELETE_FIELD,
-        })
+        doc_ref.update(
+            {
+                "emailSentAt": firestore.SERVER_TIMESTAMP,
+                "emailError": firestore.DELETE_FIELD,
+            }
+        )
         return jsonify({"ok": True})
     except Exception as e:
-        doc_ref.update({"emailError": str(e)})
-        return jsonify({"ok": False, "error": str(e)}), 500
+        print(f"[send_booking_confirmation] Error sending email for {booking_id}: {e}")
+        try:
+            doc_ref.update({"emailError": str(e)})
+        except Exception:
+            pass
+        return jsonify({"error": str(e)}), 500
+
 
 # ----------------------------
 # Email preview route (from Katie's version)
@@ -1038,6 +1559,7 @@ def auth_verify_code():
         return jsonify({"success": False, "error": "invalid_or_expired_code"}), 400
 
     doc_ref.delete()
+    
     print(f"Code verified for {email}")
 
     user_doc = db.collection("users").document(email)
@@ -1239,6 +1761,65 @@ def cleanup_sessions_older_than(days=30):
                 deleted += 1
 
     print(f"[session_cleanup] Deleted {deleted} sessions older than {days} days.")
+    return deleted
+
+def cleanup_bookings_older_than(days=30):
+    """
+    Delete bookings and pending_bookings that are older than `days`
+    based on the booking's date (preferred) or createdAt timestamp.
+    """
+    if db is None:
+        raise RuntimeError("Firestore is not initialized.")
+
+    cutoff_date = datetime.utcnow().date() - timedelta(days=days)
+    deleted = 0
+
+    collections = ["bookings", "pending_bookings"]
+
+    for collection_name in collections:
+        try:
+            # Stream all docs from the collection
+            docs = db.collection(collection_name).stream()
+            for doc in docs:
+                data = doc.to_dict() or {}
+                delete_this = False
+
+                # --- Prefer comparing the booking's "date" field ---
+                raw_date = data.get("date")
+                parsed_date = None
+
+                if raw_date:
+                    # Try a couple common formats you use
+                    for fmt in ("%m/%d/%Y", "%Y-%m-%d"):
+                        try:
+                            parsed_date = datetime.strptime(raw_date, fmt).date()
+                            break
+                        except ValueError:
+                            continue
+
+                if parsed_date and parsed_date < cutoff_date:
+                    delete_this = True
+
+                # --- Fallback to createdAt if booking date is missing/invalid ---
+                if not delete_this:
+                    created_at = data.get("createdAt")
+                    created_dt = None
+                    if hasattr(created_at, "to_datetime"):
+                        created_dt = created_at.to_datetime()
+                    elif isinstance(created_at, datetime):
+                        created_dt = created_at
+                    if created_dt and created_dt.date() < cutoff_date:
+                        delete_this = True
+
+                if delete_this:
+                    print(f"[booking_cleanup] Deleting {collection_name}/{doc.id}")
+                    doc.reference.delete()
+                    deleted += 1
+
+        except Exception as e:
+            print(f"[booking_cleanup] Error cleaning {collection_name}: {e}")
+
+    print(f"[booking_cleanup] Deleted {deleted} bookings older than {days} days.")
     return deleted
 
 

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Reservation Confirmation</title>
+    <title>Reservation Notification</title>
     <style>
       body { margin: 0; padding: 0; background-color: #f5f7fa; }
       table { border-collapse: collapse; }
@@ -16,8 +16,22 @@
     </style>
   </head>
   <body style="margin:0; padding:0; background:#f5f7fa;">
+    {% set status = email_status or "confirmed" %}
+    {% set actor_text = actor or "" %}
+
+    <!-- Preheader (hidden preview text) -->
     <div style="display:none; max-height:0; overflow:hidden; opacity:0; mso-hide:all;">
-      Your reservation is confirmed. Manage or cancel with the link inside.
+      {% if status == "pending" %}
+        We've received your booking request. It is pending approval.
+      {% elif status == "updated" %}
+        Your room reservation has been updated.
+      {% elif status == "canceled" %}
+        Your room reservation has been canceled.
+      {% elif status == "denied" %}
+        Your booking request was not approved.
+      {% else %}
+        Your room reservation is confirmed. Manage or cancel with the link inside.
+      {% endif %}
     </div>
 
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f7fa; padding:24px 0;">
@@ -51,11 +65,60 @@
                 <table role="presentation" width="100%">
                   <tr>
                     <td style="font-family: Arial, Helvetica, sans-serif; color:#1f2937;">
-                      <h1 style="margin:0 0 12px; font-size:22px; line-height:28px; font-weight:700; color:#111827;">Reservation Confirmed</h1>
-                      <p style="margin:0 0 16px; font-size:15px; line-height:22px;">Hi {{ user_name }},</p>
-                      <p style="margin:0 0 16px; font-size:15px; line-height:22px;">
-                        Your reservation has been successfully created. The details are below. You can modify or cancel your booking anytime using the button in this email.
-                      </p>
+
+                      {% if status == "pending" %}
+                        <h1 style="margin:0 0 12px; font-size:22px; line-height:28px; font-weight:700; color:#111827;">
+                          Booking Pending
+                        </h1>
+                        <p style="margin:0 0 16px; font-size:15px; line-height:22px;">Hi {{ user_name }},</p>
+                        <p style="margin:0 0 16px; font-size:15px; line-height:22px;">
+                          We've received your booking request and it is currently
+                          <strong>pending approval</strong>. You'll receive another email once
+                          your reservation has been confirmed by the CS department.
+                        </p>
+
+                      {% elif status == "updated" %}
+                        <h1 style="margin:0 0 12px; font-size:22px; line-height:28px; font-weight:700; color:#111827;">
+                          Reservation Updated
+                        </h1>
+                        <p style="margin:0 0 16px; font-size:15px; line-height:22px;">Hi {{ user_name }},</p>
+                        <p style="margin:0 0 16px; font-size:15px; line-height:22px;">
+                          Your reservation has been updated{% if actor_text %} by {{ actor_text }}{% endif %}.
+                          The updated details are listed below for your records.
+                        </p>
+
+                      {% elif status == "canceled" %}
+                        <h1 style="margin:0 0 12px; font-size:22px; line-height:28px; font-weight:700; color:#111827;">
+                          Reservation Canceled
+                        </h1>
+                        <p style="margin:0 0 16px; font-size:15px; line-height:22px;">Hi {{ user_name }},</p>
+                        <p style="margin:0 0 16px; font-size:15px; line-height:22px;">
+                          Your reservation has been canceled{% if actor_text %} by {{ actor_text }}{% endif %}.
+                          The booking details are included below for your records.
+                        </p>
+
+                      {% elif status == "denied" %}
+                        <h1 style="margin:0 0 12px; font-size:22px; line-height:28px; font-weight:700; color:#111827;">
+                          Booking Request Denied
+                        </h1>
+                        <p style="margin:0 0 16px; font-size:15px; line-height:22px;">Hi {{ user_name }},</p>
+                        <p style="margin:0 0 16px; font-size:15px; line-height:22px;">
+                          Unfortunately, your booking request was not approved by the CS department.
+                          The requested booking details are included below.
+                        </p>
+
+                      {% else %}
+                        <!-- Default: confirmed -->
+                        <h1 style="margin:0 0 12px; font-size:22px; line-height:28px; font-weight:700; color:#111827;">
+                          Reservation Confirmed
+                        </h1>
+                        <p style="margin:0 0 16px; font-size:15px; line-height:22px;">Hi {{ user_name }},</p>
+                        <p style="margin:0 0 16px; font-size:15px; line-height:22px;">
+                          Your reservation has been successfully created. The details are below.
+                          You can modify or cancel your booking anytime using the button in this email.
+                        </p>
+                      {% endif %}
+
                     </td>
                   </tr>
 
@@ -98,12 +161,27 @@
                     </td>
                   </tr>
 
-                  <!-- CTA button -->
+                  <!-- CTA button (wording changes slightly by status) -->
                   <tr>
                     <td align="center" style="padding:10px 0 4px;">
-                      <a href="{{ manage_url }}" target="_blank" style="display:inline-block; background:#6FAD6F; color:#ffffff; font-family: Arial, Helvetica, sans-serif; font-size:15px; font-weight:bold; padding:12px 18px; border-radius:8px;">
-                        Manage or Cancel Booking
-                      </a>
+                      {% if status == "denied" %}
+                        <a href="{{ manage_url }}" target="_blank" style="display:inline-block; background:#6FAD6F; color:#ffffff; font-family: Arial, Helvetica, sans-serif; font-size:15px; font-weight:bold; padding:12px 18px; border-radius:8px;">
+                          View Your Bookings
+                        </a>
+                      {% elif status == "canceled" %}
+                        <a href="{{ manage_url }}" target="_blank" style="display:inline-block; background:#6FAD6F; color:#ffffff; font-family: Arial, Helvetica, sans-serif; font-size:15px; font-weight:bold; padding:12px 18px; border-radius:8px;">
+                          View or Make Another Booking
+                        </a>
+                      {% elif status == "pending" %}
+                        <a href="{{ manage_url }}" target="_blank" style="display:inline-block; background:#6FAD6F; color:#ffffff; font-family: Arial, Helvetica, sans-serif; font-size:15px; font-weight:bold; padding:12px 18px; border-radius:8px;">
+                          View Your Booking Request
+                        </a>
+                      {% else %}
+                        <!-- confirmed / updated -->
+                        <a href="{{ manage_url }}" target="_blank" style="display:inline-block; background:#6FAD6F; color:#ffffff; font-family: Arial, Helvetica, sans-serif; font-size:15px; font-weight:bold; padding:12px 18px; border-radius:8px;">
+                          Manage or Cancel Booking
+                        </a>
+                      {% endif %}
                     </td>
                   </tr>
 
@@ -125,8 +203,14 @@
                   <!-- Footer / help -->
                   <tr>
                     <td style="padding:14px 0 0; font-family: Arial, Helvetica, sans-serif; font-size:12px; color:#6b7280;">
-                      <p style="margin:0 0 8px;">Need help? Visit <a href="{{ site_url }}" style="color:#548754;">our site</a> or reach out to admin.</p>
-                      <p style="margin:0;">If you didn’t make this reservation, please reach out to admin.</p>
+                      <p style="margin:0 0 8px;">
+                        Need help? Visit
+                        <a href="{{ site_url }}" style="color:#548754;">our site</a>
+                        or reach out to admin.
+                      </p>
+                      <p style="margin:0;">
+                        If you didn’t make this reservation, please reach out to admin.
+                      </p>
                     </td>
                   </tr>
                 </table>
