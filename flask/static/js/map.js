@@ -466,13 +466,13 @@ window.initMap = function() {
   
   // Initialize time filter to disable past times
   if (typeof window.initTimeFilter === 'function') {
-    setTimeout(() => {
+    setTimeout(async () => {
       // Try multiple container options to find the right one
       const mapContainer = document.getElementById('mapContainer') || 
                           document.getElementById('nav-map') ||
                           document.querySelector('.container');
       if (mapContainer) {
-        window.initTimeFilter(mapContainer);
+        await window.initTimeFilter(mapContainer);
       }
     }, 200);
   }

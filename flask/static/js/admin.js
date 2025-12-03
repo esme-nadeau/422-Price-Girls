@@ -1571,7 +1571,8 @@ async function initAdminTools() {
   const addClosureBtn = document.getElementById("addClosureBtn");
 
   const inputClosureName = document.getElementById("newClosureName");
-  const inputClosureDate = document.getElementById("newClosureDate");
+  const inputClosureStartDate = document.getElementById("newClosureStartDate");
+  const inputClosureEndDate = document.getElementById("newClosureEndDate");
   const inputClosureDesc = document.getElementById("newClosureDescription");
   const closuresMessage = document.getElementById("closuresMessage");
 
@@ -1609,8 +1610,20 @@ async function initAdminTools() {
 
         const leftSide = document.createElement("div");
         leftSide.className = "flex-grow-1 text-start";
+        // Display date range or single date (for backwards compatibility)
+        let dateDisplay = '';
+        if (c.startDate && c.endDate) {
+          if (c.startDate === c.endDate) {
+            dateDisplay = c.startDate;
+          } else {
+            dateDisplay = `${c.startDate} – ${c.endDate}`;
+          }
+        } else if (c.date) {
+          // Backwards compatibility with old single-date format
+          dateDisplay = c.date;
+        }
         leftSide.innerHTML = `
-          ${c.date ? `<div class="fw-semibold">${escapeHtml(c.date)}</div>` : ''}
+          ${dateDisplay ? `<div class="fw-semibold">${escapeHtml(dateDisplay)}</div>` : ''}
           <div class="small text-muted">${escapeHtml(c.name || c.id)}</div>
         `;
 
@@ -1622,7 +1635,11 @@ async function initAdminTools() {
         deleteBtn.innerHTML = `<i class="bi bi-trash me-1"></i>Delete`;
         deleteBtn.dataset.id = c.id;
         deleteBtn.dataset.name = c.name || c.id;
-        deleteBtn.dataset.date = c.date || '';
+        // Store date range for display in confirmation
+        const dateRange = (c.startDate && c.endDate) 
+          ? (c.startDate === c.endDate ? c.startDate : `${c.startDate} – ${c.endDate}`)
+          : (c.date || '');
+        deleteBtn.dataset.date = dateRange;
 
         actions.appendChild(deleteBtn);
         row.appendChild(leftSide);
@@ -1644,10 +1661,10 @@ async function initAdminTools() {
         }
 
         const closures = data.closures || [];
-        // Sort closures by date (most recent first)
+        // Sort closures by start date (most recent first)
         closures.sort((a, b) => {
-          const dateA = a.date || '';
-          const dateB = b.date || '';
+          const dateA = a.startDate || a.date || '';
+          const dateB = b.startDate || b.date || '';
           return dateB.localeCompare(dateA);
         });
 
@@ -1663,7 +1680,8 @@ async function initAdminTools() {
     if (addClosureBtn) {
       addClosureBtn.addEventListener("click", async () => {
         const name = inputClosureName?.value.trim();
-        const date = inputClosureDate?.value.trim();
+        const startDate = inputClosureStartDate?.value.trim();
+        const endDate = inputClosureEndDate?.value.trim();
         const description = inputClosureDesc?.value.trim();
 
         if (!name) {
@@ -1671,12 +1689,23 @@ async function initAdminTools() {
           return;
         }
 
-        if (!date) {
-          showClosureMessage("Date is required", true);
+        if (!startDate) {
+          showClosureMessage("Start date is required", true);
           return;
         }
 
-        const payload = { name, date, description };
+        if (!endDate) {
+          showClosureMessage("End date is required", true);
+          return;
+        }
+
+        // Validate that end date is not before start date
+        if (endDate < startDate) {
+          showClosureMessage("End date cannot be before start date", true);
+          return;
+        }
+
+        const payload = { name, startDate, endDate, description };
 
         try {
           const resp = await fetch("/api/closures", {
@@ -1696,7 +1725,8 @@ async function initAdminTools() {
 
           // Reset inputs
           inputClosureName.value = "";
-          inputClosureDate.value = "";
+          inputClosureStartDate.value = "";
+          inputClosureEndDate.value = "";
           inputClosureDesc.value = "";
 
           // Hide modal
@@ -1757,9 +1787,35 @@ async function initAdminTools() {
     if (addClosureModalEl) {
       addClosureModalEl.addEventListener("show.bs.modal", () => {
         if (inputClosureName) inputClosureName.value = "";
-        if (inputClosureDate) inputClosureDate.value = "";
+        if (inputClosureStartDate) inputClosureStartDate.value = "";
+        if (inputClosureEndDate) inputClosureEndDate.value = "";
         if (inputClosureDesc) inputClosureDesc.value = "";
         showClosureMessage("");
+      });
+    }
+    
+    // Add validation for end date to ensure it's not before start date
+    if (inputClosureStartDate && inputClosureEndDate) {
+      inputClosureStartDate.addEventListener('change', () => {
+        if (inputClosureStartDate.value && inputClosureEndDate.value) {
+          if (inputClosureEndDate.value < inputClosureStartDate.value) {
+            showClosureMessage("End date cannot be before start date", true);
+            inputClosureEndDate.value = inputClosureStartDate.value;
+          } else {
+            showClosureMessage("");
+          }
+        }
+      });
+      
+      inputClosureEndDate.addEventListener('change', () => {
+        if (inputClosureStartDate.value && inputClosureEndDate.value) {
+          if (inputClosureEndDate.value < inputClosureStartDate.value) {
+            showClosureMessage("End date cannot be before start date", true);
+            inputClosureEndDate.value = inputClosureStartDate.value;
+          } else {
+            showClosureMessage("");
+          }
+        }
       });
     }
 

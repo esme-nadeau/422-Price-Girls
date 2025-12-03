@@ -696,17 +696,31 @@ def api_create_closure():
     try:
         data = request.get_json(silent=True) or {}
         name = (data.get('name') or '').strip()
-        date = (data.get('date') or '').strip()
+        start_date = (data.get('startDate') or '').strip()
+        end_date = (data.get('endDate') or '').strip()
         description = (data.get('description') or '').strip()
         
         if not name:
-            return jsonify({"success": False, "error": "name_required"}), 400
-        if not date:
-            return jsonify({"success": False, "error": "date_required"}), 400
+            return jsonify({"success": False, "error": "Closure name is required"}), 400
+        if not start_date:
+            return jsonify({"success": False, "error": "Start date is required"}), 400
+        if not end_date:
+            return jsonify({"success": False, "error": "End date is required"}), 400
+        
+        # Validate that end date is not before start date
+        try:
+            from datetime import datetime
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            if end_dt < start_dt:
+                return jsonify({"success": False, "error": "End date cannot be before start date"}), 400
+        except ValueError:
+            return jsonify({"success": False, "error": "Invalid date format. Please use YYYY-MM-DD format"}), 400
         
         doc_ref = db.collection('closures').add({
             'name': name,
-            'date': date,
+            'startDate': start_date,
+            'endDate': end_date,
             'description': description,
         })
         new_id = doc_ref[1].id
@@ -733,17 +747,31 @@ def api_update_closure(closure_id):
     try:
         data = request.get_json(silent=True) or {}
         name = (data.get('name') or '').strip()
-        date = (data.get('date') or '').strip()
+        start_date = (data.get('startDate') or '').strip()
+        end_date = (data.get('endDate') or '').strip()
         description = (data.get('description') or '').strip()
         
         if not name:
-            return jsonify({"success": False, "error": "name_required"}), 400
-        if not date:
-            return jsonify({"success": False, "error": "date_required"}), 400
+            return jsonify({"success": False, "error": "Closure name is required"}), 400
+        if not start_date:
+            return jsonify({"success": False, "error": "Start date is required"}), 400
+        if not end_date:
+            return jsonify({"success": False, "error": "End date is required"}), 400
+        
+        # Validate that end date is not before start date
+        try:
+            from datetime import datetime
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            if end_dt < start_dt:
+                return jsonify({"success": False, "error": "End date cannot be before start date"}), 400
+        except ValueError:
+            return jsonify({"success": False, "error": "Invalid date format. Please use YYYY-MM-DD format"}), 400
         
         update_data = {
             'name': name,
-            'date': date,
+            'startDate': start_date,
+            'endDate': end_date,
             'description': description,
         }
         

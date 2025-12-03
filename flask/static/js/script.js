@@ -30,10 +30,10 @@ async function loadTabContent(targetId, url, initFunction = null) {
         
         // Initialize time filter to disable past times (for map and calendar tabs)
         if ((targetId === 'nav-map' || targetId === 'nav-calendar') && typeof window.initTimeFilter === "function") {
-            setTimeout(() => {
+            setTimeout(async () => {
                 const container = document.getElementById(targetId);
                 if (container) {
-                    window.initTimeFilter(container);
+                    await window.initTimeFilter(container);
                 }
             }, 150);
         }

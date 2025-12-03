@@ -57,6 +57,61 @@
 
   // Lookup for booked cells -> bookings (used for click handling)
   let cellBookingLookup = {};
+  
+  // Closure date ranges cache
+  let closureRanges = [];
+  
+  // Function to load closure date ranges
+  async function loadClosureDates() {
+    try {
+      const resp = await fetch("/api/closures");
+      if (!resp.ok) {
+        console.warn("Failed to load closures for all bookings");
+        return;
+      }
+      const data = await resp.json();
+      const closures = data.closures || [];
+      closureRanges = [];
+      closures.forEach(closure => {
+        // Support both new format (startDate/endDate) and old format (date) for backwards compatibility
+        if (closure.startDate && closure.endDate) {
+          closureRanges.push({
+            start: closure.startDate,
+            end: closure.endDate
+          });
+        } else if (closure.date) {
+          // Backwards compatibility: treat single date as a range of one day
+          closureRanges.push({
+            start: closure.date,
+            end: closure.date
+          });
+        }
+      });
+    } catch (err) {
+      console.error("Error loading closures for all bookings:", err);
+    }
+  }
+  
+  // Function to check if a date is a weekend
+  function isWeekend(dateISO) {
+    if (!dateISO) return false;
+    const date = new Date(dateISO + 'T00:00:00');
+    const dayOfWeek = date.getDay();
+    return dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
+  }
+  
+  // Function to check if a date falls within any closure range
+  function isClosureDate(dateISO) {
+    if (!dateISO) return false;
+    return closureRanges.some(range => {
+      return dateISO >= range.start && dateISO <= range.end;
+    });
+  }
+  
+  // Function to check if a date is invalid (weekend or closure)
+  function isInvalidDate(dateISO) {
+    return isWeekend(dateISO) || isClosureDate(dateISO);
+  }
 
   function toISODate(d){ return d.toISOString().split('T')[0]; }
   function parseISODate(iso){ const [y,m,da]=iso.split('-').map(Number); return new Date(y,m-1,da); }
@@ -140,6 +195,13 @@
         cell.dataset.date = dateISO;
         cell.dataset.idx = idx;
         if(di>0) cell.classList.add('day-divider');
+        
+        // Mark invalid dates (weekends or closures) as closed
+        if(isInvalidDate(dateISO)){
+          cell.classList.add('closed');
+          cell.style.cursor = 'not-allowed';
+        }
+        
         grid.appendChild(cell);
       }
     });
@@ -361,6 +423,7 @@
   }
 
   async function update(){
+    await loadClosureDates(); // Load closures before rendering
     await fetchBookings();
     renderGrid();
   }
@@ -597,7 +660,23 @@
     const purposeInput = root.querySelector('#allBookingPurpose');
 
     if(idInput) idInput.value = booking.id || '';
-    if(dateInput && booking.date) dateInput.value = booking.date;
+    if(dateInput) {
+      // Set minimum date to today (prevents selecting past dates)
+      const today = new Date().toISOString().split('T')[0];
+      dateInput.setAttribute('min', today);
+      if(booking.date) {
+        dateInput.value = booking.date;
+      }
+      // Initialize date prevention (weekends and closures)
+      // This will also validate and correct the current value if needed
+      if (typeof window.initWeekendPrevention === 'function') {
+        const container = root;
+        // Use setTimeout to ensure the value is set before validation
+        setTimeout(async () => {
+          await window.initWeekendPrevention(container);
+        }, 0);
+      }
+    }
     if(repeatDropdown) {
       const repeatVal = booking.repeat || 'Never';
       repeatDropdown.textContent = repeatVal;
