@@ -31,18 +31,22 @@ window.showBookingErrorModal = function(message) {
     }
 };
 
-// Fetch current session email (if logged in)
-async function fetchSessionEmailForBooking() {
+// Fetch current session info (name/email) for booking autofill, if logged in
+// NOTE: The name must come ONLY from Firestore (users collection -> sessions.name).
+// We intentionally do NOT "fake" or derive a name from the email.
+async function fetchSessionInfoForBooking() {
     try {
         const res = await fetch('/auth/session', { credentials: 'include' });
         const data = await res.json().catch(() => null);
-        if (res.ok && data && data.session && data.session.email) {
-            return data.session.email;
+        if (res.ok && data && data.session) {
+            const email = data.session.email || '';
+            const name = data.session.name || '';
+            return { email, name };
         }
     } catch (err) {
-        console.warn('Email autofill: failed to load session', err);
+        console.warn('Session autofill: failed to load session', err);
     }
-    return null;
+    return { email: '', name: '' };
 }
 
 // Find a booking-related element (Map/Calendar) relative to a given button/tab
@@ -70,14 +74,27 @@ async function autofillBookingEmailIfEmpty(contextButton) {
     if (!emailInput) return;
     if (emailInput.value && emailInput.value.trim() !== '') return;
 
-    const email = await fetchSessionEmailForBooking();
-    if (email) {
-        emailInput.value = email;
+    const session = await fetchSessionInfoForBooking();
+    if (session.email) {
+        emailInput.value = session.email;
+    }
+}
+
+// Autofill the name field with the logged-in session name if it is blank
+async function autofillBookingNameIfEmpty(contextButton) {
+    const nameInput = findBookingElement('name', contextButton);
+    if (!nameInput) return;
+    if (nameInput.value && nameInput.value.trim() !== '') return;
+
+    const session = await fetchSessionInfoForBooking();
+    if (session.name) {
+        nameInput.value = session.name;
     }
 }
 
 // Expose on window so Map/Calendar code can call it when the widget appears
 window.autofillBookingEmailIfEmpty = autofillBookingEmailIfEmpty;
+window.autofillBookingNameIfEmpty = autofillBookingNameIfEmpty;
 
 // Function to initialize booking button - can be called after content loads
 window.initBookingButton = function(containerId) {
@@ -156,8 +173,11 @@ window.initBookingButton = function(containerId) {
                 return;
             }
 
-            // After confirming login, autofill email if we have it
+            // After confirming login, autofill email + name if we have them
             await autofillBookingEmailIfEmpty(newButton);
+            if (typeof window.autofillBookingNameIfEmpty === 'function') {
+                await window.autofillBookingNameIfEmpty(newButton);
+            }
             
             // Get form values - try to find in the container that has the button
             const getElement = (id) => {
@@ -205,7 +225,9 @@ window.initBookingButton = function(containerId) {
                 let h = Math.floor(min/60); const mm = min%60; const ampm = h >= 12 ? 'PM' : 'AM'; h = ((h + 11) % 12) + 1; const m2 = mm.toString().padStart(2,'0'); return `${h}:${m2} ${ampm}`;
             };
 
-            // Find next available slot on the same date for this room
+            // Find next available slot on the same date for this room.
+            // This always uses the server (/api/bookings -> Firestore) as the
+            // source of truth and clamps suggestions to the 8:00 AM–7:00 PM day.
             async function findNextAvailable(roomName, dateISO, desiredStartMin, durationMin){
                 try{
                     const resp = await fetch('/api/bookings');
@@ -229,20 +251,28 @@ window.initBookingButton = function(containerId) {
                         if (sMin==null || eMin==null) continue;
                         intervals.push([sMin,eMin]);
                     }
-                    // add bounds for day
-                    const DAY_START = 8*60; const DAY_END = 20*60; // end boundary (exclusive)
+                    // Day bounds: 8:00 AM inclusive up to 7:00 PM exclusive.
+                    const DAY_START = 8*60;        // 8:00 AM
+                    const DAY_END = 19*60;         // 7:00 PM end boundary (exclusive)
+
+                    // Clamp desired start into the valid day window
+                    if (desiredStartMin < DAY_START) desiredStartMin = DAY_START;
+                    if (desiredStartMin >= DAY_END) return null; // no room left in the day
+
                     // Merge intervals
                     intervals.sort((a,b)=>a[0]-b[0]);
                     const merged = [];
                     for(const iv of intervals){
-                        if(!merged.length) merged.push(iv.slice());
+                        const seg = [Math.max(DAY_START, iv[0]), Math.min(DAY_END, iv[1])];
+                        if (seg[0] >= seg[1]) continue; // fully outside day bounds
+                        if(!merged.length) merged.push(seg);
                         else{
                             const last = merged[merged.length-1];
-                            if(iv[0] <= last[1]) last[1] = Math.max(last[1], iv[1]);
-                            else merged.push(iv.slice());
+                            if(seg[0] <= last[1]) last[1] = Math.max(last[1], seg[1]);
+                            else merged.push(seg);
                         }
                     }
-                    // Build free windows
+                    // Build free windows within [DAY_START, DAY_END)
                     const free = [];
                     let cur = DAY_START;
                     for(const m of merged){
@@ -250,11 +280,14 @@ window.initBookingButton = function(containerId) {
                         cur = Math.max(cur, m[1]);
                     }
                     if(cur < DAY_END) free.push([cur, DAY_END]);
-                    // Find earliest window starting at or after desiredStartMin with enough duration
+
+                    // Find earliest window starting at or after desiredStartMin
+                    // with enough duration, without exceeding DAY_END.
                     for(const w of free){
                         const startCandidate = Math.max(w[0], desiredStartMin);
-                        if(w[1] - startCandidate >= durationMin){
-                            return {start: startCandidate, end: startCandidate + durationMin};
+                        const endCandidate = startCandidate + durationMin;
+                        if(endCandidate <= w[1] && endCandidate <= DAY_END){
+                            return {start: startCandidate, end: endCandidate};
                         }
                     }
                     return null;
@@ -544,9 +577,12 @@ window.initBookingButton = function(containerId) {
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
         window.initBookingButton();
-        // Autofill email once the DOM is ready (Calendar view, or Map if visible)
+        // Autofill email + name once the DOM is ready (Calendar view, or Map if visible)
         if (typeof window.autofillBookingEmailIfEmpty === 'function') {
             window.autofillBookingEmailIfEmpty();
+        }
+        if (typeof window.autofillBookingNameIfEmpty === 'function') {
+            window.autofillBookingNameIfEmpty();
         }
     });
 } else {
@@ -554,6 +590,9 @@ if (document.readyState === 'loading') {
     window.initBookingButton();
     if (typeof window.autofillBookingEmailIfEmpty === 'function') {
         window.autofillBookingEmailIfEmpty();
+    }
+    if (typeof window.autofillBookingNameIfEmpty === 'function') {
+        window.autofillBookingNameIfEmpty();
     }
 }
 

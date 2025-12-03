@@ -721,12 +721,39 @@ function setRoomPhotoByDigits(digits) {
       }
     }
 
-    // After calendar UI is ready, try autofilling the booking email if the user is logged in.
-    // Use a timeout so this still works even though bookings.js (which defines
-    // window.autofillBookingEmailIfEmpty) loads after calendar.js.
+    // Wire instructions toggle (Calendar view)
+    const instrBtn = document.getElementById('calendarInstructionsToggle');
+    const instrPanel = document.getElementById('calendarInstructionsPanel');
+    const instrClose = document.getElementById('calendarInstructionsClose');
+
+    // Move the instructions panel to <body> so its fixed positioning is
+    // relative to the full window (transform on .calendar-page would
+    // otherwise scope it to the calendar container).
+    if (instrPanel && instrPanel.parentElement !== document.body) {
+      document.body.appendChild(instrPanel);
+    }
+
+    if (instrBtn && instrPanel) {
+      instrBtn.addEventListener('click', () => {
+        // Same behavior as Map: just show/hide fixed bottom-right card
+        instrPanel.classList.toggle('d-none');
+      });
+    }
+    if (instrClose && instrPanel) {
+      instrClose.addEventListener('click', () => {
+        instrPanel.classList.add('d-none');
+      });
+    }
+
+    // After calendar UI is ready, try autofilling the booking email + name
+    // if the user is logged in. Use a timeout so this still works even though
+    // bookings.js (which defines these helpers) loads after calendar.js.
     setTimeout(() => {
       if (typeof window.autofillBookingEmailIfEmpty === 'function') {
         window.autofillBookingEmailIfEmpty();
+      }
+      if (typeof window.autofillBookingNameIfEmpty === 'function') {
+        window.autofillBookingNameIfEmpty();
       }
     }, 250);
   }

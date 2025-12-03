@@ -227,9 +227,12 @@ async function loadRoomsAndPopulateDropdown() {
           bookingFields.style.display = 'block';
         }
 
-        // Autofill email for logged-in users when the booking widget appears
+        // Autofill email + name for logged-in users when the booking widget appears
         if (typeof window.autofillBookingEmailIfEmpty === 'function') {
           window.autofillBookingEmailIfEmpty();
+        }
+        if (typeof window.autofillBookingNameIfEmpty === 'function') {
+          window.autofillBookingNameIfEmpty();
         }
       });
       li.appendChild(a);
@@ -335,9 +338,12 @@ function clearSelection() {
           bookingFields.style.display = 'block';
         }
 
-        // Autofill email for logged-in users when the booking widget appears via map click
+        // Autofill email + name for logged-in users when the booking widget appears via map click
         if (typeof window.autofillBookingEmailIfEmpty === 'function') {
           window.autofillBookingEmailIfEmpty();
+        }
+        if (typeof window.autofillBookingNameIfEmpty === 'function') {
+          window.autofillBookingNameIfEmpty();
         }
 
         e.stopPropagation();
@@ -411,6 +417,21 @@ window.initMap = function() {
       const activeIndex = event.to; // Index of the active slide
       const floorText = `Floor ${activeIndex + 1}`;
       document.getElementById('floorDropdown').textContent = floorText;
+    });
+  }
+  
+  // Wire instructions toggle (Map view)
+  const instrBtn = document.getElementById('mapInstructionsToggle');
+  const instrPanel = document.getElementById('mapInstructionsPanel');
+  const instrClose = document.getElementById('mapInstructionsClose');
+  if (instrBtn && instrPanel) {
+    instrBtn.addEventListener('click', () => {
+      instrPanel.classList.toggle('d-none');
+    });
+  }
+  if (instrClose && instrPanel) {
+    instrClose.addEventListener('click', () => {
+      instrPanel.classList.add('d-none');
     });
   }
 
@@ -591,44 +612,33 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Helper to set full-day range on the map (8:00 AM – 7:00 PM).
-// If there are existing bookings for the selected room/date that overlap this range, show an error instead.
-window.map_setFullDay = async function(){
+// This only populates the time controls; conflict checking is handled
+// centrally on the server when the user clicks "Book Room".
+window.map_setFullDay = function(){
   const roomLabelEl = document.getElementById('selectedRoom');
-
-  // Ensure bookings are loaded before checking for conflicts
-  if (!Array.isArray(allBookings) || allBookings.length === 0) {
-    try {
-      await fetchBookings();
-    } catch (e) {
-      console.warn('[map_setFullDay] Failed to refresh bookings before full-day check:', e);
-    }
-  }
   const dateRight = document.getElementById('date_right');
   const dateLeft = document.getElementById('date_left');
 
   const roomName = roomLabelEl ? roomLabelEl.textContent.trim() : '';
   const date = (dateRight && dateRight.value) || (dateLeft && dateLeft.value) || '';
 
-  // Only check conflicts if a room and date are chosen and we have booking data
-  if(roomName && roomName !== 'Select Room' && date && Array.isArray(allBookings) && allBookings.length){
-    // Reuse the same overlap logic as room coloring: if any booking overlaps 8:00–7:00, treat as conflict
-    const hasConflict = isRoomBooked(roomName, date, '8:00 AM', '7:00 PM');
-    if(hasConflict){
-      const msg = 'Cannot book entire day for this room: there are existing bookings on that date that would conflict. Please choose a smaller time range. If you want more details on the booking conflict, look at the All Bookings tab.';
-      if (typeof window.showBookingErrorModal === 'function') {
-        window.showBookingErrorModal(msg);
-      } else {
-        alert(msg);
-      }
-      return;
+  // Require a concrete room + date before doing anything
+  if (!roomName || roomName === 'Select Room' || !date) {
+    const msg = 'Please select a room and date before using "Book entire day".';
+    if (typeof window.showBookingErrorModal === 'function') {
+      window.showBookingErrorModal(msg);
+    } else {
+      alert(msg);
     }
+    return;
   }
 
-  // These helpers already keep left/right in sync and clamp to allowed bounds
-  if(typeof window.updateStartTime === 'function'){
+  // Just set the time range; updateStartTime/updateEndTime will handle
+  // clamping and keeping left/right sections in sync.
+  if (typeof window.updateStartTime === 'function') {
     window.updateStartTime('8:00 AM');
   }
-  if(typeof window.updateEndTime === 'function'){
+  if (typeof window.updateEndTime === 'function') {
     window.updateEndTime('7:00 PM');
   }
 };
