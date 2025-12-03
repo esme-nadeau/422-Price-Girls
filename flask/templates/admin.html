@@ -168,21 +168,25 @@
         </div>
         </div>
 
-        <!-- Building hours management card -->
+        <!-- Closure management card -->
         <div class="building-management card shadow-sm p-3 mb-4" style="width: 100%;">
             <h5 class="fw-semibold mb-3">Building Closures</h5>
               <div id="closureList" class="mb-3">
                 {% if closures and closures|length > 0 %}
                   {% for c in closures %}
                     <div class="d-flex align-items-start justify-content-between mb-2 p-2 rounded" style="border:1px solid rgba(0,0,0,0.05);">
-                      <div>
-                        <div class="fw-semibold">{{ c.name or c.id }}</div>
+                      <div class="flex-grow-1 text-start">
+                        {% if c.date %}
+                        <div class="fw-semibold">{{ c.date }}</div>
+                        {% endif %}
+                        <div class="small text-muted">{{ c.name or c.id }}</div>
                       </div>
                       <div class="d-flex flex-column align-items-end gap-1">
-                        <button class="btn btn-sm btn-outline-secondary user-manage-btn"
-                          data-id="{{ c.id or c.name}}"
-                          data-date="{{ r.date }}">
-                            <i class="bi bi-gear me-1"></i>Edit
+                        <button class="btn btn-sm btn-outline-red closure-delete-btn"
+                          data-id="{{ c.id }}"
+                          data-name="{{ c.name or c.id }}"
+                          data-date="{{ c.date or '' }}">
+                            <i class="bi bi-trash me-1"></i>Delete
                         </button>
                       </div>
                     </div>
@@ -195,7 +199,7 @@
               </div>
 
           <div class="mb-3 pt-2 border-top d-flex justify-content-end">
-            <button class="btn btn-green" data-bs-toggle="modal" data-bs-target="#addRoomModal">
+            <button class="btn btn-green" data-bs-toggle="modal" data-bs-target="#addClosureModal">
                 + Add Closure
             </button>
         </div>
@@ -329,8 +333,8 @@
   </div>
 </div>
 
-<!-- MANAGE USER MODAL -->
-<div class="modal fade" id="userModal" tabindex="-1" aria-labelledby="userModalLabel" aria-hidden="true">
+<!-- ADD CLOSURE MODAL -->
+<div class="modal fade" id="closureModal" tabindex="-1" aria-labelledby="closureModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
 
@@ -370,7 +374,47 @@
   </div>
 </div>
 
+<div class="modal fade" id="addClosureModal" tabindex="-1" aria-labelledby="addClosureModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="addClosureModalLabel">Add Closure</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+
+        <div class="mb-2">
+          <label class="form-label">Closure Name (for reference)</label>
+          <input id="newClosureName" class="form-control" type="text" placeholder="e.g. Holiday Closure">
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">Date</label>
+          <input id="newClosureDate" class="form-control" type="date">
+        </div>
+
+        <div class="mb-2">
+          <div class="mb-1">
+            <label class="form-label">Notes (Optional)</label>
+            <label class="form-label small text-muted d-block">Anything to note...</label>
+          </div>
+          <input id="newClosureDescription" class="form-control" type="text" placeholder="Optional description">
+        </div>
+
+        <div id="closuresMessage" class="small text-muted"></div>
+
+      </div>
+
+      <div class="modal-footer d-flex gap-2">
+        <button id="addClosureBtn" class="btn btn-green">Add Closure</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 <script src="{{ url_for('static', filename='js/session-debug.js') }}"></script>
-

@@ -107,26 +107,54 @@ function showMessage(msg, isError = false) {
           // Save ID for approve/deny
           bookingForm.dataset.id = booking.id || "";
     
-          setField(dateField, booking.date);
-          setField(timeField, booking.time || booking.timeRange);
-          setField(repeatField, booking.repeat || "Never");
-          setField(nameField, booking.name || booking.userId);
-          setField(emailField, booking.email || booking.userEmail);
-          setField(purposeField, booking.purpose);
-          setField(roomIdField, booking.roomId);
+          // Populate <span> fields for non-editable display (matching mybookings styling)
+          const setSpan = (id, value) => {
+            const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
+            if (el) el.textContent = value || '';
+          };
+    
+          setSpan('date', booking.date || '');
+          setSpan('time', booking.time || booking.timeRange || '');
+          setSpan('repeat', booking.repeat || 'Never');
+          setSpan('name', booking.name || booking.userId || '');
+          setSpan('email', booking.email || booking.userEmail || '');
+          setSpan('purpose', booking.purpose || '');
+          setSpan('roomId', booking.roomId || '');
     
           bookingInfoCard.style.display = "block";
         }
     
         // Attach click listeners to all pending booking cards
         bookingCards.forEach((card) => {
+          // Skip if already has click handler
+          if (card.dataset.adminClickBound === 'true') {
+            return;
+          }
+          card.dataset.adminClickBound = 'true';
+          
           card.addEventListener("click", () => {
             if (!bookingInfoCard) return;
             const booking = getBookingFromCard(card);
-            console.log("Admin: selected booking", booking);
-    
-            clearActiveCards();
-            card.classList.add("active");
+            console.log("Admin: Clicked booking", card.dataset.id);
+            
+            const currentBookingId = bookingForm.dataset.id;
+            const clickedBookingId = card.dataset.id;
+            
+            // Check if the same booking is clicked again
+            if (currentBookingId === clickedBookingId && bookingInfoCard && bookingInfoCard.style.display === 'block') {
+              // Hide the booking information card
+              bookingInfoCard.style.display = 'none';
+              // Remove selection highlight
+              document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+              // Clear the form ID
+              bookingForm.dataset.id = '';
+              console.log('Admin: Booking card hidden');
+              return;
+            }
+            
+            // Highlight selected
+            document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
             populateBookingInfo(booking);
           });
         });
@@ -155,6 +183,17 @@ function showMessage(msg, isError = false) {
           return data;
         }
     
+        // Helper to check if bookings list is empty and show message
+        function checkAndShowEmptyMessage() {
+          const bookingsList = document.getElementById('bookingsList');
+          if (!bookingsList) return;
+          
+          const remainingCards = bookingsList.querySelectorAll('.booking-card');
+          if (remainingCards.length === 0) {
+            bookingsList.innerHTML = '<div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">No bookings to approve.</div>';
+          }
+        }
+
         // Approve (Confirm Reservation) for pending bookings
         if (confirmBtn && !confirmBtn.dataset.bound) {
           confirmBtn.dataset.bound = "true";
@@ -177,6 +216,9 @@ function showMessage(msg, isError = false) {
     
               if (bookingInfoCard) bookingInfoCard.style.display = "none";
               bookingForm.dataset.id = "";
+              
+              // Check if list is now empty and show message
+              checkAndShowEmptyMessage();
     
               alert("Booking approved and moved to confirmed bookings.");
             } catch (err) {
@@ -208,6 +250,9 @@ function showMessage(msg, isError = false) {
     
               if (bookingInfoCard) bookingInfoCard.style.display = "none";
               bookingForm.dataset.id = "";
+              
+              // Check if list is now empty and show message
+              checkAndShowEmptyMessage();
     
               alert("Booking denied and removed.");
             } catch (err) {
@@ -268,26 +313,54 @@ function showMessage(msg, isError = false) {
       // Save ID for approve/deny
       bookingForm.dataset.id = booking.id || "";
 
-      setField(dateField, booking.date);
-      setField(timeField, booking.time || booking.timeRange);
-      setField(repeatField, booking.repeat || "Never");
-      setField(nameField, booking.name || booking.userId);
-      setField(emailField, booking.email || booking.userEmail);
-      setField(purposeField, booking.purpose);
-      setField(roomIdField, booking.roomId);
+      // Populate <span> fields for non-editable display (matching mybookings styling)
+      const setSpan = (id, value) => {
+        const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
+        if (el) el.textContent = value || '';
+      };
+
+      setSpan('date', booking.date || '');
+      setSpan('time', booking.time || booking.timeRange || '');
+      setSpan('repeat', booking.repeat || 'Never');
+      setSpan('name', booking.name || booking.userId || '');
+      setSpan('email', booking.email || booking.userEmail || '');
+      setSpan('purpose', booking.purpose || '');
+      setSpan('roomId', booking.roomId || '');
 
       bookingInfoCard.style.display = "block";
     }
 
     // Attach click listeners to all pending booking cards
     bookingCards.forEach((card) => {
+      // Skip if already has click handler
+      if (card.dataset.adminClickBound === 'true') {
+        return;
+      }
+      card.dataset.adminClickBound = 'true';
+      
       card.addEventListener("click", () => {
         if (!bookingInfoCard) return;
         const booking = getBookingFromCard(card);
-        console.log("Admin: selected booking", booking);
-
-        clearActiveCards();
-        card.classList.add("active");
+        console.log("Admin: Clicked booking", card.dataset.id);
+        
+        const currentBookingId = bookingForm.dataset.id;
+        const clickedBookingId = card.dataset.id;
+        
+        // Check if the same booking is clicked again
+        if (currentBookingId === clickedBookingId && bookingInfoCard && bookingInfoCard.style.display === 'block') {
+          // Hide the booking information card
+          bookingInfoCard.style.display = 'none';
+          // Remove selection highlight
+          document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+          // Clear the form ID
+          bookingForm.dataset.id = '';
+          console.log('Admin: Booking card hidden');
+          return;
+        }
+        
+        // Highlight selected
+        document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
         populateBookingInfo(booking);
       });
     });
@@ -316,6 +389,17 @@ function showMessage(msg, isError = false) {
       return data;
     }
 
+    // Helper to check if bookings list is empty and show message
+    function checkAndShowEmptyMessage() {
+      const bookingsList = document.getElementById('bookingsList');
+      if (!bookingsList) return;
+      
+      const remainingCards = bookingsList.querySelectorAll('.booking-card');
+      if (remainingCards.length === 0) {
+        bookingsList.innerHTML = '<div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">No bookings to approve.</div>';
+      }
+    }
+
     // Approve (Confirm Reservation) for pending bookings
     if (confirmBtn && !confirmBtn.dataset.bound) {
       confirmBtn.dataset.bound = "true";
@@ -338,6 +422,9 @@ function showMessage(msg, isError = false) {
 
           if (bookingInfoCard) bookingInfoCard.style.display = "none";
           bookingForm.dataset.id = "";
+          
+          // Check if list is now empty and show message
+          checkAndShowEmptyMessage();
 
           alert("Booking approved and moved to confirmed bookings.");
         } catch (err) {
@@ -369,6 +456,9 @@ function showMessage(msg, isError = false) {
 
           if (bookingInfoCard) bookingInfoCard.style.display = "none";
           bookingForm.dataset.id = "";
+          
+          // Check if list is now empty and show message
+          checkAndShowEmptyMessage();
 
           alert("Booking denied and removed.");
         } catch (err) {
@@ -1473,6 +1563,210 @@ async function initAdminTools() {
   }
 
   await loadRooms();
+
+  /* ==============================
+      Closure Management
+  ============================== */
+  const closureListWrap = document.getElementById("closureList");
+  const addClosureBtn = document.getElementById("addClosureBtn");
+
+  const inputClosureName = document.getElementById("newClosureName");
+  const inputClosureDate = document.getElementById("newClosureDate");
+  const inputClosureDesc = document.getElementById("newClosureDescription");
+  const closuresMessage = document.getElementById("closuresMessage");
+
+  const addClosureModalEl = document.getElementById("addClosureModal");
+
+  if (!closureListWrap) {
+    console.warn("Closure list wrapper not found");
+  } else {
+    function showClosureMessage(msg, isError = false) {
+      if (!closuresMessage) return;
+      closuresMessage.textContent = msg || '';
+      if (isError) {
+        closuresMessage.style.color = '#F28380';
+        closuresMessage.classList.remove('text-muted');
+      } else {
+        closuresMessage.style.color = '#666';
+        closuresMessage.classList.add('text-muted');
+      }
+    }
+
+    function renderClosures(closures) {
+      closureListWrap.innerHTML = "";
+
+      if (!closures || closures.length === 0) {
+        closureListWrap.innerHTML =
+          '<div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">No closures found.</div>';
+        return;
+      }
+
+      closures.forEach((c) => {
+        const row = document.createElement("div");
+        row.className =
+          "d-flex align-items-start justify-content-between mb-2 p-2 rounded";
+        row.style.border = "1px solid rgba(0,0,0,0.05)";
+
+        const leftSide = document.createElement("div");
+        leftSide.className = "flex-grow-1 text-start";
+        leftSide.innerHTML = `
+          ${c.date ? `<div class="fw-semibold">${escapeHtml(c.date)}</div>` : ''}
+          <div class="small text-muted">${escapeHtml(c.name || c.id)}</div>
+        `;
+
+        const actions = document.createElement("div");
+        actions.className = "d-flex flex-column align-items-end gap-1";
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn btn-sm btn-outline-red closure-delete-btn";
+        deleteBtn.innerHTML = `<i class="bi bi-trash me-1"></i>Delete`;
+        deleteBtn.dataset.id = c.id;
+        deleteBtn.dataset.name = c.name || c.id;
+        deleteBtn.dataset.date = c.date || '';
+
+        actions.appendChild(deleteBtn);
+        row.appendChild(leftSide);
+        row.appendChild(actions);
+        closureListWrap.appendChild(row);
+      });
+    }
+
+    async function loadClosures() {
+      showClosureMessage("Loading closures...");
+      try {
+        const resp = await fetch("/api/closures");
+        const data = resp.ok ? await resp.json() : null;
+
+        if (!resp.ok) {
+          showClosureMessage(data?.error || "Failed to load closures", true);
+          renderClosures([]);
+          return;
+        }
+
+        const closures = data.closures || [];
+        // Sort closures by date (most recent first)
+        closures.sort((a, b) => {
+          const dateA = a.date || '';
+          const dateB = b.date || '';
+          return dateB.localeCompare(dateA);
+        });
+
+        renderClosures(closures);
+        showClosureMessage("");
+      } catch (err) {
+        console.error("loadClosures error:", err);
+        showClosureMessage("Failed to load closures (network error)", true);
+        renderClosures([]);
+      }
+    }
+
+    if (addClosureBtn) {
+      addClosureBtn.addEventListener("click", async () => {
+        const name = inputClosureName?.value.trim();
+        const date = inputClosureDate?.value.trim();
+        const description = inputClosureDesc?.value.trim();
+
+        if (!name) {
+          showClosureMessage("Closure name is required", true);
+          return;
+        }
+
+        if (!date) {
+          showClosureMessage("Date is required", true);
+          return;
+        }
+
+        const payload = { name, date, description };
+
+        try {
+          const resp = await fetch("/api/closures", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await resp.json().catch(() => ({}));
+
+          if (!resp.ok) {
+            showClosureMessage(data.error || "Failed to add closure", true);
+            return;
+          }
+
+          showClosureMessage("Closure added");
+
+          // Reset inputs
+          inputClosureName.value = "";
+          inputClosureDate.value = "";
+          inputClosureDesc.value = "";
+
+          // Hide modal
+          const modalInstance = bootstrap.Modal.getInstance(addClosureModalEl);
+          if (modalInstance) modalInstance.hide();
+
+          await loadClosures();
+        } catch (err) {
+          console.error("addClosure error:", err);
+          showClosureMessage("Failed to add closure (network error)", true);
+        }
+      });
+    }
+
+    // Handle delete button clicks
+    closureListWrap.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".closure-delete-btn");
+      if (!btn) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const closureId = btn.dataset.id;
+      const closureName = btn.dataset.name || closureId;
+      const closureDate = btn.dataset.date || '';
+
+      if (!closureId) {
+        console.warn("Delete button clicked but missing data-id", btn);
+        return;
+      }
+
+      // Build display text - use date if available, otherwise use name
+      const displayText = closureDate ? `${closureDate} (${closureName})` : closureName;
+      const ok = confirm(
+        `Are you sure you want to delete this closure?\n\nClosure: ${displayText}\nThis action cannot be undone.`
+      );
+      if (!ok) return;
+
+      try {
+        const resp = await fetch(`/api/closures/${encodeURIComponent(closureId)}`, {
+          method: "DELETE",
+        });
+
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+          alert(data.error || "Failed to delete closure");
+          return;
+        }
+
+        await loadClosures();
+      } catch (err) {
+        console.error("deleteClosure error:", err);
+        alert("Failed to delete closure (network error)");
+      }
+    });
+
+    if (addClosureModalEl) {
+      addClosureModalEl.addEventListener("show.bs.modal", () => {
+        if (inputClosureName) inputClosureName.value = "";
+        if (inputClosureDate) inputClosureDate.value = "";
+        if (inputClosureDesc) inputClosureDesc.value = "";
+        showClosureMessage("");
+      });
+    }
+
+    moveModalToBody(document.getElementById('addClosureModal'));
+
+    await loadClosures();
+  }
 }
 
 // Expose initializer so the dynamic tab loader can call it after injecting admin HTML
@@ -1490,6 +1784,144 @@ if (document.readyState !== 'loading') {
     }
   });
 }
+
+/* ==============================
+    Admin Page Booking Card Clicks (Same as MyBookings)
+============================== */
+(function() {
+  // Don't run if on mybookings page
+  if (document.getElementById('mybookings-root')) {
+    return;
+  }
+
+  function setupAdminBookingClicks() {
+    const bookingCards = document.querySelectorAll('.booking-card');
+    const bookingForm = document.getElementById('bookingForm');
+    
+    if (!bookingForm) {
+      return false; // Form not loaded yet
+    }
+
+    if (!bookingCards.length) {
+      console.warn("Admin: No booking cards found");
+      return true;
+    }
+
+    console.log(`Admin: Found ${bookingCards.length} booking cards`);
+
+    // Add click listeners to booking cards (same as mybookings)
+    bookingCards.forEach(card => {
+      // Skip if already has click handler
+      if (card.dataset.adminClickBound === 'true') {
+        return;
+      }
+      card.dataset.adminClickBound = 'true';
+      
+      card.addEventListener('click', () => {
+        console.log(`Admin: Clicked booking ${card.dataset.id}`);
+
+        const bookingInfoCard = document.getElementById('bookingInfoCard');
+        const currentBookingId = bookingForm.dataset.id;
+        const clickedBookingId = card.dataset.id;
+
+        // Check if the same booking is clicked again
+        if (currentBookingId === clickedBookingId && bookingInfoCard && bookingInfoCard.style.display === 'block') {
+          // Hide the booking information card
+          bookingInfoCard.style.display = 'none';
+          // Remove selection highlight
+          document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+          // Clear the form ID
+          bookingForm.dataset.id = '';
+          console.log('Admin: Booking card hidden');
+          return;
+        }
+
+        // Highlight selected
+        document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+
+        // Parse structured booking data
+        let bookingData = {};
+        try {
+          if (card.dataset.booking) bookingData = JSON.parse(card.dataset.booking);
+        } catch (err) {
+          console.warn('Could not parse data-booking JSON, falling back to data-* attributes', err);
+          bookingData = {};
+        }
+
+        // Save the ID
+        bookingForm.dataset.id = bookingData.id || card.dataset.id || '';
+
+        // Handle the date format safely
+        let dateValue = bookingData.date || card.dataset.date || '';
+        if (dateValue) {
+          const parsed = new Date(dateValue);
+          if (!isNaN(parsed)) dateValue = parsed;
+          else {
+            console.warn('Could not parse date:', bookingData.date || card.dataset.date);
+            dateValue = null;
+          }
+        }
+
+        // Populate <span> fields for non-editable display
+        const setSpan = (id, value) => {
+          const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
+          if (el) el.textContent = value || '';
+        };
+
+        setSpan('date', bookingData.date || card.dataset.date || '');
+        setSpan('time', bookingData.time || card.dataset.time || '');
+        setSpan('repeat', bookingData.repeat || card.dataset.repeat || 'Never');
+        setSpan('name', bookingData.name || bookingData.userId || card.dataset.name || '');
+        setSpan('email', bookingData.email || card.dataset.email || '');
+        setSpan('purpose', bookingData.purpose || card.dataset.purpose || '');
+        setSpan('roomId', bookingData.roomId || card.dataset.roomid || '');
+
+        // Show the booking information card
+        if (bookingInfoCard) {
+          bookingInfoCard.style.display = 'block';
+        }
+
+        console.log('Admin: Form populated with:', {
+          id: bookingForm.dataset.id,
+          date: bookingData.date || card.dataset.date,
+          time: bookingData.time || card.dataset.time,
+          repeat: bookingData.repeat || card.dataset.repeat,
+          email: bookingData.email || card.dataset.email,
+          purpose: bookingData.purpose || card.dataset.purpose,
+          roomId: bookingData.roomId || card.dataset.roomid
+        });
+      });
+    });
+
+    return true;
+  }
+
+  // Try to set up immediately
+  if (setupAdminBookingClicks()) {
+    return;
+  }
+
+  // If not ready, wait for content to load
+  [100, 300, 500, 1000, 2000].forEach(delay => {
+    setTimeout(() => {
+      if (!document.getElementById('mybookings-root')) {
+        setupAdminBookingClicks();
+      }
+    }, delay);
+  });
+
+  // Watch for dynamically added booking cards
+  const bookingsList = document.getElementById('bookingsList');
+  if (bookingsList) {
+    const observer = new MutationObserver(() => {
+      if (!document.getElementById('mybookings-root')) {
+        setupAdminBookingClicks();
+      }
+    });
+    observer.observe(bookingsList, { childList: true, subtree: true });
+  }
+})();
 
 /* ==============================
     Account Management - User Search

@@ -150,6 +150,7 @@ def admin():
     bookings = []
     rooms = []
     users = []
+    closures = []
     try:
         if db is None:
             error_message = "Firestore is not initialized. Please check your service account and environment variables."
@@ -186,10 +187,19 @@ def admin():
                     users.append(u)
             except Exception as ue:
                 print(f"[admin] Error loading users: {ue}")
+            # Load closures for Building Closures card
+            try:
+                closures_ref = db.collection('closures')
+                for cdoc in closures_ref.stream():
+                    c = cdoc.to_dict() or {}
+                    c["id"] = cdoc.id
+                    closures.append(c)
+            except Exception as ce:
+                print(f"[admin] Error loading closures: {ce}")
     except Exception as e:
         error_message = f"Error loading bookings: {e}"
         print(f"[admin] {error_message}")
-    return render_template("admin.html", bookings=bookings, rooms=rooms, users=users, error_message=error_message)
+    return render_template("admin.html", bookings=bookings, rooms=rooms, users=users, closures=closures, error_message=error_message)
 
 @app.route("/map")
 def map_tab():
@@ -657,6 +667,90 @@ def api_update_room(room_id):
         return jsonify({"success": True}), 200
     except Exception as e:
         print(f"[api_update_room] Error updating {room_id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ----------------------------
+# Closures API endpoints
+# ----------------------------
+@app.route("/api/closures")
+def api_closures():
+    try:
+        if db is None:
+            return jsonify({"closures": [], "error": "firestore_unavailable"}), 500
+        closures_ref = db.collection("closures")
+        docs = closures_ref.stream()
+        closures = []
+        for doc in docs:
+            c = doc.to_dict() or {}
+            c["id"] = doc.id
+            closures.append(c)
+        return jsonify({"closures": closures})
+    except Exception as e:
+        print(f"[api_closures] Error: {e}")
+        return jsonify({"closures": [], "error": str(e)}), 500
+
+@app.route("/api/closures", methods=["POST"])
+def api_create_closure():
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+    try:
+        data = request.get_json(silent=True) or {}
+        name = (data.get('name') or '').strip()
+        date = (data.get('date') or '').strip()
+        description = (data.get('description') or '').strip()
+        
+        if not name:
+            return jsonify({"success": False, "error": "name_required"}), 400
+        if not date:
+            return jsonify({"success": False, "error": "date_required"}), 400
+        
+        doc_ref = db.collection('closures').add({
+            'name': name,
+            'date': date,
+            'description': description,
+        })
+        new_id = doc_ref[1].id
+        return jsonify({"success": True, "id": new_id}), 201
+    except Exception as e:
+        print(f"[api_create_closure] Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/closures/<closure_id>', methods=['DELETE'])
+def api_delete_closure(closure_id):
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+    try:
+        db.collection('closures').document(closure_id).delete()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[api_delete_closure] Error deleting {closure_id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/closures/<closure_id>', methods=['PUT'])
+def api_update_closure(closure_id):
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+    try:
+        data = request.get_json(silent=True) or {}
+        name = (data.get('name') or '').strip()
+        date = (data.get('date') or '').strip()
+        description = (data.get('description') or '').strip()
+        
+        if not name:
+            return jsonify({"success": False, "error": "name_required"}), 400
+        if not date:
+            return jsonify({"success": False, "error": "date_required"}), 400
+        
+        update_data = {
+            'name': name,
+            'date': date,
+            'description': description,
+        }
+        
+        db.collection('closures').document(closure_id).update(update_data)
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[api_update_closure] Error updating {closure_id}: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ----------------------------
