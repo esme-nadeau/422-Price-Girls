@@ -370,6 +370,22 @@
   </div>
 </div>
 
+<!-- CLEANUP OLD BOOKINGS CARD -->
+<div class="cleanup-bookings card shadow-sm p-3 mb-4" style="width: 100%;">
+    <h5 class="fw-semibold mb-3">Maintenance</h5>
+
+    <p class="small text-muted mb-3">
+        Delete bookings and pending bookings older than 30 days.
+    </p>
+
+    <button id="cleanupBookingsBtn" class="btn btn-red w-100">
+        Delete Bookings Older Than 30 Days
+    </button>
+
+    <div id="cleanupBookingsMessage" class="small mt-2 text-muted"></div>
+</div>
+
+
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 <script src="{{ url_for('static', filename='js/session-debug.js') }}"></script>

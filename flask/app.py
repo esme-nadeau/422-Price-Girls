@@ -410,31 +410,103 @@ def api_approve_pending_booking(booking_id):
     
 @app.post("/api/pending-bookings/<booking_id>/deny")
 def api_deny_pending_booking(booking_id):
+    """
+    Admin denies a pending booking:
+      - Move entry from pending_bookings → denied_bookings
+      - Send denial email
+      - Remove the pending booking document
+    """
+
     if db is None:
         return jsonify({"success": False, "error": "firestore_unavailable"}), 500
 
-    # Only admins may deny
+    # Ensure user is admin
     session_data = get_current_session_data()
     role = (session_data.get("role") if session_data else "student") or "student"
     role = str(role).strip().lower()
+
     if role != "admin":
         return jsonify({"success": False, "error": "forbidden"}), 403
 
     try:
         pending_ref = db.collection("pending_bookings").document(booking_id)
         snap = pending_ref.get()
+
         if not snap.exists:
             return jsonify({"success": False, "error": "pending_booking_not_found"}), 404
 
         data = snap.to_dict() or {}
+
+        # Mark this booking as denied
         data["status"] = "denied"
         data["deniedAt"] = firestore.SERVER_TIMESTAMP
 
-        # Optional: archive denied bookings
-        db.collection("denied_bookings").document(booking_id).set(data)
+        # Archive into denied_bookings
+        denied_ref = db.collection("denied_bookings").document(booking_id)
+        denied_ref.set(data)
 
+        # Remove from pending_bookings
         pending_ref.delete()
+
+        # --- Send denial email ---
+        try:
+            to_email = data.get("email") or data.get("userEmail")
+
+            if to_email:
+                user_name = data.get("userId") or data.get("name") or "Guest"
+                room_name = data.get("roomId") or "Unknown Room"
+                date = data.get("date") or ""
+                time_range = data.get("timeRange") or data.get("time") or ""
+                repeat_rule = data.get("repeat") or None
+                purpose = data.get("purpose") or None
+
+                manage_url = f"{SITE_URL}/mybookings"
+                site_url = SITE_URL
+                year = datetime.now().year
+
+                # Render denial email
+                html = render_template(
+                    "booking_confirmation_email.html",
+                    user_name=user_name,
+                    reservation_id=booking_id,
+                    room_name=room_name,
+                    date=date,
+                    time_range=time_range,
+                    repeat_rule=repeat_rule,
+                    purpose=purpose,
+                    manage_url=manage_url,
+                    site_url=site_url,
+                    current_year=year,
+                    email_status="denied",
+                    actor="the CS department"
+                )
+
+                subject = f"Booking Request Denied – {room_name} on {date}"
+                text_fallback = (
+                    "Your booking request was not approved.\n"
+                    f"Reservation ID: {booking_id}\n"
+                    f"Room: {room_name}\n"
+                    f"Date: {date}\n"
+                    f"Time: {time_range}\n"
+                )
+
+                send_html_email(to_email, subject, html, text_fallback=text_fallback)
+
+                # Store in denied record
+                denied_ref.update({
+                    "emailSentAt": firestore.SERVER_TIMESTAMP,
+                    "emailError": firestore.DELETE_FIELD,
+                })
+
+        except Exception as email_err:
+            print(f"[pending_deny] Email send failed for {booking_id}: {email_err}")
+            try:
+                denied_ref.update({"emailError": str(email_err)})
+            except Exception:
+                pass
+
         return jsonify({"success": True}), 200
+
     except Exception as e:
         print(f"[pending_deny] Error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
@@ -468,11 +540,64 @@ def delete_booking(booking_id):
         if user_role != "admin" and (not user_email or user_email != booking_email):
             return jsonify({"success": False, "error": "forbidden"}), 403
 
+        # Decide actor text for email
+        if user_role == "admin":
+            actor = "an administrator"
+        else:
+            actor = "you"
+
+        # Delete the booking
         doc_ref.delete()
+
+        # --- Send "canceled" email (best-effort) ---
+        try:
+            to_email = booking_email
+            if to_email:
+                user_name = booking.get("userId") or booking.get("name") or "Guest"
+                room_name = booking.get("roomId") or "Unknown Room"
+                date = booking.get("date") or ""
+                time_range = booking.get("timeRange") or booking.get("time") or ""
+                repeat_rule = booking.get("repeat") or None
+                purpose = booking.get("purpose") or None
+
+                manage_url = f"{SITE_URL}/mybookings"
+                site_url = SITE_URL
+                current_year = datetime.now().year
+
+                html = render_template(
+                    "booking_confirmation_email.html",
+                    user_name=user_name,
+                    reservation_id=booking_id,
+                    room_name=room_name,
+                    date=date,
+                    time_range=time_range,
+                    repeat_rule=repeat_rule,
+                    purpose=purpose,
+                    manage_url=manage_url,
+                    site_url=site_url,
+                    current_year=current_year,
+                    email_status="canceled",
+                    actor=actor,
+                )
+
+                subject = f"Reservation Canceled – {room_name} on {date}"
+                text_fallback = (
+                    f"Your reservation has been canceled by {actor}.\n"
+                    f"Reservation ID: {booking_id}\n"
+                    f"Room: {room_name}\n"
+                    f"Date: {date}\n"
+                    f"Time: {time_range}\n"
+                )
+
+                send_html_email(to_email, subject, html, text_fallback=text_fallback)
+        except Exception as e:
+            print(f"[delete_booking] Cancel email failed for {booking_id}: {e}")
+
         return jsonify({"success": True}), 200
     except Exception as e:
         print(e)
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 # ----------------------------
 # MyBookings UPDATE endpoint (for Save functionality)
@@ -504,12 +629,12 @@ def update_booking(booking_id):
             return jsonify({"success": False, "error": "forbidden"}), 403
 
         data = request.get_json(force=True) or {}
-        
+
         # Extract fields for overlap checking
         room_id = data.get("roomId", "")
         date = data.get("date", "")
         time_range = data.get("timeRange", "")
-        
+
         # Validate required fields for overlap check
         if room_id and date and time_range:
             # Check for overlapping bookings (excluding the current booking being updated)
@@ -520,7 +645,7 @@ def update_booking(booking_id):
                     "success": False,
                     "error": f"This room is already booked for {conflicting_time} on {date}."
                 }), 409  # 409 Conflict status code
-        
+
         # Only allow updating editable fields
         update_fields = {
             "date": data.get("date", ""),
@@ -529,14 +654,67 @@ def update_booking(booking_id):
             "userId": data.get("userId", ""),
             "email": data.get("email", ""),
             "purpose": data.get("purpose", ""),
-            # roomId is included for completeness, but you may want to restrict editing this
-            "roomId": data.get("roomId", "")
+            "roomId": data.get("roomId", ""),
         }
         doc_ref.update(update_fields)
+
+        # --- Send "updated" email ---
+        try:
+            to_email = (update_fields.get("email") or booking_email).strip().lower()
+            if to_email:
+                # Merge existing + updated for email display
+                merged = {**existing_booking, **update_fields}
+
+                user_name = merged.get("userId") or merged.get("name") or "Guest"
+                room_name = merged.get("roomId") or "Unknown Room"
+                date_val = merged.get("date") or ""
+                time_val = merged.get("timeRange") or merged.get("time") or ""
+                repeat_rule = merged.get("repeat") or None
+                purpose = merged.get("purpose") or None
+
+                if user_role == "admin":
+                    actor = "an administrator"
+                else:
+                    actor = "you"
+
+                manage_url = f"{SITE_URL}/mybookings?bookingId={booking_id}"
+                site_url = SITE_URL
+                current_year = datetime.now().year
+
+                html = render_template(
+                    "booking_confirmation_email.html",
+                    user_name=user_name,
+                    reservation_id=booking_id,
+                    room_name=room_name,
+                    date=date_val,
+                    time_range=time_val,
+                    repeat_rule=repeat_rule,
+                    purpose=purpose,
+                    manage_url=manage_url,
+                    site_url=site_url,
+                    current_year=current_year,
+                    email_status="updated",
+                    actor=actor,
+                )
+
+                subject = f"Reservation Updated – {room_name} on {date_val}"
+                text_fallback = (
+                    f"Your reservation has been updated by {actor}.\n"
+                    f"Reservation ID: {booking_id}\n"
+                    f"Room: {room_name}\n"
+                    f"Date: {date_val}\n"
+                    f"Time: {time_val}\n"
+                )
+
+                send_html_email(to_email, subject, html, text_fallback=text_fallback)
+        except Exception as e:
+            print(f"[update_booking] Update email failed for {booking_id}: {e}")
+
         return jsonify({"success": True}), 200
     except Exception as e:
         print(f"[update_booking] Error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 # ----------------------------
 # API endpoint to get available rooms for dropdown
@@ -870,6 +1048,24 @@ def bookings():
         print(f"[bookings] Error fetching bookings: {e}")
         return jsonify({"bookings": [], "error": str(e)}), 500
 
+@app.post("/admin/cleanup-bookings")
+def admin_cleanup_bookings():
+    """
+    Admin-only endpoint to delete bookings and pending bookings older than 30 days.
+    """
+    session_data = get_current_session_data()
+    role = (session_data.get("role") if session_data else "student") or "student"
+    role = str(role).strip().lower()
+
+    if role != "admin":
+        return jsonify({"success": False, "error": "forbidden"}), 403
+
+    try:
+        deleted = cleanup_bookings_older_than(days=30)
+        return jsonify({"success": True, "deleted": deleted})
+    except Exception as e:
+        print(f"[admin_cleanup_bookings] Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 # ----------------------------
 # Email confirmation endpoint
@@ -1215,6 +1411,7 @@ def auth_verify_code():
         return jsonify({"success": False, "error": "invalid_or_expired_code"}), 400
 
     doc_ref.delete()
+    
     print(f"Code verified for {email}")
 
     user_doc = db.collection("users").document(email)
@@ -1373,6 +1570,65 @@ def cleanup_sessions_older_than(days=30):
                 deleted += 1
 
     print(f"[session_cleanup] Deleted {deleted} sessions older than {days} days.")
+    return deleted
+
+def cleanup_bookings_older_than(days=30):
+    """
+    Delete bookings and pending_bookings that are older than `days`
+    based on the booking's date (preferred) or createdAt timestamp.
+    """
+    if db is None:
+        raise RuntimeError("Firestore is not initialized.")
+
+    cutoff_date = datetime.utcnow().date() - timedelta(days=days)
+    deleted = 0
+
+    collections = ["bookings", "pending_bookings"]
+
+    for collection_name in collections:
+        try:
+            # Stream all docs from the collection
+            docs = db.collection(collection_name).stream()
+            for doc in docs:
+                data = doc.to_dict() or {}
+                delete_this = False
+
+                # --- Prefer comparing the booking's "date" field ---
+                raw_date = data.get("date")
+                parsed_date = None
+
+                if raw_date:
+                    # Try a couple common formats you use
+                    for fmt in ("%m/%d/%Y", "%Y-%m-%d"):
+                        try:
+                            parsed_date = datetime.strptime(raw_date, fmt).date()
+                            break
+                        except ValueError:
+                            continue
+
+                if parsed_date and parsed_date < cutoff_date:
+                    delete_this = True
+
+                # --- Fallback to createdAt if booking date is missing/invalid ---
+                if not delete_this:
+                    created_at = data.get("createdAt")
+                    created_dt = None
+                    if hasattr(created_at, "to_datetime"):
+                        created_dt = created_at.to_datetime()
+                    elif isinstance(created_at, datetime):
+                        created_dt = created_at
+                    if created_dt and created_dt.date() < cutoff_date:
+                        delete_this = True
+
+                if delete_this:
+                    print(f"[booking_cleanup] Deleting {collection_name}/{doc.id}")
+                    doc.reference.delete()
+                    deleted += 1
+
+        except Exception as e:
+            print(f"[booking_cleanup] Error cleaning {collection_name}: {e}")
+
+    print(f"[booking_cleanup] Deleted {deleted} bookings older than {days} days.")
     return deleted
 
 
