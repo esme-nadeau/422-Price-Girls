@@ -91,6 +91,18 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
                 loadTabContent(target, url, init);
+
+                // When switching tabs, ensure any floating instruction cards
+                // from Map/Calendar are closed so they don't linger on
+                // unrelated pages.
+                if (target !== 'nav-map') {
+                    const mapInstr = document.getElementById('mapInstructionsPanel');
+                    if (mapInstr) mapInstr.classList.add('d-none');
+                }
+                if (target !== 'nav-calendar') {
+                    const calInstr = document.getElementById('calendarInstructionsPanel');
+                    if (calInstr) calInstr.classList.add('d-none');
+                }
             });
         }
     });
