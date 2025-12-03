@@ -793,8 +793,8 @@ function setRoomPhotoByDigits(digits) {
       }
     }
 
-    // Wire instructions toggle (Calendar view)
-    const instrBtn = document.getElementById('calendarInstructionsToggle');
+    // Wire instructions toggle (Calendar view) - using header button
+    const instrBtn = document.getElementById('headerInstructionsToggle');
     const instrPanel = document.getElementById('calendarInstructionsPanel');
     const instrClose = document.getElementById('calendarInstructionsClose');
 
@@ -805,9 +805,19 @@ function setRoomPhotoByDigits(digits) {
       document.body.appendChild(instrPanel);
     }
 
-    if (instrBtn && instrPanel) {
-      instrBtn.addEventListener('click', () => {
-        // Same behavior as Map: just show/hide fixed bottom-right card
+    // Remove any existing click handlers to prevent duplicates
+    if (instrBtn) {
+      const newBtn = instrBtn.cloneNode(true);
+      instrBtn.parentNode.replaceChild(newBtn, instrBtn);
+    }
+    
+    const newInstrBtn = document.getElementById('headerInstructionsToggle');
+    if (newInstrBtn && instrPanel) {
+      newInstrBtn.addEventListener('click', () => {
+        // Hide map panel if it's visible
+        const mapPanel = document.getElementById('mapInstructionsPanel');
+        if (mapPanel) mapPanel.classList.add('d-none');
+        // Toggle calendar panel
         instrPanel.classList.toggle('d-none');
       });
     }

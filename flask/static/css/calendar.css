@@ -2,13 +2,6 @@
    Calendar page
 ============================== */
 
-/* Slight global scale on the Calendar tab so more fits on screen,
-   while keeping proportions between elements the same. */
-.calendar-page {
-  transform: scale(0.9);
-  transform-origin: top center;
-}
-
 /* Calendar page layout overrides (make grid take ~2/3 width) */
 .calendar-page #weekCalendarCard { max-width: none !important; width: 100%; }
 .calendar-page .booking-widget { max-width: none; }

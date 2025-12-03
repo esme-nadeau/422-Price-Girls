@@ -92,6 +92,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 loadTabContent(target, url, init);
 
+                // Show/hide instructions button in header based on active tab
+                const headerInstrBtn = document.getElementById('headerInstructionsToggle');
+                if (headerInstrBtn) {
+                    if (target === 'nav-map' || target === 'nav-calendar') {
+                        headerInstrBtn.classList.remove('d-none');
+                    } else {
+                        headerInstrBtn.classList.add('d-none');
+                    }
+                }
+
                 // When switching tabs, ensure any floating instruction cards
                 // from Map/Calendar are closed so they don't linger on
                 // unrelated pages.

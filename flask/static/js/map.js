@@ -420,12 +420,24 @@ window.initMap = function() {
     });
   }
   
-  // Wire instructions toggle (Map view)
-  const instrBtn = document.getElementById('mapInstructionsToggle');
+  // Wire instructions toggle (Map view) - using header button
+  const instrBtn = document.getElementById('headerInstructionsToggle');
   const instrPanel = document.getElementById('mapInstructionsPanel');
   const instrClose = document.getElementById('mapInstructionsClose');
-  if (instrBtn && instrPanel) {
-    instrBtn.addEventListener('click', () => {
+  
+  // Remove any existing click handlers to prevent duplicates
+  if (instrBtn) {
+    const newBtn = instrBtn.cloneNode(true);
+    instrBtn.parentNode.replaceChild(newBtn, instrBtn);
+  }
+  
+  const newInstrBtn = document.getElementById('headerInstructionsToggle');
+  if (newInstrBtn && instrPanel) {
+    newInstrBtn.addEventListener('click', () => {
+      // Hide calendar panel if it's visible
+      const calPanel = document.getElementById('calendarInstructionsPanel');
+      if (calPanel) calPanel.classList.add('d-none');
+      // Toggle map panel
       instrPanel.classList.toggle('d-none');
     });
   }

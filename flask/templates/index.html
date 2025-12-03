@@ -39,24 +39,30 @@
     <nav>
       <div class="nav nav-tabs" id="nav-tab" role="tablist">
 
-        <!-- moved to first position AND stays active -->
-        <button class="nav-link active" id="nav-allbookings-tab" data-bs-toggle="tab"
-          data-bs-target="#nav-allbookings" type="button" role="tab"
-          aria-controls="nav-allbookings" aria-selected="true">All Bookings</button>
+        <div>
+          <!-- moved to first position AND stays active -->
+          <button class="nav-link active" id="nav-allbookings-tab" data-bs-toggle="tab"
+            data-bs-target="#nav-allbookings" type="button" role="tab"
+            aria-controls="nav-allbookings" aria-selected="true">All Bookings</button>
 
-        <button class="nav-link" id="nav-map-tab" data-bs-toggle="tab" data-bs-target="#nav-map"
-          type="button" role="tab" aria-controls="nav-map" aria-selected="false">Map</button>
+          <button class="nav-link" id="nav-map-tab" data-bs-toggle="tab" data-bs-target="#nav-map"
+            type="button" role="tab" aria-controls="nav-map" aria-selected="false">Map</button>
 
-        <button class="nav-link" id="nav-calendar-tab" data-bs-toggle="tab" data-bs-target="#nav-calendar"
-          type="button" role="tab" aria-controls="nav-calendar" aria-selected="false">Calendar</button>
+          <button class="nav-link" id="nav-calendar-tab" data-bs-toggle="tab" data-bs-target="#nav-calendar"
+            type="button" role="tab" aria-controls="nav-calendar" aria-selected="false">Calendar</button>
 
-        <button class="nav-link" id="nav-bookings-tab" data-bs-toggle="tab" data-bs-target="#nav-bookings"
-          type="button" role="tab" aria-controls="nav-bookings" aria-selected="false">My Bookings</button>
+          <button class="nav-link" id="nav-bookings-tab" data-bs-toggle="tab" data-bs-target="#nav-bookings"
+            type="button" role="tab" aria-controls="nav-bookings" aria-selected="false">My Bookings</button>
 
-        {% if user_role == 'admin' %}
-        <button class="nav-link" id="nav-admin-tab" data-bs-toggle="tab" data-bs-target="#nav-admin"
-          type="button" role="tab" aria-controls="nav-admin" aria-selected="false">Admin Tools</button>
-        {% endif %}
+          {% if user_role == 'admin' %}
+          <button class="nav-link" id="nav-admin-tab" data-bs-toggle="tab" data-bs-target="#nav-admin"
+            type="button" role="tab" aria-controls="nav-admin" aria-selected="false">Admin Tools</button>
+          {% endif %}
+        </div>
+
+        <button id="headerInstructionsToggle" class="btn btn-outline-success btn-sm instructions-toggle d-none" type="button">
+          <i class="bi bi-info-circle-fill"></i> Instructions
+        </button>
 
       </div>
     </nav>

@@ -1,13 +1,5 @@
-/* @font-face {
-  font-family: 'UnitedSerifBold';
-  src: url('/static/UnitedSerifReg-Bold.otf') format('opentype');
-  font-weight: normal;
-  font-style: normal;
-} */
-
 body {
     margin: 0;
-    /* font-family: 'UnitedSerifBold', sans-serif !important; */
     background-color: #ffffff;
     display: flex;
     flex-direction: column;
@@ -64,16 +56,27 @@ footer {
   box-sizing: border-box;
 }
 
-/* Reusable styling for instructions buttons and cards on Map/Calendar */
+/* Reusable styling for instructions buttons and cards */
 .instructions-toggle {
-  border-color: #6FAD6F;
-  background-color: #6FAD6F;
-  color: #ffffff;
+  border-color: #f2fbf3;
+  background-color: #f2fbf3;
+  color: #548754;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: none;
+  outline: none;
 }
 .instructions-toggle:hover {
-  background-color: #548754;
-  border-color: #548754;
-  color: #ffffff;
+  background-color: white;
+  border-color: white;
+  color: #6FAD6F;
+}
+
+.instructions-toggle:active {
+  background-color: white !important;
+  border-color: white !important;
+  color: #6FAD6F !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 .instructions-card {
   position: fixed;
@@ -104,7 +107,15 @@ address {
     position: relative;
     margin-top: -2.5rem;
     padding-left: 6px !important;
+    padding-right: 20px;
     z-index: 2;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-tabs > div:first-child {
+    display: flex;
 }
 
 .nav-tabs .nav-link {
@@ -114,11 +125,15 @@ address {
 
 .nav-tabs .nav-link:hover {
     color: #6FAD6F;
-    background-color: #f2f2f2;
+    background-color: #f2fbf3;
 }
 
 .nav-tabs .nav-link.active {
     color: #6FAD6F !important;
     font-weight: bold !important;
     background-color: #f9f9f9; 
+}
+
+.bi-info-circle-fill {
+  margin-right: 4px;
 }
