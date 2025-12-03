@@ -44,6 +44,430 @@ function showMessage(msg, isError = false) {
 
     // Grab booking cards
     const bookingCards = document.querySelectorAll('.booking-card');
+        // Elements for the info card in the middle column (admin.html)
+        const bookingInfoCard = document.getElementById("bookingInfoCard");
+        const confirmBtn = document.getElementById("confirmBookingBtn");
+        const denyBtn = document.getElementById("denyBookingBtn");
+    
+        const dateField = bookingForm.querySelector("#date");
+        const timeField = bookingForm.querySelector("#time");
+        const repeatField = bookingForm.querySelector("#repeat");
+        const nameField = bookingForm.querySelector("#name");
+        const emailField = bookingForm.querySelector("#email");
+        const purposeField = bookingForm.querySelector("#purpose");
+        const roomIdField = bookingForm.querySelector("#roomId");
+    
+        function setField(el, value) {
+          if (!el) return;
+          const v = value || "";
+          // If it's an <input> or <select>, use .value, otherwise use .textContent
+          if ("value" in el && el.tagName !== "SPAN" && el.tagName !== "DIV") {
+            el.value = v;
+          } else {
+            el.textContent = v;
+          }
+        }
+    
+        function clearActiveCards() {
+          document
+            .querySelectorAll(".booking-card.active")
+            .forEach((card) => card.classList.remove("active"));
+        }
+    
+        function getBookingFromCard(card) {
+          let booking = {};
+          const raw = card.getAttribute("data-booking");
+    
+          if (raw) {
+            try {
+              booking = JSON.parse(raw);
+            } catch (e) {
+              console.error("[admin.js] Failed to parse data-booking JSON", e);
+            }
+          }
+    
+          booking.id = booking.id || card.dataset.id || "";
+          booking.date = booking.date || card.dataset.date || "";
+          booking.time =
+            booking.time || booking.timeRange || card.dataset.time || "";
+          booking.repeat = booking.repeat || card.dataset.repeat || "Never";
+          booking.name =
+            booking.name || booking.userId || card.dataset.name || "";
+          booking.email =
+            booking.email || booking.userEmail || card.dataset.email || "";
+          booking.purpose = booking.purpose || card.dataset.purpose || "";
+          booking.roomId = booking.roomId || card.dataset.roomid || "";
+    
+          return booking;
+        }
+    
+        function populateBookingInfo(booking) {
+          if (!bookingInfoCard) return;
+    
+          // Save ID for approve/deny
+          bookingForm.dataset.id = booking.id || "";
+    
+          // Populate <span> fields for non-editable display (matching mybookings styling)
+          const setSpan = (id, value) => {
+            const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
+            if (el) el.textContent = value || '';
+          };
+    
+          setSpan('date', booking.date || '');
+          setSpan('time', booking.time || booking.timeRange || '');
+          setSpan('repeat', booking.repeat || 'Never');
+          setSpan('name', booking.name || booking.userId || '');
+          setSpan('email', booking.email || booking.userEmail || '');
+          setSpan('purpose', booking.purpose || '');
+          setSpan('roomId', booking.roomId || '');
+    
+          bookingInfoCard.style.display = "block";
+        }
+    
+        // Attach click listeners to all pending booking cards
+        bookingCards.forEach((card) => {
+          // Skip if already has click handler
+          if (card.dataset.adminClickBound === 'true') {
+            return;
+          }
+          card.dataset.adminClickBound = 'true';
+          
+          card.addEventListener("click", () => {
+            if (!bookingInfoCard) return;
+            const booking = getBookingFromCard(card);
+            console.log("Admin: Clicked booking", card.dataset.id);
+            
+            const currentBookingId = bookingForm.dataset.id;
+            const clickedBookingId = card.dataset.id;
+            
+            // Check if the same booking is clicked again
+            if (currentBookingId === clickedBookingId && bookingInfoCard && bookingInfoCard.style.display === 'block') {
+              // Hide the booking information card
+              bookingInfoCard.style.display = 'none';
+              // Remove selection highlight
+              document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+              // Clear the form ID
+              bookingForm.dataset.id = '';
+              console.log('Admin: Booking card hidden');
+              return;
+            }
+            
+            // Highlight selected
+            document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            populateBookingInfo(booking);
+          });
+        });
+    
+        // Helper for POST JSON used by Approve / Deny
+        async function postJSON(url) {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          });
+    
+          let data = {};
+          try {
+            data = await res.json();
+          } catch (e) {
+            // ignore parse errors
+          }
+    
+          if (!res.ok || data.success === false || data.ok === false) {
+            const msg =
+              data.error || data.message || `Request failed: ${res.status}`;
+            throw new Error(msg);
+          }
+    
+          return data;
+        }
+    
+        // Helper to check if bookings list is empty and show message
+        function checkAndShowEmptyMessage() {
+          const bookingsList = document.getElementById('bookingsList');
+          if (!bookingsList) return;
+          
+          const remainingCards = bookingsList.querySelectorAll('.booking-card');
+          if (remainingCards.length === 0) {
+            bookingsList.innerHTML = '<div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">No bookings to approve.</div>';
+          }
+        }
+
+        // Approve (Confirm Reservation) for pending bookings
+        if (confirmBtn && !confirmBtn.dataset.bound) {
+          confirmBtn.dataset.bound = "true";
+          confirmBtn.addEventListener("click", async () => {
+            const id = bookingForm.dataset.id;
+            if (!id) {
+              alert("Select a booking first.");
+              return;
+            }
+    
+            try {
+              console.log(`Admin: approving pending booking ${id}`);
+              await postJSON(
+                `/api/pending-bookings/${encodeURIComponent(id)}/approve`
+              );
+    
+              const selector = `.booking-card[data-id="${CSS.escape(id)}"]`;
+              const card = document.querySelector(selector);
+              if (card) card.remove();
+    
+              if (bookingInfoCard) bookingInfoCard.style.display = "none";
+              bookingForm.dataset.id = "";
+              
+              // Check if list is now empty and show message
+              checkAndShowEmptyMessage();
+    
+              alert("Booking approved and moved to confirmed bookings.");
+            } catch (err) {
+              console.error("Error approving pending booking:", err);
+              alert(`Error approving booking: ${err.message}`);
+            }
+          });
+        }
+    
+        // Deny pending booking
+        if (denyBtn && !denyBtn.dataset.bound) {
+          denyBtn.dataset.bound = "true";
+          denyBtn.addEventListener("click", async () => {
+            const id = bookingForm.dataset.id;
+            if (!id) {
+              alert("Select a booking first.");
+              return;
+            }
+    
+            try {
+              console.log(`Admin: denying pending booking ${id}`);
+              await postJSON(
+                `/api/pending-bookings/${encodeURIComponent(id)}/deny`
+              );
+    
+              const selector = `.booking-card[data-id="${CSS.escape(id)}"]`;
+              const card = document.querySelector(selector);
+              if (card) card.remove();
+    
+              if (bookingInfoCard) bookingInfoCard.style.display = "none";
+              bookingForm.dataset.id = "";
+              
+              // Check if list is now empty and show message
+              checkAndShowEmptyMessage();
+    
+              alert("Booking denied and removed.");
+            } catch (err) {
+              console.error("Error denying pending booking:", err);
+              alert(`Error denying booking: ${err.message}`);
+            }
+          });
+        }
+    
+
+    function setField(el, value) {
+      if (!el) return;
+      const v = value || "";
+      // If it's an <input> or <select>, use .value, otherwise use .textContent
+      if ("value" in el && el.tagName !== "SPAN" && el.tagName !== "DIV") {
+        el.value = v;
+      } else {
+        el.textContent = v;
+      }
+    }
+
+    function clearActiveCards() {
+      document
+        .querySelectorAll(".booking-card.active")
+        .forEach((card) => card.classList.remove("active"));
+    }
+
+    function getBookingFromCard(card) {
+      let booking = {};
+      const raw = card.getAttribute("data-booking");
+
+      if (raw) {
+        try {
+          booking = JSON.parse(raw);
+        } catch (e) {
+          console.error("[admin.js] Failed to parse data-booking JSON", e);
+        }
+      }
+
+      booking.id = booking.id || card.dataset.id || "";
+      booking.date = booking.date || card.dataset.date || "";
+      booking.time =
+        booking.time || booking.timeRange || card.dataset.time || "";
+      booking.repeat = booking.repeat || card.dataset.repeat || "Never";
+      booking.name =
+        booking.name || booking.userId || card.dataset.name || "";
+      booking.email =
+        booking.email || booking.userEmail || card.dataset.email || "";
+      booking.purpose = booking.purpose || card.dataset.purpose || "";
+      booking.roomId = booking.roomId || card.dataset.roomid || "";
+
+      return booking;
+    }
+
+    function populateBookingInfo(booking) {
+      if (!bookingInfoCard) return;
+
+      // Save ID for approve/deny
+      bookingForm.dataset.id = booking.id || "";
+
+      // Populate <span> fields for non-editable display (matching mybookings styling)
+      const setSpan = (id, value) => {
+        const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
+        if (el) el.textContent = value || '';
+      };
+
+      setSpan('date', booking.date || '');
+      setSpan('time', booking.time || booking.timeRange || '');
+      setSpan('repeat', booking.repeat || 'Never');
+      setSpan('name', booking.name || booking.userId || '');
+      setSpan('email', booking.email || booking.userEmail || '');
+      setSpan('purpose', booking.purpose || '');
+      setSpan('roomId', booking.roomId || '');
+
+      bookingInfoCard.style.display = "block";
+    }
+
+    // Attach click listeners to all pending booking cards
+    bookingCards.forEach((card) => {
+      // Skip if already has click handler
+      if (card.dataset.adminClickBound === 'true') {
+        return;
+      }
+      card.dataset.adminClickBound = 'true';
+      
+      card.addEventListener("click", () => {
+        if (!bookingInfoCard) return;
+        const booking = getBookingFromCard(card);
+        console.log("Admin: Clicked booking", card.dataset.id);
+        
+        const currentBookingId = bookingForm.dataset.id;
+        const clickedBookingId = card.dataset.id;
+        
+        // Check if the same booking is clicked again
+        if (currentBookingId === clickedBookingId && bookingInfoCard && bookingInfoCard.style.display === 'block') {
+          // Hide the booking information card
+          bookingInfoCard.style.display = 'none';
+          // Remove selection highlight
+          document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+          // Clear the form ID
+          bookingForm.dataset.id = '';
+          console.log('Admin: Booking card hidden');
+          return;
+        }
+        
+        // Highlight selected
+        document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+        populateBookingInfo(booking);
+      });
+    });
+
+    // Helper for POST JSON used by Approve / Deny
+    async function postJSON(url) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (e) {
+        // ignore parse errors
+      }
+
+      if (!res.ok || data.success === false || data.ok === false) {
+        const msg =
+          data.error || data.message || `Request failed: ${res.status}`;
+        throw new Error(msg);
+      }
+
+      return data;
+    }
+
+    // Helper to check if bookings list is empty and show message
+    function checkAndShowEmptyMessage() {
+      const bookingsList = document.getElementById('bookingsList');
+      if (!bookingsList) return;
+      
+      const remainingCards = bookingsList.querySelectorAll('.booking-card');
+      if (remainingCards.length === 0) {
+        bookingsList.innerHTML = '<div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">No bookings to approve.</div>';
+      }
+    }
+
+    // Approve (Confirm Reservation) for pending bookings
+    if (confirmBtn && !confirmBtn.dataset.bound) {
+      confirmBtn.dataset.bound = "true";
+      confirmBtn.addEventListener("click", async () => {
+        const id = bookingForm.dataset.id;
+        if (!id) {
+          alert("Select a booking first.");
+          return;
+        }
+
+        try {
+          console.log(`Admin: approving pending booking ${id}`);
+          await postJSON(
+            `/api/pending-bookings/${encodeURIComponent(id)}/approve`
+          );
+
+          const selector = `.booking-card[data-id="${CSS.escape(id)}"]`;
+          const card = document.querySelector(selector);
+          if (card) card.remove();
+
+          if (bookingInfoCard) bookingInfoCard.style.display = "none";
+          bookingForm.dataset.id = "";
+          
+          // Check if list is now empty and show message
+          checkAndShowEmptyMessage();
+
+          alert("Booking approved and moved to confirmed bookings.");
+        } catch (err) {
+          console.error("Error approving pending booking:", err);
+          alert(`Error approving booking: ${err.message}`);
+        }
+      });
+    }
+
+    // Deny pending booking
+    if (denyBtn && !denyBtn.dataset.bound) {
+      denyBtn.dataset.bound = "true";
+      denyBtn.addEventListener("click", async () => {
+        const id = bookingForm.dataset.id;
+        if (!id) {
+          alert("Select a booking first.");
+          return;
+        }
+
+        try {
+          console.log(`Admin: denying pending booking ${id}`);
+          await postJSON(
+            `/api/pending-bookings/${encodeURIComponent(id)}/deny`
+          );
+
+          const selector = `.booking-card[data-id="${CSS.escape(id)}"]`;
+          const card = document.querySelector(selector);
+          if (card) card.remove();
+
+          if (bookingInfoCard) bookingInfoCard.style.display = "none";
+          bookingForm.dataset.id = "";
+          
+          // Check if list is now empty and show message
+          checkAndShowEmptyMessage();
+
+          alert("Booking denied and removed.");
+        } catch (err) {
+          console.error("Error denying pending booking:", err);
+          alert(`Error denying booking: ${err.message}`);
+        }
+      });
+    }
+
 
   // Helper to switch between display and edit mode (scoped to admin)
   function setBookingFormEditable(editable) {
@@ -1362,34 +1786,6 @@ if (document.readyState !== 'loading') {
 }
 
 /* ==============================
-    Account Management - User Search
-============================== */
-document.addEventListener("DOMContentLoaded", function () {
-    const userSearchInput = document.getElementById("userSearch");
-    const usersList = document.getElementById("usersList");
-
-    userSearchInput.addEventListener("input", function () {
-        const searchValue = userSearchInput.value.toLowerCase().trim();
-
-        // Get all user items
-        const userItems = usersList.querySelectorAll("div.d-flex");
-
-        userItems.forEach(item => {
-            const name = item.querySelector(".fw-semibold")?.textContent.toLowerCase() || "";
-            const email = item.querySelector(".small.text-muted")?.textContent.toLowerCase() || "";
-
-            // Match name OR email
-            if (name.includes(searchValue) || email.includes(searchValue)) {
-                item.style.display = "flex";  // show it
-            } else {
-                item.style.display = "none";  // hide it
-            }
-        });
-    });
-});
-
-
-/* ==============================
     Admin Page Booking Card Clicks (Same as MyBookings)
 ============================== */
 (function() {
@@ -1526,3 +1922,30 @@ document.addEventListener("DOMContentLoaded", function () {
     observer.observe(bookingsList, { childList: true, subtree: true });
   }
 })();
+
+/* ==============================
+    Account Management - User Search
+============================== */
+document.addEventListener("DOMContentLoaded", function () {
+    const userSearchInput = document.getElementById("userSearch");
+    const usersList = document.getElementById("usersList");
+
+    userSearchInput.addEventListener("input", function () {
+        const searchValue = userSearchInput.value.toLowerCase().trim();
+
+        // Get all user items
+        const userItems = usersList.querySelectorAll("div.d-flex");
+
+        userItems.forEach(item => {
+            const name = item.querySelector(".fw-semibold")?.textContent.toLowerCase() || "";
+            const email = item.querySelector(".small.text-muted")?.textContent.toLowerCase() || "";
+
+            // Match name OR email
+            if (name.includes(searchValue) || email.includes(searchValue)) {
+                item.style.display = "flex";  // show it
+            } else {
+                item.style.display = "none";  // hide it
+            }
+        });
+    });
+});
