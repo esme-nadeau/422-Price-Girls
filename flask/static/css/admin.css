@@ -54,3 +54,15 @@
   font-family: 'EB Garamond', serif;
   font-weight: 500;
 }
+
+.btn-outline-red {
+  border-color: #F28380;
+  color: #F28380;
+  background-color: transparent;
+}
+
+.btn-outline-red:hover {
+  background-color: #F28380;
+  color: #222;
+  border-color: #F28380;
+}

@@ -1139,6 +1139,210 @@ async function initAdminTools() {
   }
 
   await loadRooms();
+
+  /* ==============================
+      Closure Management
+  ============================== */
+  const closureListWrap = document.getElementById("closureList");
+  const addClosureBtn = document.getElementById("addClosureBtn");
+
+  const inputClosureName = document.getElementById("newClosureName");
+  const inputClosureDate = document.getElementById("newClosureDate");
+  const inputClosureDesc = document.getElementById("newClosureDescription");
+  const closuresMessage = document.getElementById("closuresMessage");
+
+  const addClosureModalEl = document.getElementById("addClosureModal");
+
+  if (!closureListWrap) {
+    console.warn("Closure list wrapper not found");
+  } else {
+    function showClosureMessage(msg, isError = false) {
+      if (!closuresMessage) return;
+      closuresMessage.textContent = msg || '';
+      if (isError) {
+        closuresMessage.style.color = '#F28380';
+        closuresMessage.classList.remove('text-muted');
+      } else {
+        closuresMessage.style.color = '#666';
+        closuresMessage.classList.add('text-muted');
+      }
+    }
+
+    function renderClosures(closures) {
+      closureListWrap.innerHTML = "";
+
+      if (!closures || closures.length === 0) {
+        closureListWrap.innerHTML =
+          '<div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">No closures found.</div>';
+        return;
+      }
+
+      closures.forEach((c) => {
+        const row = document.createElement("div");
+        row.className =
+          "d-flex align-items-start justify-content-between mb-2 p-2 rounded";
+        row.style.border = "1px solid rgba(0,0,0,0.05)";
+
+        const leftSide = document.createElement("div");
+        leftSide.className = "flex-grow-1 text-start";
+        leftSide.innerHTML = `
+          ${c.date ? `<div class="fw-semibold">${escapeHtml(c.date)}</div>` : ''}
+          <div class="small text-muted">${escapeHtml(c.name || c.id)}</div>
+        `;
+
+        const actions = document.createElement("div");
+        actions.className = "d-flex flex-column align-items-end gap-1";
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn btn-sm btn-outline-red closure-delete-btn";
+        deleteBtn.innerHTML = `<i class="bi bi-trash me-1"></i>Delete`;
+        deleteBtn.dataset.id = c.id;
+        deleteBtn.dataset.name = c.name || c.id;
+        deleteBtn.dataset.date = c.date || '';
+
+        actions.appendChild(deleteBtn);
+        row.appendChild(leftSide);
+        row.appendChild(actions);
+        closureListWrap.appendChild(row);
+      });
+    }
+
+    async function loadClosures() {
+      showClosureMessage("Loading closures...");
+      try {
+        const resp = await fetch("/api/closures");
+        const data = resp.ok ? await resp.json() : null;
+
+        if (!resp.ok) {
+          showClosureMessage(data?.error || "Failed to load closures", true);
+          renderClosures([]);
+          return;
+        }
+
+        const closures = data.closures || [];
+        // Sort closures by date (most recent first)
+        closures.sort((a, b) => {
+          const dateA = a.date || '';
+          const dateB = b.date || '';
+          return dateB.localeCompare(dateA);
+        });
+
+        renderClosures(closures);
+        showClosureMessage("");
+      } catch (err) {
+        console.error("loadClosures error:", err);
+        showClosureMessage("Failed to load closures (network error)", true);
+        renderClosures([]);
+      }
+    }
+
+    if (addClosureBtn) {
+      addClosureBtn.addEventListener("click", async () => {
+        const name = inputClosureName?.value.trim();
+        const date = inputClosureDate?.value.trim();
+        const description = inputClosureDesc?.value.trim();
+
+        if (!name) {
+          showClosureMessage("Closure name is required", true);
+          return;
+        }
+
+        if (!date) {
+          showClosureMessage("Date is required", true);
+          return;
+        }
+
+        const payload = { name, date, description };
+
+        try {
+          const resp = await fetch("/api/closures", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await resp.json().catch(() => ({}));
+
+          if (!resp.ok) {
+            showClosureMessage(data.error || "Failed to add closure", true);
+            return;
+          }
+
+          showClosureMessage("Closure added");
+
+          // Reset inputs
+          inputClosureName.value = "";
+          inputClosureDate.value = "";
+          inputClosureDesc.value = "";
+
+          // Hide modal
+          const modalInstance = bootstrap.Modal.getInstance(addClosureModalEl);
+          if (modalInstance) modalInstance.hide();
+
+          await loadClosures();
+        } catch (err) {
+          console.error("addClosure error:", err);
+          showClosureMessage("Failed to add closure (network error)", true);
+        }
+      });
+    }
+
+    // Handle delete button clicks
+    closureListWrap.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".closure-delete-btn");
+      if (!btn) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const closureId = btn.dataset.id;
+      const closureName = btn.dataset.name || closureId;
+      const closureDate = btn.dataset.date || '';
+
+      if (!closureId) {
+        console.warn("Delete button clicked but missing data-id", btn);
+        return;
+      }
+
+      // Build display text - use date if available, otherwise use name
+      const displayText = closureDate ? `${closureDate} (${closureName})` : closureName;
+      const ok = confirm(
+        `Are you sure you want to delete this closure?\n\nClosure: ${displayText}\nThis action cannot be undone.`
+      );
+      if (!ok) return;
+
+      try {
+        const resp = await fetch(`/api/closures/${encodeURIComponent(closureId)}`, {
+          method: "DELETE",
+        });
+
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+          alert(data.error || "Failed to delete closure");
+          return;
+        }
+
+        await loadClosures();
+      } catch (err) {
+        console.error("deleteClosure error:", err);
+        alert("Failed to delete closure (network error)");
+      }
+    });
+
+    if (addClosureModalEl) {
+      addClosureModalEl.addEventListener("show.bs.modal", () => {
+        if (inputClosureName) inputClosureName.value = "";
+        if (inputClosureDate) inputClosureDate.value = "";
+        if (inputClosureDesc) inputClosureDesc.value = "";
+        showClosureMessage("");
+      });
+    }
+
+    moveModalToBody(document.getElementById('addClosureModal'));
+
+    await loadClosures();
+  }
 }
 
 // Expose initializer so the dynamic tab loader can call it after injecting admin HTML
