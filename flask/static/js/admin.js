@@ -44,6 +44,340 @@ function showMessage(msg, isError = false) {
 
     // Grab booking cards
     const bookingCards = document.querySelectorAll('.booking-card');
+        // Elements for the info card in the middle column (admin.html)
+        const bookingInfoCard = document.getElementById("bookingInfoCard");
+        const confirmBtn = document.getElementById("confirmBookingBtn");
+        const denyBtn = document.getElementById("denyBookingBtn");
+    
+        const dateField = bookingForm.querySelector("#date");
+        const timeField = bookingForm.querySelector("#time");
+        const repeatField = bookingForm.querySelector("#repeat");
+        const nameField = bookingForm.querySelector("#name");
+        const emailField = bookingForm.querySelector("#email");
+        const purposeField = bookingForm.querySelector("#purpose");
+        const roomIdField = bookingForm.querySelector("#roomId");
+    
+        function setField(el, value) {
+          if (!el) return;
+          const v = value || "";
+          // If it's an <input> or <select>, use .value, otherwise use .textContent
+          if ("value" in el && el.tagName !== "SPAN" && el.tagName !== "DIV") {
+            el.value = v;
+          } else {
+            el.textContent = v;
+          }
+        }
+    
+        function clearActiveCards() {
+          document
+            .querySelectorAll(".booking-card.active")
+            .forEach((card) => card.classList.remove("active"));
+        }
+    
+        function getBookingFromCard(card) {
+          let booking = {};
+          const raw = card.getAttribute("data-booking");
+    
+          if (raw) {
+            try {
+              booking = JSON.parse(raw);
+            } catch (e) {
+              console.error("[admin.js] Failed to parse data-booking JSON", e);
+            }
+          }
+    
+          booking.id = booking.id || card.dataset.id || "";
+          booking.date = booking.date || card.dataset.date || "";
+          booking.time =
+            booking.time || booking.timeRange || card.dataset.time || "";
+          booking.repeat = booking.repeat || card.dataset.repeat || "Never";
+          booking.name =
+            booking.name || booking.userId || card.dataset.name || "";
+          booking.email =
+            booking.email || booking.userEmail || card.dataset.email || "";
+          booking.purpose = booking.purpose || card.dataset.purpose || "";
+          booking.roomId = booking.roomId || card.dataset.roomid || "";
+    
+          return booking;
+        }
+    
+        function populateBookingInfo(booking) {
+          if (!bookingInfoCard) return;
+    
+          // Save ID for approve/deny
+          bookingForm.dataset.id = booking.id || "";
+    
+          setField(dateField, booking.date);
+          setField(timeField, booking.time || booking.timeRange);
+          setField(repeatField, booking.repeat || "Never");
+          setField(nameField, booking.name || booking.userId);
+          setField(emailField, booking.email || booking.userEmail);
+          setField(purposeField, booking.purpose);
+          setField(roomIdField, booking.roomId);
+    
+          bookingInfoCard.style.display = "block";
+        }
+    
+        // Attach click listeners to all pending booking cards
+        bookingCards.forEach((card) => {
+          card.addEventListener("click", () => {
+            if (!bookingInfoCard) return;
+            const booking = getBookingFromCard(card);
+            console.log("Admin: selected booking", booking);
+    
+            clearActiveCards();
+            card.classList.add("active");
+            populateBookingInfo(booking);
+          });
+        });
+    
+        // Helper for POST JSON used by Approve / Deny
+        async function postJSON(url) {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}),
+          });
+    
+          let data = {};
+          try {
+            data = await res.json();
+          } catch (e) {
+            // ignore parse errors
+          }
+    
+          if (!res.ok || data.success === false || data.ok === false) {
+            const msg =
+              data.error || data.message || `Request failed: ${res.status}`;
+            throw new Error(msg);
+          }
+    
+          return data;
+        }
+    
+        // Approve (Confirm Reservation) for pending bookings
+        if (confirmBtn && !confirmBtn.dataset.bound) {
+          confirmBtn.dataset.bound = "true";
+          confirmBtn.addEventListener("click", async () => {
+            const id = bookingForm.dataset.id;
+            if (!id) {
+              alert("Select a booking first.");
+              return;
+            }
+    
+            try {
+              console.log(`Admin: approving pending booking ${id}`);
+              await postJSON(
+                `/api/pending-bookings/${encodeURIComponent(id)}/approve`
+              );
+    
+              const selector = `.booking-card[data-id="${CSS.escape(id)}"]`;
+              const card = document.querySelector(selector);
+              if (card) card.remove();
+    
+              if (bookingInfoCard) bookingInfoCard.style.display = "none";
+              bookingForm.dataset.id = "";
+    
+              alert("Booking approved and moved to confirmed bookings.");
+            } catch (err) {
+              console.error("Error approving pending booking:", err);
+              alert(`Error approving booking: ${err.message}`);
+            }
+          });
+        }
+    
+        // Deny pending booking
+        if (denyBtn && !denyBtn.dataset.bound) {
+          denyBtn.dataset.bound = "true";
+          denyBtn.addEventListener("click", async () => {
+            const id = bookingForm.dataset.id;
+            if (!id) {
+              alert("Select a booking first.");
+              return;
+            }
+    
+            try {
+              console.log(`Admin: denying pending booking ${id}`);
+              await postJSON(
+                `/api/pending-bookings/${encodeURIComponent(id)}/deny`
+              );
+    
+              const selector = `.booking-card[data-id="${CSS.escape(id)}"]`;
+              const card = document.querySelector(selector);
+              if (card) card.remove();
+    
+              if (bookingInfoCard) bookingInfoCard.style.display = "none";
+              bookingForm.dataset.id = "";
+    
+              alert("Booking denied and removed.");
+            } catch (err) {
+              console.error("Error denying pending booking:", err);
+              alert(`Error denying booking: ${err.message}`);
+            }
+          });
+        }
+    
+
+    function setField(el, value) {
+      if (!el) return;
+      const v = value || "";
+      // If it's an <input> or <select>, use .value, otherwise use .textContent
+      if ("value" in el && el.tagName !== "SPAN" && el.tagName !== "DIV") {
+        el.value = v;
+      } else {
+        el.textContent = v;
+      }
+    }
+
+    function clearActiveCards() {
+      document
+        .querySelectorAll(".booking-card.active")
+        .forEach((card) => card.classList.remove("active"));
+    }
+
+    function getBookingFromCard(card) {
+      let booking = {};
+      const raw = card.getAttribute("data-booking");
+
+      if (raw) {
+        try {
+          booking = JSON.parse(raw);
+        } catch (e) {
+          console.error("[admin.js] Failed to parse data-booking JSON", e);
+        }
+      }
+
+      booking.id = booking.id || card.dataset.id || "";
+      booking.date = booking.date || card.dataset.date || "";
+      booking.time =
+        booking.time || booking.timeRange || card.dataset.time || "";
+      booking.repeat = booking.repeat || card.dataset.repeat || "Never";
+      booking.name =
+        booking.name || booking.userId || card.dataset.name || "";
+      booking.email =
+        booking.email || booking.userEmail || card.dataset.email || "";
+      booking.purpose = booking.purpose || card.dataset.purpose || "";
+      booking.roomId = booking.roomId || card.dataset.roomid || "";
+
+      return booking;
+    }
+
+    function populateBookingInfo(booking) {
+      if (!bookingInfoCard) return;
+
+      // Save ID for approve/deny
+      bookingForm.dataset.id = booking.id || "";
+
+      setField(dateField, booking.date);
+      setField(timeField, booking.time || booking.timeRange);
+      setField(repeatField, booking.repeat || "Never");
+      setField(nameField, booking.name || booking.userId);
+      setField(emailField, booking.email || booking.userEmail);
+      setField(purposeField, booking.purpose);
+      setField(roomIdField, booking.roomId);
+
+      bookingInfoCard.style.display = "block";
+    }
+
+    // Attach click listeners to all pending booking cards
+    bookingCards.forEach((card) => {
+      card.addEventListener("click", () => {
+        if (!bookingInfoCard) return;
+        const booking = getBookingFromCard(card);
+        console.log("Admin: selected booking", booking);
+
+        clearActiveCards();
+        card.classList.add("active");
+        populateBookingInfo(booking);
+      });
+    });
+
+    // Helper for POST JSON used by Approve / Deny
+    async function postJSON(url) {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (e) {
+        // ignore parse errors
+      }
+
+      if (!res.ok || data.success === false || data.ok === false) {
+        const msg =
+          data.error || data.message || `Request failed: ${res.status}`;
+        throw new Error(msg);
+      }
+
+      return data;
+    }
+
+    // Approve (Confirm Reservation) for pending bookings
+    if (confirmBtn && !confirmBtn.dataset.bound) {
+      confirmBtn.dataset.bound = "true";
+      confirmBtn.addEventListener("click", async () => {
+        const id = bookingForm.dataset.id;
+        if (!id) {
+          alert("Select a booking first.");
+          return;
+        }
+
+        try {
+          console.log(`Admin: approving pending booking ${id}`);
+          await postJSON(
+            `/api/pending-bookings/${encodeURIComponent(id)}/approve`
+          );
+
+          const selector = `.booking-card[data-id="${CSS.escape(id)}"]`;
+          const card = document.querySelector(selector);
+          if (card) card.remove();
+
+          if (bookingInfoCard) bookingInfoCard.style.display = "none";
+          bookingForm.dataset.id = "";
+
+          alert("Booking approved and moved to confirmed bookings.");
+        } catch (err) {
+          console.error("Error approving pending booking:", err);
+          alert(`Error approving booking: ${err.message}`);
+        }
+      });
+    }
+
+    // Deny pending booking
+    if (denyBtn && !denyBtn.dataset.bound) {
+      denyBtn.dataset.bound = "true";
+      denyBtn.addEventListener("click", async () => {
+        const id = bookingForm.dataset.id;
+        if (!id) {
+          alert("Select a booking first.");
+          return;
+        }
+
+        try {
+          console.log(`Admin: denying pending booking ${id}`);
+          await postJSON(
+            `/api/pending-bookings/${encodeURIComponent(id)}/deny`
+          );
+
+          const selector = `.booking-card[data-id="${CSS.escape(id)}"]`;
+          const card = document.querySelector(selector);
+          if (card) card.remove();
+
+          if (bookingInfoCard) bookingInfoCard.style.display = "none";
+          bookingForm.dataset.id = "";
+
+          alert("Booking denied and removed.");
+        } catch (err) {
+          console.error("Error denying pending booking:", err);
+          alert(`Error denying booking: ${err.message}`);
+        }
+      });
+    }
+
 
   // Helper to switch between display and edit mode (scoped to admin)
   function setBookingFormEditable(editable) {
@@ -1183,142 +1517,3 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
 });
-
-
-/* ==============================
-    Admin Page Booking Card Clicks (Same as MyBookings)
-============================== */
-(function() {
-  // Don't run if on mybookings page
-  if (document.getElementById('mybookings-root')) {
-    return;
-  }
-
-  function setupAdminBookingClicks() {
-    const bookingCards = document.querySelectorAll('.booking-card');
-    const bookingForm = document.getElementById('bookingForm');
-    
-    if (!bookingForm) {
-      return false; // Form not loaded yet
-    }
-
-    if (!bookingCards.length) {
-      console.warn("Admin: No booking cards found");
-      return true;
-    }
-
-    console.log(`Admin: Found ${bookingCards.length} booking cards`);
-
-    // Add click listeners to booking cards (same as mybookings)
-    bookingCards.forEach(card => {
-      // Skip if already has click handler
-      if (card.dataset.adminClickBound === 'true') {
-        return;
-      }
-      card.dataset.adminClickBound = 'true';
-      
-      card.addEventListener('click', () => {
-        console.log(`Admin: Clicked booking ${card.dataset.id}`);
-
-        const bookingInfoCard = document.getElementById('bookingInfoCard');
-        const currentBookingId = bookingForm.dataset.id;
-        const clickedBookingId = card.dataset.id;
-
-        // Check if the same booking is clicked again
-        if (currentBookingId === clickedBookingId && bookingInfoCard && bookingInfoCard.style.display === 'block') {
-          // Hide the booking information card
-          bookingInfoCard.style.display = 'none';
-          // Remove selection highlight
-          document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
-          // Clear the form ID
-          bookingForm.dataset.id = '';
-          console.log('Admin: Booking card hidden');
-          return;
-        }
-
-        // Highlight selected
-        document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-
-        // Parse structured booking data
-        let bookingData = {};
-        try {
-          if (card.dataset.booking) bookingData = JSON.parse(card.dataset.booking);
-        } catch (err) {
-          console.warn('Could not parse data-booking JSON, falling back to data-* attributes', err);
-          bookingData = {};
-        }
-
-        // Save the ID
-        bookingForm.dataset.id = bookingData.id || card.dataset.id || '';
-
-        // Handle the date format safely
-        let dateValue = bookingData.date || card.dataset.date || '';
-        if (dateValue) {
-          const parsed = new Date(dateValue);
-          if (!isNaN(parsed)) dateValue = parsed;
-          else {
-            console.warn('Could not parse date:', bookingData.date || card.dataset.date);
-            dateValue = null;
-          }
-        }
-
-        // Populate <span> fields for non-editable display
-        const setSpan = (id, value) => {
-          const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
-          if (el) el.textContent = value || '';
-        };
-
-        setSpan('date', bookingData.date || card.dataset.date || '');
-        setSpan('time', bookingData.time || card.dataset.time || '');
-        setSpan('repeat', bookingData.repeat || card.dataset.repeat || 'Never');
-        setSpan('name', bookingData.name || bookingData.userId || card.dataset.name || '');
-        setSpan('email', bookingData.email || card.dataset.email || '');
-        setSpan('purpose', bookingData.purpose || card.dataset.purpose || '');
-        setSpan('roomId', bookingData.roomId || card.dataset.roomid || '');
-
-        // Show the booking information card
-        if (bookingInfoCard) {
-          bookingInfoCard.style.display = 'block';
-        }
-
-        console.log('Admin: Form populated with:', {
-          id: bookingForm.dataset.id,
-          date: bookingData.date || card.dataset.date,
-          time: bookingData.time || card.dataset.time,
-          repeat: bookingData.repeat || card.dataset.repeat,
-          email: bookingData.email || card.dataset.email,
-          purpose: bookingData.purpose || card.dataset.purpose,
-          roomId: bookingData.roomId || card.dataset.roomid
-        });
-      });
-    });
-
-    return true;
-  }
-
-  // Try to set up immediately
-  if (setupAdminBookingClicks()) {
-    return;
-  }
-
-  // If not ready, wait for content to load
-  [100, 300, 500, 1000, 2000].forEach(delay => {
-    setTimeout(() => {
-      if (!document.getElementById('mybookings-root')) {
-        setupAdminBookingClicks();
-      }
-    }, delay);
-  });
-
-  // Watch for dynamically added booking cards
-  const bookingsList = document.getElementById('bookingsList');
-  if (bookingsList) {
-    const observer = new MutationObserver(() => {
-      if (!document.getElementById('mybookings-root')) {
-        setupAdminBookingClicks();
-      }
-    });
-    observer.observe(bookingsList, { childList: true, subtree: true });
-  }
-})();

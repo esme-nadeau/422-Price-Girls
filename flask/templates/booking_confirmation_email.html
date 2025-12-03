@@ -51,11 +51,26 @@
                 <table role="presentation" width="100%">
                   <tr>
                     <td style="font-family: Arial, Helvetica, sans-serif; color:#1f2937;">
-                      <h1 style="margin:0 0 12px; font-size:22px; line-height:28px; font-weight:700; color:#111827;">Reservation Confirmed</h1>
+                      {% if email_status == "pending" %}
+                      <h1 style="margin:0 0 12px; font-size:22px; line-height:28px; font-weight:700; color:#111827;">
+                        Booking Pending
+                      </h1>
                       <p style="margin:0 0 16px; font-size:15px; line-height:22px;">Hi {{ user_name }},</p>
                       <p style="margin:0 0 16px; font-size:15px; line-height:22px;">
-                        Your reservation has been successfully created. The details are below. You can modify or cancel your booking anytime using the button in this email.
+                        We've received your booking request and it is currently <strong>pending approval</strong>.
+                        You'll receive another email once your reservation has been confirmed by the CS department.
                       </p>
+                    {% else %}
+                      <h1 style="margin:0 0 12px; font-size:22px; line-height:28px; font-weight:700; color:#111827;">
+                        Reservation Confirmed
+                      </h1>
+                      <p style="margin:0 0 16px; font-size:15px; line-height:22px;">Hi {{ user_name }},</p>
+                      <p style="margin:0 0 16px; font-size:15px; line-height:22px;">
+                        Your reservation has been successfully created. The details are below. You can modify or cancel
+                        your booking anytime using the button in this email.
+                      </p>
+                    {% endif %}
+
                     </td>
                   </tr>
 
