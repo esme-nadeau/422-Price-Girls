@@ -64,6 +64,34 @@ footer {
   box-sizing: border-box;
 }
 
+/* Reusable styling for instructions buttons and cards on Map/Calendar */
+.instructions-toggle {
+  border-color: #6FAD6F;
+  background-color: #6FAD6F;
+  color: #ffffff;
+}
+.instructions-toggle:hover {
+  background-color: #548754;
+  border-color: #548754;
+  color: #ffffff;
+}
+.instructions-card {
+  position: fixed;
+  right: 1.5rem;
+  bottom: 1.5rem;
+  z-index: 1050;
+  max-width: 360px;
+  border-left: 4px solid #198754;
+  background-color: #f3fbf3;
+}
+.instructions-card .instructions-body {
+  font-size: 0.9rem;
+}
+.instructions-card .instructions-list {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
 .signature {
   text-align: left;
 }

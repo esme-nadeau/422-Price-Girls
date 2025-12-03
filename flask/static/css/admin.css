@@ -1,6 +1,17 @@
 /* ==============================
    Admin page
 ============================== */	
+
+/* Admin layout*/
+#adminLeftCol,
+#bookingInfoWidget,
+#adminSearchCol,
+#adminRightCol {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem; /* consistent vertical spacing between widgets */
+}
+
 #usersList {
 	max-height: 220px; /* adjust as needed */
 	overflow-y: auto;
@@ -12,27 +23,86 @@
 	background: #fff;
 }
 
-/* Slightly smaller text for the compact list */
 #usersList .fw-semibold { font-size: 0.95rem; }
 #usersList .small { font-size: 0.8rem; }
 
-/* Make the room list also compact */
+#mybookings-tab-content .card h5.fw-semibold {
+	font-size: 1.05rem;           /* all card titles */
+}
+
+/* Uniform label and body text sizes across admin widgets */
+#mybookings-tab-content label,
+#mybookings-tab-content .form-label,
+#mybookings-tab-content .small,
+#mybookings-tab-content .card {
+	font-size: 0.9rem;
+}
+
 #roomsList { max-height: 220px; overflow-y: auto; padding-right: 6px; }
 
-/* Make the building closures list match room management size and scrollable */
-#closureList { max-height: 220px; overflow-y: auto; padding-right: 6px; }
-
-/* Make the bookings to approve list scrollable */
 .approve-bookings #bookingsList {
-	max-height: 850px; /* maximum height - scrolls if content exceeds this */
+	max-height: 280px;
 	overflow-y: auto;
 	padding-right: 6px; /* space for scrollbar */
 }
 
-/* Make bookings to approve card dynamic - shrinks based on content, max height controlled by #bookingsList */
+/* Keep card layout flexible without forcing it to full column height */
 .approve-bookings.card {
 	display: flex;
 	flex-direction: column;
+}
+
+#adminLeftCol .building-management.card,
+#adminRightCol .room-management.card {
+	display: flex;
+	flex-direction: column;
+}
+
+#adminRightCol .room-management.card {
+	height: 360px;
+}
+
+/* Booking Details and Search Results: auto height; Search Results list is capped */
+#bookingInfoWidget #adminBookingDetailsCard,
+#adminSearchCol #bookingSearchResultsCard {
+	display: flex;
+	flex-direction: column;
+}
+
+#bookingSearchResultsSummary {
+	margin-bottom: 0.5rem;
+}
+
+#bookingSearchFilterChips {
+	min-height: 1.5rem;
+}
+
+#bookingSearchFilterChips .badge {
+	font-size: 0.75rem;
+	font-weight: 500;
+}
+
+#bookingSearchResultsList {
+	max-height: 528px;       
+	overflow-y: auto;         /* scroll within the card */
+	padding-right: 4px;
+}
+
+#adminRightCol .card {
+	margin-bottom: 0;
+}
+
+/* Soft green hover glow for bookings (left list + search results) */
+.approve-bookings .booking-card,
+#bookingSearchResultsList .list-group-item {
+	transition: box-shadow 0.15s ease, transform 0.1s ease, background-color 0.15s ease;
+}
+
+.approve-bookings .booking-card:hover,
+#bookingSearchResultsList .list-group-item:hover {
+	box-shadow: 0 0 0 3px rgba(111, 173, 111, 0.35);
+	background-color: #f3fbf3;
+	transform: translateY(-1px);
 }
 
 .btn-red {
@@ -55,16 +125,4 @@
   border-radius: 12px;
   font-family: 'EB Garamond', serif;
   font-weight: 500;
-}
-
-.btn-outline-red {
-  border-color: #F28380;
-  color: #F28380;
-  background-color: transparent;
-}
-
-.btn-outline-red:hover {
-  background-color: #F28380;
-  color: #222;
-  border-color: #F28380;
 }
