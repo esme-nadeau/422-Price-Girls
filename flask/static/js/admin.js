@@ -793,6 +793,36 @@ function showMessage(msg, isError = false) {
     return true;
   }
 
+      // -------------------------------
+    // CLEANUP OLD BOOKINGS BUTTON
+    // -------------------------------
+    const cleanupBtn = document.getElementById("cleanupBookingsBtn");
+    const cleanupMsg = document.getElementById("cleanupBookingsMessage");
+
+    if (cleanupBtn) {
+      cleanupBtn.addEventListener("click", async () => {
+        cleanupMsg.textContent = "Running cleanup…";
+
+        try {
+          const res = await fetch("/admin/cleanup-bookings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          });
+
+          const data = await res.json();
+
+          if (data.success) {
+            cleanupMsg.textContent = `Deleted ${data.deleted} old bookings.`;
+          } else {
+            cleanupMsg.textContent = `Error: ${data.error}`;
+          }
+        } catch (err) {
+          cleanupMsg.textContent = `Request failed: ${err.message}`;
+        }
+      });
+    }
+
+
   // Try to initialize immediately
   if (initAdminBookingManagement()) {
     return;
