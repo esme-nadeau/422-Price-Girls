@@ -1,10 +1,34 @@
+// Helper: format multiline messages nicely for the booking error modal
+function formatBookingErrorHtml(message) {
+    const safe = String(message)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    // Preserve newlines visually
+    return safe.replace(/\n\n/g, '<br><br>').replace(/\n/g, '<br>');
+}
+
+function findBookingErrorModalElements() {
+    // Prefer the modal inside the currently active tab (Map/Calendar/My Bookings)
+    let scope = document.querySelector('.tab-pane.show.active') ||
+                document.querySelector('#nav-map.show, #nav-calendar.show, #nav-bookings.show');
+
+    let modalEl = scope ? scope.querySelector('#bookingErrorModal') : null;
+    let bodyEl = scope ? scope.querySelector('#bookingErrorModalBody') : null;
+
+    // Fallback to the first matching elements in the document
+    if (!modalEl) modalEl = document.getElementById('bookingErrorModal');
+    if (!bodyEl) bodyEl = document.getElementById('bookingErrorModalBody');
+
+    return { modalEl, bodyEl };
+}
+
 // Helper: show a lightweight booking error dialog without blocking the whole page
 window.showBookingErrorModal = function(message) {
-    const body = document.getElementById('bookingErrorModalBody');
-    const modalEl = document.getElementById('bookingErrorModal');
+    const { modalEl, bodyEl } = findBookingErrorModalElements();
 
-    if (body) {
-        body.textContent = message;
+    if (bodyEl) {
+        bodyEl.innerHTML = formatBookingErrorHtml(message);
     }
 
     if (modalEl) {
@@ -465,6 +489,82 @@ window.initBookingButton = function(containerId) {
             }
 
             const occurrenceDates = buildOccurrenceDates();
+
+            // If this is a repeating booking, pre-check ALL occurrences against
+            // existing bookings in Firestore. If ANY date in the series
+            // conflicts, we block the entire booking (no partial series).
+            if (occurrenceDates.length > 1 || (repeatType && repeatType !== 'Never')) {
+                try {
+                    const resp = await fetch('/api/bookings');
+                    const data = await resp.json();
+                    const all = data.bookings || [];
+
+                    // Helper to compare room names by digits if available
+                    const extractDigitsRepeat = (s) => {
+                        if (!s) return null;
+                        const m = String(s).match(/(\d{2,4})/);
+                        return m ? m[1] : null;
+                    };
+
+                    const requestedDigits = extractDigitsRepeat(room);
+                    const occurrenceSet = new Set(occurrenceDates);
+                    const repeatConflicts = [];
+
+                    for (const b of all) {
+                        if (!b || !b.date || !b.timeRange) continue;
+                        if (!occurrenceSet.has(b.date)) continue;
+
+                        const bookingRoom = b.roomId || b.room || '';
+                        let roomMatches = false;
+                        if (requestedDigits) {
+                            const bd = extractDigitsRepeat(bookingRoom);
+                            if (bd === requestedDigits) roomMatches = true;
+                        }
+                        if (!roomMatches && bookingRoom === room) roomMatches = true;
+                        if (!roomMatches) continue;
+
+                        const parts = (b.timeRange || '').split(' - ');
+                        if (parts.length !== 2) continue;
+                        const sLabel = (parts[0] || '').trim();
+                        const eLabel = (parts[1] || '').trim();
+                        if (!sLabel || !eLabel) continue;
+
+                        const sMin = _labelToMinutes(sLabel);
+                        const eMin = _labelToMinutes(eLabel);
+                        if (sMin == null || eMin == null) continue;
+
+                        // Same overlap rule as elsewhere: [startMin, endMin) vs [sMin, eMin)
+                        if (startMin < eMin && sMin < endMin) {
+                            repeatConflicts.push({ date: b.date, timeRange: b.timeRange });
+                        }
+                    }
+
+                    if (repeatConflicts.length) {
+                        const maxLines = 10;
+                        const lines = repeatConflicts
+                            .slice(0, maxLines)
+                            .map(c => `  • ${c.date}: ${c.timeRange}`)
+                            .join('\n');
+                        let msg = 'This repeating booking conflicts with existing reservations on one or more dates.\n\n'
+                            + 'Repeat bookings follow an all-or-nothing rule: if any date is unavailable, no bookings are created for this series.\n'
+                            + 'Please review room availability on the Map or Calendar, adjust your dates/times, and try again.\n\n'
+                            + 'Conflicting dates and times:\n' + lines;
+                        if (repeatConflicts.length > maxLines) {
+                            msg += `\n  • and ${repeatConflicts.length - maxLines} more...`;
+                        }
+                        if (typeof window.showBookingErrorModal === 'function') {
+                            window.showBookingErrorModal(msg);
+                        } else {
+                            alert(msg);
+                        }
+                        return; // Block entire repeat booking
+                    }
+                } catch (err) {
+                    console.warn('Failed to pre-check repeat bookings for conflicts', err);
+                    // If this pre-check fails, fall back to server-side per-date
+                    // overlap checks so we don't silently allow bad data.
+                }
+            }
 
             // Prepare base booking data (date is filled per occurrence)
             const baseBookingData = {

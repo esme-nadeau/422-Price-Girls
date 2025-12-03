@@ -279,6 +279,8 @@ function initMyBookingsButtons() {
         });
         const result = await response.json();
         if (result.success) {
+          // Notify user
+          alert('Your reservation was updated successfully.');
           // Update display
           setBookingFormEditable(false);
           // Forcefully replace time dropdowns with span
