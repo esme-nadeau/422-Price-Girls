@@ -842,7 +842,7 @@
         const payload = {
           date: dateVal,
           timeRange,
-          repeat: repeatSel ? repeatSel.value : 'Never',
+          repeat: repeatText,
           name: nameInput ? nameInput.value.trim() : '',
           email: emailInput ? emailInput.value.trim() : '',
           purpose: purposeInput ? purposeInput.value.trim() : '',
@@ -866,6 +866,8 @@
             }
             return;
           }
+          // Success notification for admin users
+          alert('Booking details were saved successfully.');
           // Refresh grid from Firestore
           await update();
         }catch(err){
