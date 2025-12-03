@@ -886,16 +886,31 @@ function wireCleanupButton() {
   });
 
   // Also watch for content to load
-  const observer = new MutationObserver(() => {
-    if (!document.getElementById('mybookings-root')) {
-      if (initAdminBookingManagement()) {
-        wireCleanupButton();
+  function tryInitAdmin() {
+    // Only run on the admin page, not on the React / mybookings root
+    if (document.getElementById('mybookings-root')) {
+      return false;
+    }
+
+    if (initAdminBookingManagement()) {
+      wireCleanupButton();
+      return true;
+    }
+    return false;
+  }
+
+  // Try immediately (for normal full page loads like /admin)
+  if (!tryInitAdmin()) {
+    // Fallback for cases where the DOM is injected later
+    const observer = new MutationObserver(() => {
+      if (tryInitAdmin()) {
         observer.disconnect();
       }
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
 })(); // End of admin-only booking management IIFE
+ // End of admin-only booking management IIFE
 
 
   /* ==============================
