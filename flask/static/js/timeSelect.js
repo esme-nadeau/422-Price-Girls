@@ -171,7 +171,7 @@ function filterPastTimes(container) {
 }
 
 // Initialize time filtering for a container
-window.initTimeFilter = function(container) {
+window.initTimeFilter = async function(container) {
   if (!container) {
     // Try to find active tab
     container = document.querySelector('.tab-pane.show.active') ||
@@ -179,6 +179,9 @@ window.initTimeFilter = function(container) {
   }
   
   if (!container) return;
+  
+  // Initialize date prevention (weekends and closures) for all date inputs
+  await window.initWeekendPrevention(container);
   
   // Filter immediately
   filterPastTimes(container);
@@ -195,6 +198,204 @@ window.initTimeFilter = function(container) {
   setInterval(() => {
     filterPastTimes(container);
   }, 60000); // Check every minute
+};
+
+// Store closures as date ranges
+let closureRanges = [];
+
+// Function to fetch and cache closure date ranges
+async function loadClosureDates() {
+  try {
+    const resp = await fetch("/api/closures");
+    if (!resp.ok) {
+      console.warn("Failed to load closures for date prevention");
+      return;
+    }
+    const data = await resp.json();
+    const closures = data.closures || [];
+    closureRanges = [];
+    closures.forEach(closure => {
+      // Support both new format (startDate/endDate) and old format (date) for backwards compatibility
+      if (closure.startDate && closure.endDate) {
+        closureRanges.push({
+          start: closure.startDate,
+          end: closure.endDate
+        });
+      } else if (closure.date) {
+        // Backwards compatibility: treat single date as a range of one day
+        closureRanges.push({
+          start: closure.date,
+          end: closure.date
+        });
+      }
+    });
+  } catch (err) {
+    console.error("Error loading closures:", err);
+  }
+}
+
+// Function to refresh closure dates and re-validate all date inputs
+window.refreshClosureDates = async function() {
+  await loadClosureDates();
+  // Re-validate all date inputs on the page
+  const allDateInputs = document.querySelectorAll('input[type="date"]');
+  allDateInputs.forEach(input => {
+    if (input.value && isInvalidDate(input.value)) {
+      const nextValid = findNextValidDate(input.value);
+      if (nextValid) {
+        input.value = nextValid;
+      } else {
+        input.value = '';
+      }
+    }
+  });
+};
+
+// Function to check if a date is a weekend (Saturday = 6, Sunday = 0)
+function isWeekend(dateString) {
+  if (!dateString) return false;
+  const date = new Date(dateString + 'T00:00:00'); // Add time to avoid timezone issues
+  const dayOfWeek = date.getDay();
+  return dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
+}
+
+// Function to check if a date falls within any closure range
+function isClosureDate(dateString) {
+  if (!dateString) return false;
+  return closureRanges.some(range => {
+    return dateString >= range.start && dateString <= range.end;
+  });
+}
+
+// Function to check if a date is invalid (weekend or closure)
+function isInvalidDate(dateString) {
+  return isWeekend(dateString) || isClosureDate(dateString);
+}
+
+// Function to find the next valid date (not a weekend, not a closure) from a given date
+function findNextValidDate(dateString) {
+  if (!dateString) return null;
+  let date = new Date(dateString + 'T00:00:00');
+  let attempts = 0;
+  const maxAttempts = 365; // Prevent infinite loops
+  
+  // Start by checking if we need to move from weekend
+  let dayOfWeek = date.getDay();
+  if (dayOfWeek === 6) {
+    // Saturday, move to Monday
+    date.setDate(date.getDate() + 2);
+  } else if (dayOfWeek === 0) {
+    // Sunday, move to Monday
+    date.setDate(date.getDate() + 1);
+  }
+  
+  // Now check if the date is valid (not weekend, not closure)
+  while (attempts < maxAttempts) {
+    const dateStr = formatDateString(date);
+    if (!isInvalidDate(dateStr)) {
+      return dateStr;
+    }
+    // Move to next day
+    date.setDate(date.getDate() + 1);
+    attempts++;
+  }
+  
+  return null; // Couldn't find a valid date
+}
+
+// Helper function to format date as YYYY-MM-DD
+function formatDateString(date) {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+// Function to prevent weekend and closure date selection
+function preventInvalidDateSelection(dateInput) {
+  if (!dateInput) return;
+  
+  // Store the last valid (non-weekend, non-closure) date
+  let lastValidDate = dateInput.value;
+  
+  // Check if initial value is invalid and fix it
+  if (lastValidDate && isInvalidDate(lastValidDate)) {
+    const nextValid = findNextValidDate(lastValidDate);
+    if (nextValid) {
+      dateInput.value = nextValid;
+      lastValidDate = nextValid;
+    } else {
+      lastValidDate = '';
+      dateInput.value = '';
+    }
+  } else if (!lastValidDate) {
+    // If no initial value, try to set to today if it's valid, or next valid date
+    const today = new Date();
+    const todayStr = formatDateString(today);
+    if (!isInvalidDate(todayStr)) {
+      lastValidDate = todayStr;
+    } else {
+      const nextValid = findNextValidDate(todayStr);
+      if (nextValid) {
+        lastValidDate = nextValid;
+      }
+    }
+  }
+  
+  // Helper function to handle invalid date selection
+  const handleInvalidSelection = function(input, selectedDate) {
+    if (selectedDate && isInvalidDate(selectedDate)) {
+      // If an invalid date is selected, revert to the last valid date or find next valid date
+      if (lastValidDate && !isInvalidDate(lastValidDate)) {
+        input.value = lastValidDate;
+      } else {
+        const nextValid = findNextValidDate(selectedDate);
+        if (nextValid) {
+          input.value = nextValid;
+          lastValidDate = nextValid;
+        } else {
+          input.value = '';
+          lastValidDate = '';
+        }
+      }
+      return false; // Indicate that selection was prevented
+    } else if (selectedDate) {
+      // Update last valid date if it's valid
+      lastValidDate = selectedDate;
+      return true; // Indicate that selection was allowed
+    }
+    return true;
+  };
+  
+  // Listen for date changes
+  dateInput.addEventListener('change', function() {
+    handleInvalidSelection(this, this.value);
+  });
+  
+  // Also listen for input event to catch changes before they're committed
+  dateInput.addEventListener('input', function() {
+    handleInvalidSelection(this, this.value);
+  });
+}
+
+// Initialize date prevention (weekends and closures) for all date inputs in a container
+window.initWeekendPrevention = async function(container) {
+  if (!container) {
+    // Try to find active tab
+    container = document.querySelector('.tab-pane.show.active') ||
+                document.querySelector('#nav-map.show, #nav-calendar.show');
+  }
+  
+  if (!container) return;
+  
+  // Load closure dates first (if not already loaded or if we want to refresh)
+  await loadClosureDates();
+  
+  // Find all date inputs in the container
+  const dateInputs = container.querySelectorAll('input[type="date"]');
+  dateInputs.forEach(input => {
+    preventInvalidDateSelection(input);
+  });
 };
 
 // Auto-initialize for dynamically loaded content

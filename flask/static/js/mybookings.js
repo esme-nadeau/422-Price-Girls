@@ -147,6 +147,21 @@ function setBookingFormEditable(editable) {
         newEl.type = f.type;
         newEl.id = f.id;
         newEl.value = el.textContent;
+        
+        // For date inputs, set min date and initialize date prevention
+        if (f.type === 'date') {
+          const today = new Date().toISOString().split('T')[0];
+          newEl.setAttribute('min', today);
+          // Initialize date prevention (weekends and closures) after element is added to DOM
+          // This will also validate and correct the current value if needed
+          setTimeout(async () => {
+            if (typeof window.initWeekendPrevention === 'function') {
+              const container = bookingForm || document;
+              await window.initWeekendPrevention(container);
+            }
+          }, 0);
+        }
+        
         el.replaceWith(newEl);
       }
     } else {

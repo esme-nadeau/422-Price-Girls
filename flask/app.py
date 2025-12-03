@@ -150,6 +150,7 @@ def admin():
     bookings = []
     rooms = []
     users = []
+    closures = []
     try:
         if db is None:
             error_message = "Firestore is not initialized. Please check your service account and environment variables."
@@ -186,10 +187,19 @@ def admin():
                     users.append(u)
             except Exception as ue:
                 print(f"[admin] Error loading users: {ue}")
+            # Load closures for Building Closures card
+            try:
+                closures_ref = db.collection('closures')
+                for cdoc in closures_ref.stream():
+                    c = cdoc.to_dict() or {}
+                    c["id"] = cdoc.id
+                    closures.append(c)
+            except Exception as ce:
+                print(f"[admin] Error loading closures: {ce}")
     except Exception as e:
         error_message = f"Error loading bookings: {e}"
         print(f"[admin] {error_message}")
-    return render_template("admin.html", bookings=bookings, rooms=rooms, users=users, error_message=error_message)
+    return render_template("admin.html", bookings=bookings, rooms=rooms, users=users, closures=closures, error_message=error_message)
 
 @app.route("/map")
 def map_tab():
@@ -838,6 +848,118 @@ def api_update_room(room_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 # ----------------------------
+# Closures API endpoints
+# ----------------------------
+@app.route("/api/closures")
+def api_closures():
+    try:
+        if db is None:
+            return jsonify({"closures": [], "error": "firestore_unavailable"}), 500
+        closures_ref = db.collection("closures")
+        docs = closures_ref.stream()
+        closures = []
+        for doc in docs:
+            c = doc.to_dict() or {}
+            c["id"] = doc.id
+            closures.append(c)
+        return jsonify({"closures": closures})
+    except Exception as e:
+        print(f"[api_closures] Error: {e}")
+        return jsonify({"closures": [], "error": str(e)}), 500
+
+@app.route("/api/closures", methods=["POST"])
+def api_create_closure():
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+    try:
+        data = request.get_json(silent=True) or {}
+        name = (data.get('name') or '').strip()
+        start_date = (data.get('startDate') or '').strip()
+        end_date = (data.get('endDate') or '').strip()
+        description = (data.get('description') or '').strip()
+        
+        if not name:
+            return jsonify({"success": False, "error": "Closure name is required"}), 400
+        if not start_date:
+            return jsonify({"success": False, "error": "Start date is required"}), 400
+        if not end_date:
+            return jsonify({"success": False, "error": "End date is required"}), 400
+        
+        # Validate that end date is not before start date
+        try:
+            from datetime import datetime
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            if end_dt < start_dt:
+                return jsonify({"success": False, "error": "End date cannot be before start date"}), 400
+        except ValueError:
+            return jsonify({"success": False, "error": "Invalid date format. Please use YYYY-MM-DD format"}), 400
+        
+        doc_ref = db.collection('closures').add({
+            'name': name,
+            'startDate': start_date,
+            'endDate': end_date,
+            'description': description,
+        })
+        new_id = doc_ref[1].id
+        return jsonify({"success": True, "id": new_id}), 201
+    except Exception as e:
+        print(f"[api_create_closure] Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/closures/<closure_id>', methods=['DELETE'])
+def api_delete_closure(closure_id):
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+    try:
+        db.collection('closures').document(closure_id).delete()
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[api_delete_closure] Error deleting {closure_id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/closures/<closure_id>', methods=['PUT'])
+def api_update_closure(closure_id):
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+    try:
+        data = request.get_json(silent=True) or {}
+        name = (data.get('name') or '').strip()
+        start_date = (data.get('startDate') or '').strip()
+        end_date = (data.get('endDate') or '').strip()
+        description = (data.get('description') or '').strip()
+        
+        if not name:
+            return jsonify({"success": False, "error": "Closure name is required"}), 400
+        if not start_date:
+            return jsonify({"success": False, "error": "Start date is required"}), 400
+        if not end_date:
+            return jsonify({"success": False, "error": "End date is required"}), 400
+        
+        # Validate that end date is not before start date
+        try:
+            from datetime import datetime
+            start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+            end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+            if end_dt < start_dt:
+                return jsonify({"success": False, "error": "End date cannot be before start date"}), 400
+        except ValueError:
+            return jsonify({"success": False, "error": "Invalid date format. Please use YYYY-MM-DD format"}), 400
+        
+        update_data = {
+            'name': name,
+            'startDate': start_date,
+            'endDate': end_date,
+            'description': description,
+        }
+        
+        db.collection('closures').document(closure_id).update(update_data)
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[api_update_closure] Error updating {closure_id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# ----------------------------
 # Helper functions for time overlap checking
 # ----------------------------
 def parse_time_string(time_str):
@@ -874,7 +996,7 @@ def check_booking_overlap(db, room_id, date, time_range_str, exclude_booking_id=
     
     Args:
         db: Firestore client
-        room_id: Room ID to check
+        room_id: Room ID to check (may be a human-friendly label like "Room 120")
         date: Date string (YYYY-MM-DD)
         time_range_str: Time range string (e.g., "8:00 AM - 9:00 AM")
         exclude_booking_id: Optional booking ID to exclude from overlap check (for updates)
@@ -882,37 +1004,63 @@ def check_booking_overlap(db, room_id, date, time_range_str, exclude_booking_id=
     try:
         # Parse the new booking's time range
         new_start, new_end = parse_time_string(time_range_str)
-        
-        # Query existing bookings for the same room and date
-        existing_bookings = db.collection("bookings").where("roomId", "==", room_id).where("date", "==", date).stream()
-        
+
+        # Extract digits from a room identifier like "Room 120" so that we
+        # can match bookings even if older records used a slightly different
+        # naming convention (e.g., just "120").
+        def extract_digits(val: str) -> str | None:
+            if not val:
+                return None
+            import re
+            m = re.search(r"(\d{2,4})", str(val))
+            return m.group(1) if m else None
+
+        requested_digits = extract_digits(room_id)
+
+        # Query existing bookings for the same date, then filter by room match
+        existing_bookings = db.collection("bookings").where("date", "==", date).stream()
+
         for booking_doc in existing_bookings:
             # Skip the booking being updated
             if exclude_booking_id and booking_doc.id == exclude_booking_id:
                 continue
-                
-            booking = booking_doc.to_dict()
+
+            booking = booking_doc.to_dict() or {}
+
+            # Room matching: prefer exact roomId match, but also fall back to
+            # digit-based comparison so "Room 120" matches "120".
+            existing_room = booking.get("roomId") or booking.get("room") or ""
+            room_matches = False
+            if existing_room == room_id:
+                room_matches = True
+            else:
+                if requested_digits:
+                    existing_digits = extract_digits(existing_room)
+                    if existing_digits and existing_digits == requested_digits:
+                        room_matches = True
+            if not room_matches:
+                continue
+
             existing_time_range = booking.get("timeRange", "")
-            
             if not existing_time_range:
                 continue
-            
+
             try:
                 existing_start, existing_end = parse_time_string(existing_time_range)
-                
+
                 # Check for overlap
                 if times_overlap(new_start, new_end, existing_start, existing_end):
                     return {
                         "overlap": True,
                         "conflicting_booking_id": booking_doc.id,
-                        "conflicting_time": existing_time_range
+                        "conflicting_time": existing_time_range,
                     }
             except (ValueError, AttributeError) as e:
                 print(f"[overlap] Error parsing existing booking time: {e}")
                 continue
-        
+
         return {"overlap": False}
-    
+
     except Exception as e:
         print(f"[overlap] Error checking overlap: {e}")
         import traceback
@@ -1444,6 +1592,12 @@ def auth_verify_code():
 
 @app.get("/auth/session")
 def auth_session_info():
+    """Return the current session plus canonical user info.
+
+    The *only* source of truth for a user's name/role is the users collection
+    in Firestore. Older sessions may have an empty or outdated name field, so
+    we backfill from users/{email} on every request.
+    """
     if db is None:
         return jsonify({"success": False, "error": "firestore_unavailable"}), 500
 
@@ -1452,12 +1606,16 @@ def auth_session_info():
     ip = forwarded_for.split(",")[0].strip() if forwarded_for else (request.remote_addr or "unknown")
 
     session_data = None
+    session_doc_ref = None
 
+    # First try cookie-based session lookup
     if session_id:
-        snap = db.collection("sessions").document(session_id).get()
+        session_doc_ref = db.collection("sessions").document(session_id)
+        snap = session_doc_ref.get()
         if snap.exists:
             session_data = snap.to_dict()
 
+    # Fallback: look up most recent session for this IP
     if session_data is None:
         try:
             query = (
@@ -1469,12 +1627,45 @@ def auth_session_info():
             )
             for doc in query:
                 session_data = doc.to_dict()
+                session_doc_ref = doc.reference
                 break
         except Exception as e:
             print(f"[auth_session] Failed to load session for IP {ip}: {e}")
 
     if session_data is None:
         return jsonify({"success": False, "error": "session_not_found"}), 404
+
+    # Backfill name/role from canonical users collection if missing or blank
+    email = (session_data.get("email") or "").strip().lower()
+    if email:
+        try:
+            user_doc = db.collection("users").document(email).get()
+            if user_doc.exists:
+                user = user_doc.to_dict() or {}
+                user_name = (user.get("name") or "").strip()
+                user_role = (user.get("role") or session_data.get("role") or "student").strip()
+
+                # Only overwrite if we actually have values
+                if user_name:
+                    session_data["name"] = user_name
+                if user_role:
+                    session_data["role"] = user_role
+
+                # Persist the backfilled values onto the session document so
+                # subsequent lookups don't need to re-query users.
+                if session_doc_ref is not None:
+                    update_payload = {}
+                    if user_name:
+                        update_payload["name"] = user_name
+                    if user_role:
+                        update_payload["role"] = user_role
+                    if update_payload:
+                        try:
+                            session_doc_ref.update(update_payload)
+                        except Exception as e:
+                            print(f"[auth_session] Failed to update session doc for {email}: {e}")
+        except Exception as e:
+            print(f"[auth_session] Failed to backfill user info for {email}: {e}")
 
     created_at = session_data.get("createdAt")
     if hasattr(created_at, "isoformat"):

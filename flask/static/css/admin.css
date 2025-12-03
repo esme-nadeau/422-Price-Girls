@@ -19,16 +19,18 @@
 /* Make the room list also compact */
 #roomsList { max-height: 220px; overflow-y: auto; padding-right: 6px; }
 
+/* Make the building closures list match room management size and scrollable */
+#closureList { max-height: 220px; overflow-y: auto; padding-right: 6px; }
+
 /* Make the bookings to approve list scrollable */
 .approve-bookings #bookingsList {
-	max-height: 850px; /* adjust as needed */
+	max-height: 850px; /* maximum height - scrolls if content exceeds this */
 	overflow-y: auto;
 	padding-right: 6px; /* space for scrollbar */
 }
 
-/* Make bookings to approve card same height as booking information card */
+/* Make bookings to approve card dynamic - shrinks based on content, max height controlled by #bookingsList */
 .approve-bookings.card {
-	min-height: 850px; /* match the booking information card height */
 	display: flex;
 	flex-direction: column;
 }
@@ -47,10 +49,77 @@
 	min-width: 80px;
 }
 
+.btn-grey {
+	padding: 8px 16px;
+	min-width: 80px;
+	background-color: #6c757d;
+	color: #fff;
+	border: none;
+	border-radius: 12px;
+	font-family: 'EB Garamond', serif;
+	font-weight: 500;
+	transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-grey:hover {
+	background-color: #5a6268;
+	color: #fff;
+	transform: translateY(-1px);
+}
+
+.btn-grey:active {
+	background-color: #5a6268;
+	color: #fff;
+	transform: translateY(-1px);
+}
+
 .btn-red:hover{
   background-color: #c25956;
   color: #222;
   border-radius: 12px;
   font-family: 'EB Garamond', serif;
+  font-weight: 500;
+}
+
+.btn-outline-red {
+  border-color: #F28380;
+  color: #F28380;
+  background-color: transparent;
+}
+
+.btn-outline-red:hover {
+  background-color: #F28380;
+  color: #222;
+  border-color: #F28380;
+}
+
+/* Style the dropdown toggle icons */
+#bookingsToggleIcon,
+#allBookingsToggleIcon {
+  color: #6c757d;
+  font-size: 1.2rem;
+}
+
+/* All Bookings Search Results */
+#allBookingsResultsList .list-group-item {
+  transition: box-shadow 0.15s ease, transform 0.1s ease, background-color 0.15s ease;
+  border: 1px solid rgba(0, 0, 0, 0.125);
+  border-radius: 12px;
+  margin-bottom: 0.25rem;
+}
+
+#allBookingsResultsList .list-group-item:hover {
+  background-color: #f3fbf3;
+  transform: translateY(-1px);
+}
+
+#allBookingsResultsList .list-group-item.selected {
+  background-color: #d9fcd9;
+  border: 2px solid #38a169;
+  color: #222;
+}
+
+#allBookingsFilterChips .badge {
+  font-size: 0.75rem;
   font-weight: 500;
 }

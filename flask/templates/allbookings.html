@@ -7,7 +7,7 @@
 
       <!-- LEFT: Side panel / info for this tab -->
       <div class="col-12 col-lg-3">
-        <!-- Info widget for students / unauthenticated users -->
+        <!-- Role-aware instructions / overview card for All Bookings -->
         <div
           class="card shadow-sm mb-3 d-none"
           id="allBookingsInfoPanel"
@@ -18,11 +18,12 @@
               All Bookings Overview
             </h5>
             <p class="mb-3 fs-6 text-body" id="allBookingsInfoBody">
-              This tab shows all current and upcoming room reservations so you can see when rooms are busy
+              This tab shows all current and upcoming room reservations so you can see when rooms are busy.
             </p>
             <ul class="mb-0 ps-3" id="allBookingsInfoList" style="font-size: 1.05rem; line-height: 1.5;">
-              <li class="mb-1">See when rooms are reserved, not who booked them or why</li>
-              <li class="mb-1">Use the Map or Calendar tabs to explore availability and make a reservation</li>
+              <!-- The specific bullet points are populated in static/js/allbookings.js
+                   based on the current user's role (student, faculty, admin). -->
+              <li class="mb-1">Example item: this text will be replaced at runtime.</li>
             </ul>
           </div>
         </div>
@@ -81,7 +82,6 @@
                   <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Daily', event)">Daily</a></li>
                   <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Weekly', event)">Weekly</a></li>
                   <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Monthly', event)">Monthly</a></li>
-                  <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Custom', event)">Custom</a></li>
                 </ul>
               </div>
               <div class="text-end">
@@ -111,8 +111,6 @@
               <button type="button" class="btn btn-red flex-grow-1" id="allDeleteBookingBtn">Delete</button>
               <button type="button" class="btn btn-green flex-grow-1" id="allSaveBookingBtn">Save</button>
             </div>
-
-            <p class="small text-muted mt-2 mb-0" id="allBookingHint">Select a booking in the calendar to view or edit details.</p>
           </form>
         </div>
       </div>
@@ -144,7 +142,7 @@
 
           <div id="allCalendarGrid" class="week-grid"></div>
           <div class="allbookings-instruction alert alert-info mt-2 py-1 px-2">
-            <strong>Tip:</strong> Each gray cell with a label has a booking. Click a cell to view or edit its booking.
+            <strong>Tip:</strong> Each gray cell with a label has a booking, and darker cells indicate there are multiple overlapping bookings for different rooms. Click a cell to view its booking.
           </div>
         </div>
       </div>
@@ -216,10 +214,6 @@
         <div id="monthlyOptions" class="repeat-option d-none">
           <label for="monthlyEndDate" class="form-label">End Date</label>
           <input type="date" id="monthlyEndDate" class="form-control">
-        </div>
-        <div id="customOptions" class="repeat-option d-none">
-          <label for="customText" class="form-label">Custom Repeat Notes</label>
-          <input type="text" id="customText" class="form-control" placeholder="e.g., every 3rd Wednesday">
         </div>
       </div>
       <div class="modal-footer">

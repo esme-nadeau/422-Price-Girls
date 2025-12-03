@@ -57,6 +57,61 @@
 
   // Lookup for booked cells -> bookings (used for click handling)
   let cellBookingLookup = {};
+  
+  // Closure date ranges cache
+  let closureRanges = [];
+  
+  // Function to load closure date ranges
+  async function loadClosureDates() {
+    try {
+      const resp = await fetch("/api/closures");
+      if (!resp.ok) {
+        console.warn("Failed to load closures for all bookings");
+        return;
+      }
+      const data = await resp.json();
+      const closures = data.closures || [];
+      closureRanges = [];
+      closures.forEach(closure => {
+        // Support both new format (startDate/endDate) and old format (date) for backwards compatibility
+        if (closure.startDate && closure.endDate) {
+          closureRanges.push({
+            start: closure.startDate,
+            end: closure.endDate
+          });
+        } else if (closure.date) {
+          // Backwards compatibility: treat single date as a range of one day
+          closureRanges.push({
+            start: closure.date,
+            end: closure.date
+          });
+        }
+      });
+    } catch (err) {
+      console.error("Error loading closures for all bookings:", err);
+    }
+  }
+  
+  // Function to check if a date is a weekend
+  function isWeekend(dateISO) {
+    if (!dateISO) return false;
+    const date = new Date(dateISO + 'T00:00:00');
+    const dayOfWeek = date.getDay();
+    return dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
+  }
+  
+  // Function to check if a date falls within any closure range
+  function isClosureDate(dateISO) {
+    if (!dateISO) return false;
+    return closureRanges.some(range => {
+      return dateISO >= range.start && dateISO <= range.end;
+    });
+  }
+  
+  // Function to check if a date is invalid (weekend or closure)
+  function isInvalidDate(dateISO) {
+    return isWeekend(dateISO) || isClosureDate(dateISO);
+  }
 
   function toISODate(d){ return d.toISOString().split('T')[0]; }
   function parseISODate(iso){ const [y,m,da]=iso.split('-').map(Number); return new Date(y,m-1,da); }
@@ -140,6 +195,13 @@
         cell.dataset.date = dateISO;
         cell.dataset.idx = idx;
         if(di>0) cell.classList.add('day-divider');
+        
+        // Mark invalid dates (weekends or closures) as closed
+        if(isInvalidDate(dateISO)){
+          cell.classList.add('closed');
+          cell.style.cursor = 'not-allowed';
+        }
+        
         grid.appendChild(cell);
       }
     });
@@ -360,7 +422,69 @@
     labelEl.textContent = `${bookingsThisWeek.length} bookings from ${startStr}–${endStr}`;
   }
 
+  // Configure the role-specific instructions card on the left side.
+  // You can edit the messages for each role here.
+  function configureAllBookingsInfoPanel(infoPanel){
+    if (!infoPanel) return;
+
+    const titleEl = infoPanel.querySelector('#allBookingsInfoTitle');
+    const bodyEl  = infoPanel.querySelector('#allBookingsInfoBody');
+    const listEl  = infoPanel.querySelector('#allBookingsInfoList');
+    if (!titleEl || !bodyEl || !listEl) return;
+
+    infoPanel.classList.remove('d-none');
+    listEl.innerHTML = '';
+
+    const mkItem = (text) => {
+      const li = document.createElement('li');
+      li.className = 'mb-1';
+      li.textContent = text;
+      return li;
+    };
+
+    if (isStudent) {
+      // STUDENT / UNAUTHENTICATED VIEW
+      titleEl.textContent = 'All Bookings';
+      if (isLoggedIn) {
+        bodyEl.textContent =
+          'This page shows all room reservations for the current week. Use the arrows above the calendar to switch between weeks and browse reservations for the current, past, or upcoming weeks.';
+      } else {
+        bodyEl.textContent =
+          'This page shows all room reservations for the current week. Use the arrows above the calendar to switch between weeks and browse reservations for the current, past, or upcoming weeks.';
+      }
+
+      if (isLoggedIn) {
+        listEl.appendChild(mkItem('Use the Map or Calendar tabs to find an available time and create a booking. Some bookings will require admin approval'));
+        listEl.appendChild(mkItem('Use the My Bookings tab to review, modify, or delete your own reservations'));
+      } else {
+        listEl.appendChild(mkItem('If you want to create a booking, you must have a registered account and sign in with the registered uoregon.edu email'));
+        listEl.appendChild(mkItem('After successfully logging in, use the Map or Calendar tabs to create bookings and My Bookings to manage them'));
+      }
+
+    } else if (isFaculty) {
+      // FACULTY VIEW
+      titleEl.textContent = 'All Bookings (Faculty View)';
+      bodyEl.textContent =
+          'This page shows all room reservations for the current week. Use the arrows above the calendar to switch between weeks and browse reservations for the current, past, or upcoming weeks.';
+      listEl.appendChild(mkItem('Click a gray cell with a label to view details for that booking which populates the Booking Details card below'));
+      listEl.appendChild(mkItem('To change or cancel your own reservations, use the My Bookings tab'));
+    } else if (isAdmin) {
+      // ADMIN VIEW
+      titleEl.textContent = 'All Bookings (Admin View)';
+      bodyEl.textContent =
+          'This page shows all room reservations for the current week. Use the arrows above the calendar to switch between weeks and browse reservations for the current, past, or upcoming weeks.';
+      listEl.appendChild(mkItem('Click a gray cell with a label to view details for that booking which populates the Booking Details card below'));    
+      listEl.appendChild(mkItem('To edit or remove a booking, update the information in the Booking Details panel, then click Save or Delete')); 
+    } else {
+      // Fallback for unexpected roles
+      titleEl.textContent = 'All Bookings Overview';
+      bodyEl.textContent = 'This tab shows all room reservations for the week.';
+      listEl.appendChild(mkItem('Browse bookings in the calendar on the right.'));
+    }
+  }
+
   async function update(){
+    await loadClosureDates(); // Load closures before rendering
     await fetchBookings();
     renderGrid();
   }
@@ -597,7 +721,23 @@
     const purposeInput = root.querySelector('#allBookingPurpose');
 
     if(idInput) idInput.value = booking.id || '';
-    if(dateInput && booking.date) dateInput.value = booking.date;
+    if(dateInput) {
+      // Set minimum date to today (prevents selecting past dates)
+      const today = new Date().toISOString().split('T')[0];
+      dateInput.setAttribute('min', today);
+      if(booking.date) {
+        dateInput.value = booking.date;
+      }
+      // Initialize date prevention (weekends and closures)
+      // This will also validate and correct the current value if needed
+      if (typeof window.initWeekendPrevention === 'function') {
+        const container = root;
+        // Use setTimeout to ensure the value is set before validation
+        setTimeout(async () => {
+          await window.initWeekendPrevention(container);
+        }, 0);
+      }
+    }
     if(repeatDropdown) {
       const repeatVal = booking.repeat || 'Never';
       repeatDropdown.textContent = repeatVal;
@@ -624,8 +764,6 @@
     if (hint) {
       if (isAdmin) {
         hint.textContent = 'Editing booking ' + (booking.id || '');
-      } else if (isFaculty) {
-        hint.textContent = 'Faculty view is read-only. To change your own bookings, use the My Bookings tab.';
       } else {
         hint.textContent = '';
       }
@@ -820,64 +958,12 @@
     const infoPanel = root.querySelector('#allBookingsInfoPanel');
 
     if (isStudent) {
-      // Students/unauthenticated: hide the edit panel and show the guidance widget.
+      // Students/unauthenticated: hide the edit panel and show only the info card.
       if (panel) panel.classList.add('d-none');
-      if (infoPanel) {
-        infoPanel.classList.remove('d-none');
-        const titleEl = infoPanel.querySelector('#allBookingsInfoTitle');
-        const bodyEl = infoPanel.querySelector('#allBookingsInfoBody');
-        const listEl = infoPanel.querySelector('#allBookingsInfoList');
-
-        if (titleEl) titleEl.textContent = 'All Bookings Overview';
-
-        if (bodyEl) {
-          if (isLoggedIn) {
-            // Logged-in student
-            bodyEl.textContent =
-              'This tab shows all current and upcoming room reservations so you can see when rooms are busy.';
-          } else {
-            // Not logged in
-            bodyEl.textContent =
-              'This tab shows all current and upcoming room reservations. You can browse availability even without logging in.';
-          }
-        }
-
-        if (listEl) {
-          listEl.innerHTML = '';
-
-          const mkItem = (text) => {
-            const li = document.createElement('li');
-            li.textContent = text;
-            return li;
-          };
-
-          // Everyone (student or not logged in)
-          listEl.appendChild(
-            mkItem('See when rooms are reserved, not who booked them or why')
-          );
-
-          if (isLoggedIn) {
-            // Logged-in student
-            listEl.appendChild(
-              mkItem('To make a reservation, go to the Map or Calendar tabs and select an available time')
-            );
-          } else {
-            // Anonymous visitor
-            listEl.appendChild(
-              mkItem('To create or manage a booking, log in with your uoregon.edu email from the Login button in the header')
-            );
-            listEl.appendChild(
-              mkItem('Students can create reservations from the Map or Calendar tabs once logged in')
-            );
-            listEl.appendChild(
-              mkItem('Faculty and admins, once logged in, may have access to additional booking management tools')
-            );
-          }
-        }
-      }
+      if (infoPanel) configureAllBookingsInfoPanel(infoPanel);
     } else {
-      // Faculty/Admin: hide the info widget and show the details panel.
-      if (infoPanel) infoPanel.classList.add('d-none');
+      // Faculty/Admin: show both the info card (instructions) and the details panel.
+      if (infoPanel) configureAllBookingsInfoPanel(infoPanel);
       if (panel) {
         panel.classList.remove('d-none');
 
@@ -891,7 +977,7 @@
           if (actionsRow) actionsRow.classList.remove('d-none');
         } else if (isFaculty) {
           // Faculty: clearly indicate read-only and hide action buttons.
-          if (titleEl) titleEl.textContent = 'Booking Details (Faculty View – Read Only)';
+          if (titleEl) titleEl.textContent = 'Booking Details (Faculty View)';
           if (facultyNote) facultyNote.classList.remove('d-none');
           if (actionsRow) actionsRow.classList.add('d-none');
 

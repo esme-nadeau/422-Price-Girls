@@ -153,26 +153,63 @@ function wireCleanupButton() {
           // Save ID for approve/deny
           bookingForm.dataset.id = booking.id || "";
     
-          setField(dateField, booking.date);
-          setField(timeField, booking.time || booking.timeRange);
-          setField(repeatField, booking.repeat || "Never");
-          setField(nameField, booking.name || booking.userId);
-          setField(emailField, booking.email || booking.userEmail);
-          setField(purposeField, booking.purpose);
-          setField(roomIdField, booking.roomId);
+          // Populate <span> fields for non-editable display (matching mybookings styling)
+          const setSpan = (id, value) => {
+            const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
+            if (el) el.textContent = value || '';
+          };
+    
+          setSpan('date', booking.date || '');
+          setSpan('time', booking.time || booking.timeRange || '');
+          setSpan('repeat', booking.repeat || 'Never');
+          setSpan('name', booking.name || booking.userId || '');
+          setSpan('email', booking.email || booking.userEmail || '');
+          setSpan('purpose', booking.purpose || '');
+          setSpan('roomId', booking.roomId || '');
     
           bookingInfoCard.style.display = "block";
         }
     
         // Attach click listeners to all pending booking cards
         bookingCards.forEach((card) => {
+          // Skip if already has click handler
+          if (card.dataset.adminClickBound === 'true') {
+            return;
+          }
+          card.dataset.adminClickBound = 'true';
+          
           card.addEventListener("click", () => {
             if (!bookingInfoCard) return;
             const booking = getBookingFromCard(card);
-            console.log("Admin: selected booking", booking);
-    
-            clearActiveCards();
-            card.classList.add("active");
+            console.log("Admin: Clicked booking", card.dataset.id);
+            
+            const currentBookingId = bookingForm.dataset.id;
+            const clickedBookingId = card.dataset.id;
+            
+            // Get the all bookings card to hide it
+            const allBookingsInfoCard = document.getElementById("allBookingsInfoCard");
+            
+            // Check if the same booking is clicked again
+            if (currentBookingId === clickedBookingId && bookingInfoCard && bookingInfoCard.style.display === 'block') {
+              // Hide the booking information card
+              bookingInfoCard.style.display = 'none';
+              // Remove selection highlight
+              document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+              document.querySelectorAll('#allBookingsResultsList .list-group-item').forEach(c => c.classList.remove('selected'));
+              // Clear the form ID
+              bookingForm.dataset.id = '';
+              console.log('Admin: Booking card hidden');
+              return;
+            }
+            
+            // Hide all bookings card
+            if (allBookingsInfoCard) allBookingsInfoCard.style.display = 'none';
+            
+            // Remove selection from all bookings results
+            document.querySelectorAll('#allBookingsResultsList .list-group-item').forEach(c => c.classList.remove('selected'));
+            // Highlight selected
+            document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
             populateBookingInfo(booking);
           });
         });
@@ -201,6 +238,17 @@ function wireCleanupButton() {
           return data;
         }
     
+        // Helper to check if bookings list is empty and show message
+        function checkAndShowEmptyMessage() {
+          const bookingsList = document.getElementById('bookingsList');
+          if (!bookingsList) return;
+          
+          const remainingCards = bookingsList.querySelectorAll('.booking-card');
+          if (remainingCards.length === 0) {
+            bookingsList.innerHTML = '<div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">No bookings to approve.</div>';
+          }
+        }
+
         // Approve (Confirm Reservation) for pending bookings
         if (confirmBtn && !confirmBtn.dataset.bound) {
           confirmBtn.dataset.bound = "true";
@@ -223,6 +271,9 @@ function wireCleanupButton() {
     
               if (bookingInfoCard) bookingInfoCard.style.display = "none";
               bookingForm.dataset.id = "";
+              
+              // Check if list is now empty and show message
+              checkAndShowEmptyMessage();
     
               alert("Booking approved and moved to confirmed bookings.");
             } catch (err) {
@@ -254,6 +305,9 @@ function wireCleanupButton() {
     
               if (bookingInfoCard) bookingInfoCard.style.display = "none";
               bookingForm.dataset.id = "";
+              
+              // Check if list is now empty and show message
+              checkAndShowEmptyMessage();
     
               alert("Booking denied and removed.");
             } catch (err) {
@@ -314,26 +368,58 @@ function wireCleanupButton() {
       // Save ID for approve/deny
       bookingForm.dataset.id = booking.id || "";
 
-      setField(dateField, booking.date);
-      setField(timeField, booking.time || booking.timeRange);
-      setField(repeatField, booking.repeat || "Never");
-      setField(nameField, booking.name || booking.userId);
-      setField(emailField, booking.email || booking.userEmail);
-      setField(purposeField, booking.purpose);
-      setField(roomIdField, booking.roomId);
+      // Populate <span> fields for non-editable display (matching mybookings styling)
+      const setSpan = (id, value) => {
+        const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
+        if (el) el.textContent = value || '';
+      };
+
+      setSpan('date', booking.date || '');
+      setSpan('time', booking.time || booking.timeRange || '');
+      setSpan('repeat', booking.repeat || 'Never');
+      setSpan('name', booking.name || booking.userId || '');
+      setSpan('email', booking.email || booking.userEmail || '');
+      setSpan('purpose', booking.purpose || '');
+      setSpan('roomId', booking.roomId || '');
 
       bookingInfoCard.style.display = "block";
     }
 
     // Attach click listeners to all pending booking cards
     bookingCards.forEach((card) => {
+      // Skip if already has click handler
+      if (card.dataset.adminClickBound === 'true') {
+        return;
+      }
+      card.dataset.adminClickBound = 'true';
+      
       card.addEventListener("click", () => {
         if (!bookingInfoCard) return;
         const booking = getBookingFromCard(card);
-        console.log("Admin: selected booking", booking);
-
-        clearActiveCards();
-        card.classList.add("active");
+        console.log("Admin: Clicked booking", card.dataset.id);
+        
+        const currentBookingId = bookingForm.dataset.id;
+        const clickedBookingId = card.dataset.id;
+        
+        // Check if the same booking is clicked again
+        if (currentBookingId === clickedBookingId && bookingInfoCard && bookingInfoCard.style.display === 'block') {
+          // Hide the booking information card
+          bookingInfoCard.style.display = 'none';
+          // Remove selection highlight
+          document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+          // Clear the form ID
+          bookingForm.dataset.id = '';
+          console.log('Admin: Booking card hidden');
+          return;
+        }
+        
+        // Remove selection from all bookings results
+        document.querySelectorAll('#allBookingsResultsList .list-group-item').forEach(c => c.classList.remove('selected'));
+        // Remove selection from all bookings results
+        document.querySelectorAll('#allBookingsResultsList .list-group-item').forEach(c => c.classList.remove('selected'));
+        // Highlight selected
+        document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
         populateBookingInfo(booking);
       });
     });
@@ -362,6 +448,17 @@ function wireCleanupButton() {
       return data;
     }
 
+    // Helper to check if bookings list is empty and show message
+    function checkAndShowEmptyMessage() {
+      const bookingsList = document.getElementById('bookingsList');
+      if (!bookingsList) return;
+      
+      const remainingCards = bookingsList.querySelectorAll('.booking-card');
+      if (remainingCards.length === 0) {
+        bookingsList.innerHTML = '<div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">No bookings to approve.</div>';
+      }
+    }
+
     // Approve (Confirm Reservation) for pending bookings
     if (confirmBtn && !confirmBtn.dataset.bound) {
       confirmBtn.dataset.bound = "true";
@@ -384,6 +481,9 @@ function wireCleanupButton() {
 
           if (bookingInfoCard) bookingInfoCard.style.display = "none";
           bookingForm.dataset.id = "";
+          
+          // Check if list is now empty and show message
+          checkAndShowEmptyMessage();
 
           alert("Booking approved and moved to confirmed bookings.");
         } catch (err) {
@@ -415,6 +515,9 @@ function wireCleanupButton() {
 
           if (bookingInfoCard) bookingInfoCard.style.display = "none";
           bookingForm.dataset.id = "";
+          
+          // Check if list is now empty and show message
+          checkAndShowEmptyMessage();
 
           alert("Booking denied and removed.");
         } catch (err) {
@@ -799,6 +902,62 @@ function wireCleanupButton() {
       Room Management Modal
   ============================== */
 async function initAdminTools() {
+  // Initialize bookings dropdown toggle (for "Bookings to Approve")
+  const bookingsToggleBtn = document.getElementById('bookingsToggleBtn');
+  const bookingsToggleIcon = document.getElementById('bookingsToggleIcon');
+  const bookingsListCollapse = document.getElementById('bookingsListCollapse');
+  
+  if (bookingsToggleBtn && bookingsToggleIcon && bookingsListCollapse) {
+    // Set initial icon state (caret-down-square when expanded, caret-up-square when collapsed)
+    // Since the collapse has 'show' class initially, it starts expanded
+    if (bookingsListCollapse.classList.contains('show')) {
+      bookingsToggleIcon.classList.remove('bi-caret-up-square');
+      bookingsToggleIcon.classList.add('bi-caret-down-square');
+    } else {
+      bookingsToggleIcon.classList.remove('bi-caret-down-square');
+      bookingsToggleIcon.classList.add('bi-caret-up-square');
+    }
+    
+    // Listen for collapse events to toggle the icon
+    bookingsListCollapse.addEventListener('show.bs.collapse', () => {
+      bookingsToggleIcon.classList.remove('bi-caret-up-square');
+      bookingsToggleIcon.classList.add('bi-caret-down-square');
+    });
+    
+    bookingsListCollapse.addEventListener('hide.bs.collapse', () => {
+      bookingsToggleIcon.classList.remove('bi-caret-down-square');
+      bookingsToggleIcon.classList.add('bi-caret-up-square');
+    });
+  }
+  
+  // Initialize all bookings dropdown toggle (for "All Bookings")
+  const allBookingsToggleBtn = document.getElementById('allBookingsToggleBtn');
+  const allBookingsToggleIcon = document.getElementById('allBookingsToggleIcon');
+  const allBookingsListCollapse = document.getElementById('allBookingsListCollapse');
+  
+  if (allBookingsToggleBtn && allBookingsToggleIcon && allBookingsListCollapse) {
+    // Set initial icon state (caret-down-square when expanded, caret-up-square when collapsed)
+    // This one starts collapsed, so icon should be caret-up-square
+    if (allBookingsListCollapse.classList.contains('show')) {
+      allBookingsToggleIcon.classList.remove('bi-caret-up-square');
+      allBookingsToggleIcon.classList.add('bi-caret-down-square');
+    } else {
+      allBookingsToggleIcon.classList.remove('bi-caret-down-square');
+      allBookingsToggleIcon.classList.add('bi-caret-up-square');
+    }
+    
+    // Listen for collapse events to toggle the icon
+    allBookingsListCollapse.addEventListener('show.bs.collapse', () => {
+      allBookingsToggleIcon.classList.remove('bi-caret-up-square');
+      allBookingsToggleIcon.classList.add('bi-caret-down-square');
+    });
+    
+    allBookingsListCollapse.addEventListener('hide.bs.collapse', () => {
+      allBookingsToggleIcon.classList.remove('bi-caret-down-square');
+      allBookingsToggleIcon.classList.add('bi-caret-up-square');
+    });
+  }
+  
   const listWrap = document.getElementById("roomsList");
   const addBtn = document.getElementById("addRoomBtn");
   const refreshBtn = document.getElementById("refreshRoomsBtn");
@@ -1552,6 +1711,266 @@ async function initAdminTools() {
   }
 
   await loadRooms();
+
+  /* ==============================
+      Closure Management
+  ============================== */
+  const closureListWrap = document.getElementById("closureList");
+  const addClosureBtn = document.getElementById("addClosureBtn");
+
+  const inputClosureName = document.getElementById("newClosureName");
+  const inputClosureStartDate = document.getElementById("newClosureStartDate");
+  const inputClosureEndDate = document.getElementById("newClosureEndDate");
+  const inputClosureDesc = document.getElementById("newClosureDescription");
+  const closuresMessage = document.getElementById("closuresMessage");
+
+  const addClosureModalEl = document.getElementById("addClosureModal");
+
+  if (!closureListWrap) {
+    console.warn("Closure list wrapper not found");
+  } else {
+    function showClosureMessage(msg, isError = false) {
+      if (!closuresMessage) return;
+      closuresMessage.textContent = msg || '';
+      if (isError) {
+        closuresMessage.style.color = '#F28380';
+        closuresMessage.classList.remove('text-muted');
+      } else {
+        closuresMessage.style.color = '#666';
+        closuresMessage.classList.add('text-muted');
+      }
+    }
+
+    function renderClosures(closures) {
+      closureListWrap.innerHTML = "";
+
+      if (!closures || closures.length === 0) {
+        closureListWrap.innerHTML =
+          '<div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">No closures found.</div>';
+        return;
+      }
+
+      closures.forEach((c) => {
+        const row = document.createElement("div");
+        row.className =
+          "d-flex align-items-start justify-content-between mb-2 p-2 rounded";
+        row.style.border = "1px solid rgba(0,0,0,0.05)";
+
+        const leftSide = document.createElement("div");
+        leftSide.className = "flex-grow-1 text-start";
+        // Display date range or single date (for backwards compatibility)
+        let dateDisplay = '';
+        if (c.startDate && c.endDate) {
+          if (c.startDate === c.endDate) {
+            dateDisplay = c.startDate;
+          } else {
+            dateDisplay = `${c.startDate} – ${c.endDate}`;
+          }
+        } else if (c.date) {
+          // Backwards compatibility with old single-date format
+          dateDisplay = c.date;
+        }
+        leftSide.innerHTML = `
+          ${dateDisplay ? `<div class="fw-semibold">${escapeHtml(dateDisplay)}</div>` : ''}
+          <div class="small text-muted">${escapeHtml(c.name || c.id)}</div>
+        `;
+
+        const actions = document.createElement("div");
+        actions.className = "d-flex flex-column align-items-end gap-1";
+
+        const deleteBtn = document.createElement("button");
+        deleteBtn.className = "btn btn-sm btn-outline-red closure-delete-btn";
+        deleteBtn.innerHTML = `<i class="bi bi-trash me-1"></i>Delete`;
+        deleteBtn.dataset.id = c.id;
+        deleteBtn.dataset.name = c.name || c.id;
+        // Store date range for display in confirmation
+        const dateRange = (c.startDate && c.endDate) 
+          ? (c.startDate === c.endDate ? c.startDate : `${c.startDate} – ${c.endDate}`)
+          : (c.date || '');
+        deleteBtn.dataset.date = dateRange;
+
+        actions.appendChild(deleteBtn);
+        row.appendChild(leftSide);
+        row.appendChild(actions);
+        closureListWrap.appendChild(row);
+      });
+    }
+
+    async function loadClosures() {
+      showClosureMessage("Loading closures...");
+      try {
+        const resp = await fetch("/api/closures");
+        const data = resp.ok ? await resp.json() : null;
+
+        if (!resp.ok) {
+          showClosureMessage(data?.error || "Failed to load closures", true);
+          renderClosures([]);
+          return;
+        }
+
+        const closures = data.closures || [];
+        // Sort closures by start date (most recent first)
+        closures.sort((a, b) => {
+          const dateA = a.startDate || a.date || '';
+          const dateB = b.startDate || b.date || '';
+          return dateB.localeCompare(dateA);
+        });
+
+        renderClosures(closures);
+        showClosureMessage("");
+      } catch (err) {
+        console.error("loadClosures error:", err);
+        showClosureMessage("Failed to load closures (network error)", true);
+        renderClosures([]);
+      }
+    }
+
+    if (addClosureBtn) {
+      addClosureBtn.addEventListener("click", async () => {
+        const name = inputClosureName?.value.trim();
+        const startDate = inputClosureStartDate?.value.trim();
+        const endDate = inputClosureEndDate?.value.trim();
+        const description = inputClosureDesc?.value.trim();
+
+        if (!name) {
+          showClosureMessage("Closure name is required", true);
+          return;
+        }
+
+        if (!startDate) {
+          showClosureMessage("Start date is required", true);
+          return;
+        }
+
+        if (!endDate) {
+          showClosureMessage("End date is required", true);
+          return;
+        }
+
+        // Validate that end date is not before start date
+        if (endDate < startDate) {
+          showClosureMessage("End date cannot be before start date", true);
+          return;
+        }
+
+        const payload = { name, startDate, endDate, description };
+
+        try {
+          const resp = await fetch("/api/closures", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          const data = await resp.json().catch(() => ({}));
+
+          if (!resp.ok) {
+            showClosureMessage(data.error || "Failed to add closure", true);
+            return;
+          }
+
+          showClosureMessage("Closure added");
+
+          // Reset inputs
+          inputClosureName.value = "";
+          inputClosureStartDate.value = "";
+          inputClosureEndDate.value = "";
+          inputClosureDesc.value = "";
+
+          // Hide modal
+          const modalInstance = bootstrap.Modal.getInstance(addClosureModalEl);
+          if (modalInstance) modalInstance.hide();
+
+          await loadClosures();
+        } catch (err) {
+          console.error("addClosure error:", err);
+          showClosureMessage("Failed to add closure (network error)", true);
+        }
+      });
+    }
+
+    // Handle delete button clicks
+    closureListWrap.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".closure-delete-btn");
+      if (!btn) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const closureId = btn.dataset.id;
+      const closureName = btn.dataset.name || closureId;
+      const closureDate = btn.dataset.date || '';
+
+      if (!closureId) {
+        console.warn("Delete button clicked but missing data-id", btn);
+        return;
+      }
+
+      // Build display text - use date if available, otherwise use name
+      const displayText = closureDate ? `${closureDate} (${closureName})` : closureName;
+      const ok = confirm(
+        `Are you sure you want to delete this closure?\n\nClosure: ${displayText}\nThis action cannot be undone.`
+      );
+      if (!ok) return;
+
+      try {
+        const resp = await fetch(`/api/closures/${encodeURIComponent(closureId)}`, {
+          method: "DELETE",
+        });
+
+        const data = await resp.json().catch(() => ({}));
+
+        if (!resp.ok) {
+          alert(data.error || "Failed to delete closure");
+          return;
+        }
+
+        await loadClosures();
+      } catch (err) {
+        console.error("deleteClosure error:", err);
+        alert("Failed to delete closure (network error)");
+      }
+    });
+
+    if (addClosureModalEl) {
+      addClosureModalEl.addEventListener("show.bs.modal", () => {
+        if (inputClosureName) inputClosureName.value = "";
+        if (inputClosureStartDate) inputClosureStartDate.value = "";
+        if (inputClosureEndDate) inputClosureEndDate.value = "";
+        if (inputClosureDesc) inputClosureDesc.value = "";
+        showClosureMessage("");
+      });
+    }
+    
+    // Add validation for end date to ensure it's not before start date
+    if (inputClosureStartDate && inputClosureEndDate) {
+      inputClosureStartDate.addEventListener('change', () => {
+        if (inputClosureStartDate.value && inputClosureEndDate.value) {
+          if (inputClosureEndDate.value < inputClosureStartDate.value) {
+            showClosureMessage("End date cannot be before start date", true);
+            inputClosureEndDate.value = inputClosureStartDate.value;
+          } else {
+            showClosureMessage("");
+          }
+        }
+      });
+      
+      inputClosureEndDate.addEventListener('change', () => {
+        if (inputClosureStartDate.value && inputClosureEndDate.value) {
+          if (inputClosureEndDate.value < inputClosureStartDate.value) {
+            showClosureMessage("End date cannot be before start date", true);
+            inputClosureEndDate.value = inputClosureStartDate.value;
+          } else {
+            showClosureMessage("");
+          }
+        }
+      });
+    }
+
+    moveModalToBody(document.getElementById('addClosureModal'));
+
+    await loadClosures();
+  }
 }
 
 // Expose initializer so the dynamic tab loader can call it after injecting admin HTML
@@ -1571,31 +1990,839 @@ if (document.readyState !== 'loading') {
 }
 
 /* ==============================
-    Account Management - User Search
+    Admin Page Booking Card Clicks (Same as MyBookings)
 ============================== */
-document.addEventListener("DOMContentLoaded", function () {
-    const userSearchInput = document.getElementById("userSearch");
-    const usersList = document.getElementById("usersList");
+(function() {
+  // Don't run if on mybookings page
+  if (document.getElementById('mybookings-root')) {
+    return;
+  }
 
-    userSearchInput.addEventListener("input", function () {
-        const searchValue = userSearchInput.value.toLowerCase().trim();
+  function setupAdminBookingClicks() {
+    const bookingCards = document.querySelectorAll('.booking-card');
+    const bookingForm = document.getElementById('bookingForm');
+    
+    if (!bookingForm) {
+      return false; // Form not loaded yet
+    }
 
-        // Get all user items
-        const userItems = usersList.querySelectorAll("div.d-flex");
+    if (!bookingCards.length) {
+      console.warn("Admin: No booking cards found");
+      return true;
+    }
 
-        userItems.forEach(item => {
-            const name = item.querySelector(".fw-semibold")?.textContent.toLowerCase() || "";
-            const email = item.querySelector(".small.text-muted")?.textContent.toLowerCase() || "";
+    console.log(`Admin: Found ${bookingCards.length} booking cards`);
 
-            // Match name OR email
-            if (name.includes(searchValue) || email.includes(searchValue)) {
-                item.style.display = "flex";  // show it
-            } else {
-                item.style.display = "none";  // hide it
-            }
+    // Add click listeners to booking cards (same as mybookings)
+    bookingCards.forEach(card => {
+      // Skip if already has click handler
+      if (card.dataset.adminClickBound === 'true') {
+        return;
+      }
+      card.dataset.adminClickBound = 'true';
+      
+      card.addEventListener('click', () => {
+        console.log(`Admin: Clicked booking ${card.dataset.id}`);
+
+        const bookingInfoCard = document.getElementById('bookingInfoCard');
+        const currentBookingId = bookingForm.dataset.id;
+        const clickedBookingId = card.dataset.id;
+
+        // Check if the same booking is clicked again
+        if (currentBookingId === clickedBookingId && bookingInfoCard && bookingInfoCard.style.display === 'block') {
+          // Hide the booking information card
+          bookingInfoCard.style.display = 'none';
+          // Remove selection highlight
+          document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+          // Clear the form ID
+          bookingForm.dataset.id = '';
+          console.log('Admin: Booking card hidden');
+          return;
+        }
+
+        // Remove selection from all bookings results
+        document.querySelectorAll('#allBookingsResultsList .list-group-item').forEach(c => c.classList.remove('selected'));
+        // Highlight selected
+        document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+
+        // Parse structured booking data
+        let bookingData = {};
+        try {
+          if (card.dataset.booking) bookingData = JSON.parse(card.dataset.booking);
+        } catch (err) {
+          console.warn('Could not parse data-booking JSON, falling back to data-* attributes', err);
+          bookingData = {};
+        }
+
+        // Save the ID
+        bookingForm.dataset.id = bookingData.id || card.dataset.id || '';
+
+        // Handle the date format safely
+        let dateValue = bookingData.date || card.dataset.date || '';
+        if (dateValue) {
+          const parsed = new Date(dateValue);
+          if (!isNaN(parsed)) dateValue = parsed;
+          else {
+            console.warn('Could not parse date:', bookingData.date || card.dataset.date);
+            dateValue = null;
+          }
+        }
+
+        // Populate <span> fields for non-editable display
+        const setSpan = (id, value) => {
+          const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
+          if (el) el.textContent = value || '';
+        };
+
+        setSpan('date', bookingData.date || card.dataset.date || '');
+        setSpan('time', bookingData.time || card.dataset.time || '');
+        setSpan('repeat', bookingData.repeat || card.dataset.repeat || 'Never');
+        setSpan('name', bookingData.name || bookingData.userId || card.dataset.name || '');
+        setSpan('email', bookingData.email || card.dataset.email || '');
+        setSpan('purpose', bookingData.purpose || card.dataset.purpose || '');
+        setSpan('roomId', bookingData.roomId || card.dataset.roomid || '');
+
+        // Show the booking information card
+        if (bookingInfoCard) {
+          bookingInfoCard.style.display = 'block';
+        }
+
+        console.log('Admin: Form populated with:', {
+          id: bookingForm.dataset.id,
+          date: bookingData.date || card.dataset.date,
+          time: bookingData.time || card.dataset.time,
+          repeat: bookingData.repeat || card.dataset.repeat,
+          email: bookingData.email || card.dataset.email,
+          purpose: bookingData.purpose || card.dataset.purpose,
+          roomId: bookingData.roomId || card.dataset.roomid
         });
+      });
     });
-});
+
+    return true;
+  }
+
+  // Try to set up immediately
+  if (setupAdminBookingClicks()) {
+    return;
+  }
+
+  // If not ready, wait for content to load
+  [100, 300, 500, 1000, 2000].forEach(delay => {
+    setTimeout(() => {
+      if (!document.getElementById('mybookings-root')) {
+        setupAdminBookingClicks();
+      }
+    }, delay);
+  });
+
+  // Watch for dynamically added booking cards
+  const bookingsList = document.getElementById('bookingsList');
+  if (bookingsList) {
+    const observer = new MutationObserver(() => {
+      if (!document.getElementById('mybookings-root')) {
+        setupAdminBookingClicks();
+      }
+    });
+    observer.observe(bookingsList, { childList: true, subtree: true });
+  }
+})();
+
+/* ==============================
+   All Bookings Search (in All Bookings card)
+============================== */
+(function initAllBookingsSearch() {
+  let allBookingsCache = null;
+  let allBookingsRoomsCache = null;
+
+  async function loadAllBookings() {
+    if (allBookingsCache) return allBookingsCache;
+    try {
+      const res = await fetch('/api/bookings');
+      const data = await res.json().catch(() => ({}));
+      allBookingsCache = data.bookings || [];
+    } catch (err) {
+      console.error('[all bookings search] Failed to load bookings', err);
+      allBookingsCache = [];
+    }
+    return allBookingsCache;
+  }
+
+  async function loadAllBookingsRooms() {
+    if (allBookingsRoomsCache) return allBookingsRoomsCache;
+    try {
+      const res = await fetch('/api/rooms');
+      const data = await res.json().catch(() => ({}));
+      allBookingsRoomsCache = data.rooms || [];
+    } catch (err) {
+      console.error('[all bookings search] Failed to load rooms', err);
+      allBookingsRoomsCache = [];
+    }
+    return allBookingsRoomsCache;
+  }
+
+  function buildTimeSlots() {
+    const slots = [];
+    for (let h = 8; h <= 19; h++) {
+      for (let m = 0; m < 60; m += 30) {
+        if (h === 19 && m > 0) continue;
+        let hour = h > 12 ? h - 12 : h;
+        const ampm = h < 12 ? 'AM' : 'PM';
+        const mm = m === 0 ? '00' : '30';
+        slots.push(`${hour}:${mm} ${ampm}`);
+      }
+    }
+    return slots;
+  }
+
+  function renderAllBookingsResults(matches, hasFilters, searchExecuted) {
+    const resultsList = document.getElementById("allBookingsResultsList");
+    const resultsSummary = document.getElementById("allBookingsResultsSummary");
+    const filterChips = document.getElementById("allBookingsFilterChips");
+    const emailNameInput = document.getElementById("allBookingsSearchEmailName");
+    const dateInput = document.getElementById("allBookingsSearchDate");
+    const roomInput = document.getElementById("allBookingsSearchRoom");
+    const startSelect = document.getElementById("allBookingsSearchStart");
+    const endSelect = document.getElementById("allBookingsSearchEnd");
+
+    if (!resultsList || !resultsSummary || !filterChips) return;
+
+    resultsList.innerHTML = "";
+    filterChips.innerHTML = "";
+
+    function buildChips() {
+      const chips = [];
+      const emailNameVal = (emailNameInput?.value || "").trim();
+      const dateVal = (dateInput?.value || "").trim();
+      const roomVal = (roomInput?.value || "").trim();
+      const startVal = (startSelect?.value || "").trim();
+      const endVal = (endSelect?.value || "").trim();
+
+      if (emailNameVal) chips.push(`Email/name: ${emailNameVal}`);
+      if (dateVal) chips.push(`Date: ${dateVal}`);
+      if (roomVal) chips.push(`Room: ${roomVal}`);
+      if (startVal || endVal) chips.push(`Time: ${startVal || '?'} – ${endVal || '?'}`);
+
+      chips.forEach(label => {
+        const span = document.createElement('span');
+        span.className = 'badge bg-secondary-subtle border border-secondary-subtle text-secondary-emphasis';
+        span.textContent = label;
+        filterChips.appendChild(span);
+      });
+    }
+
+    if (!searchExecuted) {
+      resultsSummary.textContent = "No search run yet. Enter one or more fields above, then press Search.";
+      return;
+    }
+
+    if (hasFilters) {
+      buildChips();
+    }
+
+    if (!hasFilters) {
+      resultsSummary.textContent = matches.length
+        ? `${matches.length} reservation${matches.length === 1 ? '' : 's'} shown (no filters applied).`
+        : "There are no reservations to show.";
+    } else if (!matches.length) {
+      resultsSummary.textContent = "No reservations match your filters.";
+      return;
+    } else {
+      resultsSummary.textContent = `${matches.length} reservation${matches.length === 1 ? '' : 's'} match your filters.`;
+    }
+
+    matches.forEach(booking => {
+      const purpose = booking.purpose || "(no purpose)";
+      const room = booking.roomId || booking.roomName || "(room)";
+      const date = booking.date || "";
+      const time = booking.timeRange || "";
+      const email = booking.email || booking.userEmail || "";
+
+      const item = document.createElement("div");
+      item.className = "list-group-item list-group-item-action text-start";
+      item.style.cursor = "pointer";
+      item.dataset.bookingId = booking.id || '';
+      item.innerHTML = `
+        <div class="fw-semibold">${escapeHtml(purpose)}</div>
+        <div class="small text-muted">${escapeHtml(room)} • ${escapeHtml(date)}${time ? ' • ' + escapeHtml(time) : ''}</div>
+        <div class="small text-muted">${escapeHtml(email)}</div>
+      `;
+
+      item.addEventListener("click", () => {
+        // Get the all bookings info card and form
+        const allBookingsInfoCard = document.getElementById("allBookingsInfoCard");
+        const allBookingsForm = document.getElementById("allBookingsForm");
+        const allBookingsEditBtn = document.getElementById("allBookingsEditBtn");
+        const approveBookingsCard = document.getElementById("bookingInfoCard");
+        
+        if (!allBookingsInfoCard || !allBookingsForm) return;
+        
+        const currentBookingId = allBookingsForm.dataset.id;
+        const clickedBookingId = booking.id || '';
+        
+        // Check if the same booking is clicked again
+        if (currentBookingId === clickedBookingId && allBookingsInfoCard.style.display === 'block') {
+          // Hide the all bookings information card
+          allBookingsInfoCard.style.display = 'none';
+          // Remove selection highlight from all bookings results
+          document.querySelectorAll('#allBookingsResultsList .list-group-item').forEach(c => c.classList.remove('selected'));
+          // Remove selection from approve bookings
+          document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+          // Clear the form ID
+          allBookingsForm.dataset.id = '';
+          return;
+        }
+        
+        // Reset edit state if in edit mode
+        if (allBookingsEditBtn && allBookingsEditBtn.textContent === 'Save') {
+          // Exit edit mode - this will be handled by the edit button logic
+          // For now, just reset the button text and form state
+          allBookingsEditBtn.textContent = 'Edit Reservation';
+          // The form will be reset when we populate it below
+        }
+        
+        // Hide approve bookings card
+        if (approveBookingsCard) approveBookingsCard.style.display = 'none';
+        
+        // Remove selection from other items
+        document.querySelectorAll('#allBookingsResultsList .list-group-item').forEach(c => c.classList.remove('selected'));
+        document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+        
+        // Add selection to clicked item
+        item.classList.add('selected');
+        
+        // Populate the all bookings info card
+        allBookingsForm.dataset.id = clickedBookingId;
+        const dateEl = document.getElementById("allBookingsDate");
+        const timeEl = document.getElementById("allBookingsTime");
+        const nameEl = document.getElementById("allBookingsName");
+        const emailEl = document.getElementById("allBookingsEmail");
+        const purposeEl = document.getElementById("allBookingsPurpose");
+        const roomEl = document.getElementById("allBookingsRoomId");
+        const repeatEl = document.getElementById("allBookingsRepeat");
+        
+        if (dateEl) dateEl.textContent = booking.date || '';
+        if (timeEl) timeEl.textContent = booking.timeRange || '';
+        if (nameEl) nameEl.textContent = booking.name || booking.userId || '';
+        if (emailEl) emailEl.textContent = booking.email || booking.userEmail || '';
+        if (purposeEl) purposeEl.textContent = booking.purpose || '';
+        if (roomEl) roomEl.textContent = booking.roomId || '';
+        if (repeatEl) repeatEl.textContent = booking.repeat || 'Never';
+        
+        // Make sure form is in display mode (not edit mode)
+        // This will be handled by the setAllBookingsFormEditable function if needed
+        // For now, just ensure all fields are spans, not inputs
+        const allInputs = allBookingsForm.querySelectorAll('input, select');
+        allInputs.forEach(input => {
+          if (input.id && input.id.startsWith('allBookings')) {
+            const span = document.createElement('span');
+            span.className = 'form-control';
+            span.id = input.id;
+            span.style.background = '#eee';
+            span.style.pointerEvents = 'none';
+            span.style.userSelect = 'text';
+            span.textContent = input.value || input.textContent || '';
+            input.replaceWith(span);
+          }
+        });
+        
+        // Show the all bookings info card
+        allBookingsInfoCard.style.display = 'block';
+      });
+
+      resultsList.appendChild(item);
+    });
+
+  }
+
+  async function applyAllBookingsFilters() {
+    const emailNameInput = document.getElementById("allBookingsSearchEmailName");
+    const dateInput = document.getElementById("allBookingsSearchDate");
+    const roomInput = document.getElementById("allBookingsSearchRoom");
+    const startSelect = document.getElementById("allBookingsSearchStart");
+    const endSelect = document.getElementById("allBookingsSearchEnd");
+
+    const allBookings = await loadAllBookings();
+
+    const emailNameVal = (emailNameInput?.value || "").toLowerCase().trim();
+    const dateVal = (dateInput?.value || "").trim();
+    const roomVal = (roomInput?.value || "").toLowerCase().trim();
+    const startVal = (startSelect?.value || "").toLowerCase().trim();
+    const endVal = (endSelect?.value || "").toLowerCase().trim();
+
+    const hasAnyFilter = !!(emailNameVal || dateVal || roomVal || startVal || endVal);
+
+    if (!hasAnyFilter) {
+      renderAllBookingsResults(allBookings, false, true);
+      return;
+    }
+
+    const matches = allBookings.filter(b => {
+      const bEmail = (b.email || b.userEmail || "").toLowerCase();
+      const bName = (b.name || b.userId || "").toLowerCase();
+      const bDate = (b.date || "").trim();
+      const bRoom = (b.roomId || b.roomName || "").toLowerCase();
+      const bTime = (b.timeRange || "").toLowerCase();
+
+      if (emailNameVal && !(bEmail.includes(emailNameVal) || bName.includes(emailNameVal))) return false;
+      if (dateVal && bDate !== dateVal) return false;
+      if (roomVal && !bRoom.includes(roomVal)) return false;
+
+      if (startVal || endVal) {
+        const parts = bTime.split(' - ').map(s => s.trim());
+        const bStart = (parts[0] || '').toLowerCase();
+        const bEnd = (parts[1] || '').toLowerCase();
+        if (startVal && bStart !== startVal) return false;
+        if (endVal && bEnd !== endVal) return false;
+      }
+      return true;
+    });
+
+    renderAllBookingsResults(matches, true, true);
+  }
+
+  function initAllBookingsSearchForm() {
+    const form = document.getElementById("allBookingsSearchForm");
+    const searchBtn = document.getElementById("allBookingsSearchSubmit");
+    const clearBtn = document.getElementById("allBookingsSearchClear");
+    const roomSelect = document.getElementById("allBookingsSearchRoom");
+    const startSel = document.getElementById("allBookingsSearchStart");
+    const endSel = document.getElementById("allBookingsSearchEnd");
+
+    if (!form || form.dataset.searchBound === "true") return;
+    form.dataset.searchBound = "true";
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+    });
+
+    form.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        applyAllBookingsFilters();
+      }
+    });
+
+    if (searchBtn) {
+      searchBtn.addEventListener("click", function () {
+        applyAllBookingsFilters();
+      });
+    }
+
+    if (clearBtn) {
+      clearBtn.addEventListener("click", function () {
+        const emailInput = document.getElementById("allBookingsSearchEmailName");
+        const dateInput = document.getElementById("allBookingsSearchDate");
+        if (emailInput) emailInput.value = "";
+        if (dateInput) dateInput.value = "";
+        if (roomSelect) roomSelect.value = "";
+        if (startSel) startSel.value = "";
+        if (endSel) endSel.value = "";
+        applyAllBookingsFilters();
+      });
+    }
+
+    // Populate room and time dropdowns
+    (async () => {
+      if (roomSelect) {
+        const rooms = await loadAllBookingsRooms();
+        roomSelect.innerHTML = '<option value="">Any room</option>';
+        rooms.forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.id;
+          opt.textContent = r.name || r.id;
+          roomSelect.appendChild(opt);
+        });
+      }
+      if (startSel && endSel) {
+        const allSlots = buildTimeSlots();
+        const startSlots = allSlots.slice(0, allSlots.length - 1);
+        const endSlots = allSlots.slice(1);
+
+        const fill = (sel, label, slots) => {
+          sel.innerHTML = '';
+          const base = document.createElement('option');
+          base.value = '';
+          base.textContent = label;
+          sel.appendChild(base);
+          slots.forEach(s => {
+            const o = document.createElement('option');
+            o.value = s;
+            o.textContent = s;
+            sel.appendChild(o);
+          });
+        };
+        fill(startSel, 'Start', startSlots);
+        fill(endSel, 'End', endSlots);
+      }
+      // On init, show all bookings
+      applyAllBookingsFilters();
+    })();
+  }
+
+  // Initialize when DOM is ready
+  function tryInit() {
+    const form = document.getElementById("allBookingsSearchForm");
+    if (form) {
+      initAllBookingsSearchForm();
+      return true;
+    }
+    return false;
+  }
+
+  if (document.readyState !== 'loading') {
+    tryInit();
+  } else {
+    document.addEventListener('DOMContentLoaded', tryInit);
+  }
+
+  // Watch for dynamically loaded content
+  const observer = new MutationObserver(() => {
+    if (!document.getElementById("allBookingsSearchForm")?.dataset.searchBound) {
+      tryInit();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  /* ==============================
+     All Bookings Edit/Cancel Functionality
+  ============================== */
+  function initAllBookingsEditCancel() {
+    const allBookingsForm = document.getElementById('allBookingsForm');
+    const allBookingsEditBtn = document.getElementById('allBookingsEditBtn');
+    const allBookingsCancelBtn = document.getElementById('allBookingsCancelBtn');
+    
+    if (!allBookingsForm || !allBookingsEditBtn || !allBookingsCancelBtn) {
+      return false;
+    }
+
+    // Helper to switch between display and edit mode for all bookings form
+    function setAllBookingsFormEditable(editable) {
+      if (!allBookingsForm) return;
+      const fields = [
+        { id: 'allBookingsDate', type: 'date' },
+        { id: 'allBookingsTime', type: 'custom-time' },
+        { id: 'allBookingsRepeat', type: 'select' },
+        { id: 'allBookingsName', type: 'text' },
+        { id: 'allBookingsEmail', type: 'email' },
+        { id: 'allBookingsPurpose', type: 'text' },
+        { id: 'allBookingsRoomId', type: 'dropdown' }
+      ];
+      fields.forEach(async f => {
+        const el = allBookingsForm.querySelector(`#${f.id}`) || document.getElementById(f.id);
+        if (!el) return;
+        if (editable) {
+          let newEl;
+          if (f.type === 'select') {
+            newEl = document.createElement('select');
+            newEl.className = 'form-select';
+            newEl.id = f.id;
+            ['Never', 'Weekly', 'Monthly'].forEach(opt => {
+              const o = document.createElement('option');
+              o.textContent = opt;
+              o.value = opt;
+              newEl.appendChild(o);
+            });
+            newEl.value = el.textContent || 'Never';
+            el.replaceWith(newEl);
+            return;
+          } else if (f.type === 'dropdown') {
+            newEl = document.createElement('select');
+            newEl.className = 'form-select';
+            newEl.id = f.id;
+            try {
+              const resp = await fetch('/api/rooms');
+              const data = await resp.json();
+              (data.rooms || []).forEach(room => {
+                const o = document.createElement('option');
+                o.value = room.id;
+                o.textContent = room.name || room.id;
+                newEl.appendChild(o);
+              });
+              newEl.value = el.textContent;
+            } catch (err) {
+              const o = document.createElement('option');
+              o.textContent = el.textContent || 'Unavailable';
+              newEl.appendChild(o);
+            }
+            el.replaceWith(newEl);
+            return;
+          } else if (f.type === 'custom-time') {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'd-flex gap-2';
+            const slots = [];
+            for (let h = 8; h <= 18; h++) {
+              for (let m = 0; m < 60; m += 30) {
+                let hour = h > 12 ? h - 12 : h;
+                let ampm = h < 12 ? 'AM' : 'PM';
+                let min = m === 0 ? '00' : '30';
+                slots.push(`${hour}:${min} ${ampm}`);
+              }
+            }
+            let startVal = slots[0], endVal = slots[1];
+            if (el.textContent && el.textContent.includes(' - ')) {
+              const [start, end] = el.textContent.split(' - ');
+              startVal = start.trim();
+              endVal = end.trim();
+            }
+            const startSel = document.createElement('select');
+            startSel.className = 'form-select';
+            startSel.id = 'allBookingsStartTime';
+            slots.forEach(s => {
+              const o = document.createElement('option');
+              o.value = s;
+              o.textContent = s;
+              startSel.appendChild(o);
+            });
+            startSel.value = startVal;
+            const endSel = document.createElement('select');
+            endSel.className = 'form-select';
+            endSel.id = 'allBookingsEndTime';
+            slots.forEach(s => {
+              const o = document.createElement('option');
+              o.value = s;
+              o.textContent = s;
+              endSel.appendChild(o);
+            });
+            endSel.value = endVal;
+            function validateTimes() {
+              const startIdx = slots.indexOf(startSel.value);
+              const endIdx = slots.indexOf(endSel.value);
+              if (endIdx <= startIdx) {
+                endSel.setCustomValidity('End time must be after start time');
+                endSel.reportValidity();
+              } else {
+                endSel.setCustomValidity('');
+              }
+            }
+            startSel.addEventListener('change', validateTimes);
+            endSel.addEventListener('change', validateTimes);
+            wrapper.appendChild(startSel);
+            wrapper.appendChild(document.createTextNode(' to '));
+            wrapper.appendChild(endSel);
+            el.replaceWith(wrapper);
+          } else {
+            newEl = document.createElement('input');
+            newEl.className = 'form-control';
+            newEl.type = f.type;
+            newEl.id = f.id;
+            newEl.value = el.textContent;
+            el.replaceWith(newEl);
+          }
+        } else {
+          let newEl = document.createElement('span');
+          newEl.className = 'form-control';
+          newEl.id = f.id;
+          newEl.style.background = '#eee';
+          newEl.style.pointerEvents = 'none';
+          newEl.style.userSelect = 'text';
+          if (f.type === 'custom-time') {
+            let startVal = '', endVal = '';
+            if (el.classList.contains('d-flex')) {
+              const startSel = el.querySelector('#allBookingsStartTime');
+              const endSel = el.querySelector('#allBookingsEndTime');
+              if (startSel && endSel) {
+                startVal = startSel.value;
+                endVal = endSel.value;
+              } else {
+                if (el.textContent && el.textContent.includes(' to ')) {
+                  const [start, end] = el.textContent.split(' to ');
+                  startVal = start.trim();
+                  endVal = end.trim();
+                } else {
+                  startVal = el.textContent;
+                }
+              }
+            } else {
+              startVal = el.textContent;
+            }
+            newEl.textContent = startVal && endVal ? `${startVal} - ${endVal}` : startVal;
+            el.replaceWith(newEl);
+            return;
+          } else if (el.tagName === 'SELECT') {
+            newEl.textContent = el.value;
+            el.replaceWith(newEl);
+            return;
+          } else {
+            newEl.textContent = el.value;
+            el.replaceWith(newEl);
+            return;
+          }
+        }
+      });
+    }
+
+    let isEditingAllBookings = false;
+
+    // Edit button handler
+    if (allBookingsEditBtn && !allBookingsEditBtn.dataset.bound) {
+      allBookingsEditBtn.dataset.bound = 'true';
+      allBookingsEditBtn.addEventListener('click', async () => {
+        if (!isEditingAllBookings) {
+          // Enter edit mode
+          setAllBookingsFormEditable(true);
+          allBookingsEditBtn.textContent = 'Save';
+          isEditingAllBookings = true;
+        } else {
+          // Save edits
+          const bookingId = allBookingsForm.dataset.id;
+          if (!bookingId) {
+            alert('No booking selected.');
+            return;
+          }
+          // Gather updated values
+          const getVal = id => {
+            if (id === 'allBookingsTime') {
+              const wrapper = allBookingsForm.querySelector('.d-flex');
+              const startSel = wrapper ? wrapper.querySelector('#allBookingsStartTime') : null;
+              const endSel = wrapper ? wrapper.querySelector('#allBookingsEndTime') : null;
+              if (startSel && endSel) {
+                const slots = Array.from(startSel.options).map(o => o.value);
+                const startIdx = slots.indexOf(startSel.value);
+                const endIdx = slots.indexOf(endSel.value);
+                if (endIdx <= startIdx) {
+                  alert('End time must be after start time.');
+                  return null;
+                }
+                return `${startSel.value} - ${endSel.value}`;
+              }
+              return '';
+            }
+            const el = allBookingsForm.querySelector(`#${id}`);
+            return el ? (el.tagName === 'SELECT' ? el.value : el.value) : '';
+          };
+          const updated = {
+            date: getVal('allBookingsDate'),
+            timeRange: getVal('allBookingsTime'),
+            repeat: getVal('allBookingsRepeat'),
+            email: getVal('allBookingsEmail'),
+            purpose: getVal('allBookingsPurpose'),
+            roomId: getVal('allBookingsRoomId'),
+            userId: getVal('allBookingsName'),
+            name: getVal('allBookingsName')
+          };
+          if (updated.timeRange === null) return;
+          try {
+            const response = await fetch(`/update_booking/${bookingId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(updated)
+            });
+            const result = await response.json();
+            if (result.success) {
+              setAllBookingsFormEditable(false);
+              const timeWrapper = allBookingsForm.querySelector('.d-flex');
+              if (timeWrapper) {
+                let startVal = '', endVal = '';
+                const startSel = timeWrapper.querySelector('#allBookingsStartTime');
+                const endSel = timeWrapper.querySelector('#allBookingsEndTime');
+                if (startSel && endSel) {
+                  startVal = startSel.value;
+                  endVal = endSel.value;
+                }
+                const span = document.createElement('span');
+                span.className = 'form-control';
+                span.id = 'allBookingsTime';
+                span.style.background = '#eee';
+                span.style.pointerEvents = 'none';
+                span.style.userSelect = 'text';
+                span.textContent = startVal && endVal ? `${startVal} - ${endVal}` : '';
+                timeWrapper.replaceWith(span);
+              }
+              allBookingsEditBtn.textContent = 'Edit Reservation';
+              isEditingAllBookings = false;
+              // Update the booking in the results list
+              const allBookingsItem = document.querySelector(`#allBookingsResultsList .list-group-item[data-booking-id="${bookingId}"]`);
+              if (allBookingsItem) {
+                allBookingsItem.querySelector('.fw-semibold').textContent = updated.purpose || '(no purpose)';
+                const details = allBookingsItem.querySelectorAll('.small.text-muted');
+                if (details.length >= 1) {
+                  details[0].textContent = `${updated.roomId || '(room)'} • ${updated.date || ''}${updated.timeRange ? ' • ' + updated.timeRange : ''}`;
+                }
+                if (details.length >= 2) {
+                  details[1].textContent = updated.email || '';
+                }
+              }
+              // Update form display
+              const setSpan = (id, value) => {
+                const el = allBookingsForm.querySelector(`#${id}`) || document.getElementById(id);
+                if (el) el.textContent = value || '';
+              };
+              setSpan('allBookingsDate', updated.date);
+              setSpan('allBookingsTime', updated.timeRange);
+              setSpan('allBookingsRepeat', updated.repeat);
+              setSpan('allBookingsName', updated.name || updated.userId);
+              setSpan('allBookingsEmail', updated.email);
+              setSpan('allBookingsPurpose', updated.purpose);
+              setSpan('allBookingsRoomId', updated.roomId);
+              alert('Booking updated successfully!');
+            } else {
+              alert('Error saving booking: ' + (result.error || 'unknown error'));
+            }
+          } catch (err) {
+            alert('Failed to save booking.');
+          }
+        }
+      });
+    }
+
+    // Cancel button handler
+    if (allBookingsCancelBtn && !allBookingsCancelBtn.dataset.bound) {
+      allBookingsCancelBtn.dataset.bound = 'true';
+      allBookingsCancelBtn.addEventListener('click', async () => {
+        const bookingId = allBookingsForm.dataset.id;
+        if (!bookingId) {
+          alert("Please select a booking first.");
+          return;
+        }
+        const confirmDelete = confirm("Are you sure you want to cancel this reservation?");
+        if (!confirmDelete) return;
+        console.log(`🗑️ Deleting booking ${bookingId}...`);
+        try {
+          const response = await fetch(`/delete_booking/${bookingId}`, { method: 'DELETE' });
+          const result = await response.json();
+          if (result.success) {
+            alert("Booking canceled successfully!");
+            // Remove from all bookings results list
+            const allBookingsItem = document.querySelector(`#allBookingsResultsList .list-group-item[data-booking-id="${bookingId}"]`);
+            if (allBookingsItem) {
+              allBookingsItem.remove();
+            }
+            // Hide the card
+            const allBookingsInfoCard = document.getElementById('allBookingsInfoCard');
+            if (allBookingsInfoCard) {
+              allBookingsInfoCard.style.display = 'none';
+            }
+            allBookingsForm.dataset.id = "";
+          } else {
+            alert("Error canceling booking: " + (result.error || "unknown error"));
+          }
+        } catch (err) {
+          console.error("❌ Error deleting booking:", err);
+          alert("Failed to cancel booking.");
+        }
+      });
+    }
+
+    return true;
+  }
+
+  // Initialize edit/cancel functionality
+  if (document.readyState !== 'loading') {
+    initAllBookingsEditCancel();
+  } else {
+    document.addEventListener('DOMContentLoaded', initAllBookingsEditCancel);
+  }
+
+  // Watch for dynamically added elements
+  const editCancelObserver = new MutationObserver(() => {
+    if (!document.getElementById('allBookingsEditBtn')?.dataset.bound) {
+      initAllBookingsEditCancel();
+    }
+  });
+  editCancelObserver.observe(document.body, { childList: true, subtree: true });
+})();
 /* ==============================
    Maintenance - Cleanup Old Bookings
 ============================== */
