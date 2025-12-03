@@ -51,8 +51,10 @@
           <button class="nav-link" id="nav-calendar-tab" data-bs-toggle="tab" data-bs-target="#nav-calendar"
             type="button" role="tab" aria-controls="nav-calendar" aria-selected="false">Calendar</button>
 
+          {% if is_logged_in %}
           <button class="nav-link" id="nav-bookings-tab" data-bs-toggle="tab" data-bs-target="#nav-bookings"
             type="button" role="tab" aria-controls="nav-bookings" aria-selected="false">My Bookings</button>
+          {% endif %}
 
           {% if user_role == 'admin' %}
           <button class="nav-link" id="nav-admin-tab" data-bs-toggle="tab" data-bs-target="#nav-admin"
@@ -77,7 +79,9 @@
 
       <div class="tab-pane fade p-3" id="nav-calendar" role="tabpanel" aria-labelledby="nav-calendar-tab"></div>
 
+      {% if is_logged_in %}
       <div class="tab-pane fade p-3" id="nav-bookings" role="tabpanel" aria-labelledby="nav-bookings-tab"></div>
+      {% endif %}
 
       {% if user_role == 'admin' %}
       <div class="tab-pane fade p-3" id="nav-admin" role="tabpanel" aria-labelledby="nav-admin-tab"></div>
@@ -115,6 +119,11 @@
 document.addEventListener('DOMContentLoaded', () => {
   const bookingsTab = document.getElementById('nav-bookings-tab');
   const bookingsContent = document.getElementById('nav-bookings');
+
+  // Only set up event listener if the tab exists (user is logged in)
+  if (!bookingsTab || !bookingsContent) {
+    return;
+  }
 
   bookingsTab.addEventListener('shown.bs.tab', async () => {
     console.log("My Bookings tab opened");
