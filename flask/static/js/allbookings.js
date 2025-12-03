@@ -58,6 +58,9 @@
   // Lookup for booked cells -> bookings (used for click handling)
   let cellBookingLookup = {};
   
+  // Track currently selected booking ID for toggle behavior
+  let currentlySelectedBookingId = null;
+  
   // Closure date ranges cache
   let closureRanges = [];
   
@@ -526,6 +529,43 @@
         hint.textContent = '';
       }
     }
+    
+    // Reset selected booking ID
+    currentlySelectedBookingId = null;
+    
+    // Show instruction panel and hide edit panel for admin/faculty
+    if (!isStudent) {
+      showInstructionPanel();
+      hideEditPanel();
+    }
+  }
+  
+  // Show instruction panel and hide edit panel
+  function showInstructionPanel(){
+    const root = getRoot();
+    const infoPanel = root.querySelector('#allBookingsInfoPanel');
+    const editPanel = root.querySelector('#allBookingPanel');
+    if (infoPanel) infoPanel.classList.remove('d-none');
+    if (editPanel) editPanel.classList.add('d-none');
+  }
+  
+  // Hide instruction panel and show edit panel
+  function hideInstructionPanel(){
+    const root = getRoot();
+    const infoPanel = root.querySelector('#allBookingsInfoPanel');
+    if (infoPanel) infoPanel.classList.add('d-none');
+  }
+  
+  function showEditPanel(){
+    const root = getRoot();
+    const editPanel = root.querySelector('#allBookingPanel');
+    if (editPanel) editPanel.classList.remove('d-none');
+  }
+  
+  function hideEditPanel(){
+    const root = getRoot();
+    const editPanel = root.querySelector('#allBookingPanel');
+    if (editPanel) editPanel.classList.add('d-none');
   }
 
   // Modal-based chooser for multi-booking cells
@@ -570,7 +610,19 @@
       // Only faculty/admin can drill into an individual booking record.
       if (!isStudent) {
         item.addEventListener('click', () => {
-          openBookingPanel(b);
+          const bookingId = b.id;
+          
+          // If clicking the same booking, toggle it off
+          if (currentlySelectedBookingId === bookingId) {
+            clearBookingPanel();
+          } else {
+            // Otherwise, show the edit panel
+            currentlySelectedBookingId = bookingId;
+            openBookingPanel(b);
+            hideInstructionPanel();
+            showEditPanel();
+          }
+          
           if(window.bootstrap && bootstrap.Modal){
             const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
             modalInstance.hide();
@@ -593,7 +645,19 @@
     } else if (!isStudent) {
       // Fallback for non-students: open the first booking directly if we can't show a proper modal
       if(bookings.length === 1){
-        openBookingPanel(bookings[0]);
+        const booking = bookings[0];
+        const bookingId = booking.id;
+        
+        // If clicking the same booking, toggle it off
+        if (currentlySelectedBookingId === bookingId) {
+          clearBookingPanel();
+        } else {
+          // Otherwise, show the edit panel
+          currentlySelectedBookingId = bookingId;
+          openBookingPanel(booking);
+          hideInstructionPanel();
+          showEditPanel();
+        }
       }
     }
   }
@@ -625,9 +689,22 @@
         return;
       }
 
-      // Faculty/Admin: existing behavior
+      // Faculty/Admin: existing behavior with toggle
       if(bookings.length === 1){
-        openBookingPanel(bookings[0]);
+        const booking = bookings[0];
+        const bookingId = booking.id;
+        
+        // If clicking the same booking, toggle it off
+        if (currentlySelectedBookingId === bookingId) {
+          clearBookingPanel();
+          return;
+        }
+        
+        // Otherwise, show the edit panel
+        currentlySelectedBookingId = bookingId;
+        openBookingPanel(booking);
+        hideInstructionPanel();
+        showEditPanel();
         return;
       }
 
@@ -868,6 +945,8 @@
           }
           // Success notification for admin users
           alert('Booking details were saved successfully.');
+          // Clear the selected booking and show instructions again
+          clearBookingPanel();
           // Refresh grid from Firestore
           await update();
         }catch(err){
@@ -898,6 +977,8 @@
             alert('Failed to delete booking: ' + (data.error || res.statusText));
             return;
           }
+          // Clear the selected booking and show instructions again
+          clearBookingPanel();
           await update();
         }catch(err){
           console.error('[allbookings] Delete error', err);
@@ -964,10 +1045,11 @@
       if (panel) panel.classList.add('d-none');
       if (infoPanel) configureAllBookingsInfoPanel(infoPanel);
     } else {
-      // Faculty/Admin: show both the info card (instructions) and the details panel.
+      // Faculty/Admin: show info card (instructions) initially, hide edit panel until booking is clicked.
       if (infoPanel) configureAllBookingsInfoPanel(infoPanel);
       if (panel) {
-        panel.classList.remove('d-none');
+        // Initially hide the edit panel - it will show when a booking is clicked
+        panel.classList.add('d-none');
 
         const titleEl = panel.querySelector('#allBookingPanelTitle');
         const facultyNote = panel.querySelector('#allBookingFacultyNote');
