@@ -12,13 +12,13 @@
                     <i class="bi bi-caret-down-square" id="bookingsToggleIcon"></i>
                 </button>
             </div>
-            {% if error_message %}
-            <div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">
-            {{ error_message }}
-            </div>
-            {% endif %}
             <div class="collapse show" id="bookingsListCollapse">
                 <div id="bookingsList">
+                {% if error_message %}
+                <div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">
+                {{ error_message }}
+                </div>
+                {% endif %}
                 {% for booking in bookings %}
             <div class="booking-card mb-3 p-3 rounded" 
                 data-id="{{ booking.id }}"

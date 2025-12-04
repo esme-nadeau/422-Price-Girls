@@ -241,11 +241,38 @@ function wireCleanupButton() {
         // Helper to check if bookings list is empty and show message
         function checkAndShowEmptyMessage() {
           const bookingsList = document.getElementById('bookingsList');
+          const bookingsListCollapse = document.getElementById('bookingsListCollapse');
+          const bookingsToggleIcon = document.getElementById('bookingsToggleIcon');
           if (!bookingsList) return;
           
           const remainingCards = bookingsList.querySelectorAll('.booking-card');
           if (remainingCards.length === 0) {
             bookingsList.innerHTML = '<div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">No bookings to approve.</div>';
+            
+            // Ensure collapse stays open and is properly initialized
+            if (bookingsListCollapse) {
+              // Keep it expanded (add 'show' class if not present)
+              if (!bookingsListCollapse.classList.contains('show')) {
+                bookingsListCollapse.classList.add('show');
+              }
+              
+              // Re-initialize Bootstrap collapse to ensure it still works
+              if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                // Get or create collapse instance
+                let collapseInstance = bootstrap.Collapse.getInstance(bookingsListCollapse);
+                if (!collapseInstance) {
+                  collapseInstance = new bootstrap.Collapse(bookingsListCollapse, {
+                    toggle: false
+                  });
+                }
+              }
+              
+              // Update icon to match expanded state
+              if (bookingsToggleIcon) {
+                bookingsToggleIcon.classList.remove('bi-caret-up-square');
+                bookingsToggleIcon.classList.add('bi-caret-down-square');
+              }
+            }
           }
         }
 
@@ -451,11 +478,38 @@ function wireCleanupButton() {
     // Helper to check if bookings list is empty and show message
     function checkAndShowEmptyMessage() {
       const bookingsList = document.getElementById('bookingsList');
+      const bookingsListCollapse = document.getElementById('bookingsListCollapse');
+      const bookingsToggleIcon = document.getElementById('bookingsToggleIcon');
       if (!bookingsList) return;
       
       const remainingCards = bookingsList.querySelectorAll('.booking-card');
       if (remainingCards.length === 0) {
         bookingsList.innerHTML = '<div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">No bookings to approve.</div>';
+        
+        // Ensure collapse stays open and is properly initialized
+        if (bookingsListCollapse) {
+          // Keep it expanded (add 'show' class if not present)
+          if (!bookingsListCollapse.classList.contains('show')) {
+            bookingsListCollapse.classList.add('show');
+          }
+          
+          // Re-initialize Bootstrap collapse to ensure it still works
+          if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+            // Get or create collapse instance
+            let collapseInstance = bootstrap.Collapse.getInstance(bookingsListCollapse);
+            if (!collapseInstance) {
+              collapseInstance = new bootstrap.Collapse(bookingsListCollapse, {
+                toggle: false
+              });
+            }
+          }
+          
+          // Update icon to match expanded state
+          if (bookingsToggleIcon) {
+            bookingsToggleIcon.classList.remove('bi-caret-up-square');
+            bookingsToggleIcon.classList.add('bi-caret-down-square');
+          }
+        }
       }
     }
 
@@ -918,32 +972,58 @@ function wireCleanupButton() {
   ============================== */
 async function initAdminTools() {
   // Initialize bookings dropdown toggle (for "Bookings to Approve")
-  const bookingsToggleBtn = document.getElementById('bookingsToggleBtn');
-  const bookingsToggleIcon = document.getElementById('bookingsToggleIcon');
-  const bookingsListCollapse = document.getElementById('bookingsListCollapse');
-  
-  if (bookingsToggleBtn && bookingsToggleIcon && bookingsListCollapse) {
-    // Set initial icon state (caret-down-square when expanded, caret-up-square when collapsed)
-    // Since the collapse has 'show' class initially, it starts expanded
-    if (bookingsListCollapse.classList.contains('show')) {
-      bookingsToggleIcon.classList.remove('bi-caret-up-square');
-      bookingsToggleIcon.classList.add('bi-caret-down-square');
-    } else {
-      bookingsToggleIcon.classList.remove('bi-caret-down-square');
-      bookingsToggleIcon.classList.add('bi-caret-up-square');
+  // Use a small delay to ensure DOM is fully ready, especially when page loads with empty state
+  setTimeout(() => {
+    const bookingsToggleBtn = document.getElementById('bookingsToggleBtn');
+    const bookingsToggleIcon = document.getElementById('bookingsToggleIcon');
+    const bookingsListCollapse = document.getElementById('bookingsListCollapse');
+    
+    if (bookingsToggleBtn && bookingsToggleIcon && bookingsListCollapse) {
+      // Check if bookingsList is empty (no bookings on initial page load)
+      const bookingsList = document.getElementById('bookingsList');
+      const hasBookings = bookingsList && bookingsList.querySelectorAll('.booking-card').length > 0;
+      const hasEmptyMessage = bookingsList && bookingsList.querySelector('[style*="color: #6c757d"]');
+      
+      // If empty and no message exists, ensure we have content so collapse works properly
+      if (!hasBookings && bookingsList && !hasEmptyMessage) {
+        // Add empty message inside the collapse if not already there
+        bookingsList.innerHTML = '<div style="color: #6c757d; background: #f8f9fa; border: 1px solid #e9ecef; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">No bookings to approve.</div>';
+      }
+      
+      // Ensure Bootstrap's collapse is initialized for this element
+      // This is important even when the list is empty
+      if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+        // Get or create the collapse instance
+        let collapseInstance = bootstrap.Collapse.getInstance(bookingsListCollapse);
+        if (!collapseInstance) {
+          collapseInstance = new bootstrap.Collapse(bookingsListCollapse, {
+            toggle: false
+          });
+        }
+      }
+      
+      // Set initial icon state (caret-down-square when expanded, caret-up-square when collapsed)
+      // Since the collapse has 'show' class initially, it starts expanded
+      if (bookingsListCollapse.classList.contains('show')) {
+        bookingsToggleIcon.classList.remove('bi-caret-up-square');
+        bookingsToggleIcon.classList.add('bi-caret-down-square');
+      } else {
+        bookingsToggleIcon.classList.remove('bi-caret-down-square');
+        bookingsToggleIcon.classList.add('bi-caret-up-square');
+      }
+      
+      // Listen for collapse events to toggle the icon
+      bookingsListCollapse.addEventListener('show.bs.collapse', () => {
+        bookingsToggleIcon.classList.remove('bi-caret-up-square');
+        bookingsToggleIcon.classList.add('bi-caret-down-square');
+      });
+      
+      bookingsListCollapse.addEventListener('hide.bs.collapse', () => {
+        bookingsToggleIcon.classList.remove('bi-caret-down-square');
+        bookingsToggleIcon.classList.add('bi-caret-up-square');
+      });
     }
-    
-    // Listen for collapse events to toggle the icon
-    bookingsListCollapse.addEventListener('show.bs.collapse', () => {
-      bookingsToggleIcon.classList.remove('bi-caret-up-square');
-      bookingsToggleIcon.classList.add('bi-caret-down-square');
-    });
-    
-    bookingsListCollapse.addEventListener('hide.bs.collapse', () => {
-      bookingsToggleIcon.classList.remove('bi-caret-down-square');
-      bookingsToggleIcon.classList.add('bi-caret-up-square');
-    });
-  }
+  }, 100);
   
   // Initialize all bookings dropdown toggle (for "All Bookings")
   const allBookingsToggleBtn = document.getElementById('allBookingsToggleBtn');
