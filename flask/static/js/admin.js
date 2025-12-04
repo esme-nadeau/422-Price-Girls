@@ -21,6 +21,52 @@ function showMessage(msg, isError = false) {
   }
 }
 
+function wireCleanupButton() {
+  const cleanupBtn = document.getElementById("cleanupBookingsBtn");
+  const cleanupMsg = document.getElementById("cleanupBookingsMessage");
+
+  if (!cleanupBtn || !cleanupMsg) {
+    return false;
+  }
+
+  // Avoid double-binding
+  if (cleanupBtn.dataset.bound === "true") {
+    return true;
+  }
+  cleanupBtn.dataset.bound = "true";
+
+  cleanupBtn.addEventListener("click", async () => {
+    console.log("[admin] cleanupBookingsBtn clicked");
+    cleanupMsg.textContent = "Running cleanup…";
+
+    try {
+      const res = await fetch("/admin/cleanup-bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (_) {
+        data = {};
+      }
+
+      if (res.ok && data.success) {
+        const count = data.deleted ?? 0;
+        cleanupMsg.textContent = `Deleted ${count} old booking${count === 1 ? "" : "s"}.`;
+      } else {
+        cleanupMsg.textContent = `Error: ${data.error || "Unknown error"}`;
+      }
+    } catch (err) {
+      console.error("cleanup-bookings error:", err);
+      cleanupMsg.textContent = `Request failed: ${err.message}`;
+    }
+  });
+
+  return true;
+}
+
 /* ==============================
     Admin Page Booking Management
 ============================== */
@@ -825,6 +871,7 @@ function showMessage(msg, isError = false) {
 
   // Try to initialize immediately
   if (initAdminBookingManagement()) {
+    wireCleanupButton();
     return;
   }
 
@@ -833,20 +880,37 @@ function showMessage(msg, isError = false) {
     setTimeout(() => {
       if (!document.getElementById('mybookings-root')) {
         initAdminBookingManagement();
+        wireCleanupButton();
       }
     }, delay);
   });
 
   // Also watch for content to load
-  const observer = new MutationObserver(() => {
-    if (!document.getElementById('mybookings-root')) {
-      if (initAdminBookingManagement()) {
+  function tryInitAdmin() {
+    // Only run on the admin page, not on the React / mybookings root
+    if (document.getElementById('mybookings-root')) {
+      return false;
+    }
+
+    if (initAdminBookingManagement()) {
+      wireCleanupButton();
+      return true;
+    }
+    return false;
+  }
+
+  // Try immediately (for normal full page loads like /admin)
+  if (!tryInitAdmin()) {
+    // Fallback for cases where the DOM is injected later
+    const observer = new MutationObserver(() => {
+      if (tryInitAdmin()) {
         observer.disconnect();
       }
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
 })(); // End of admin-only booking management IIFE
+ // End of admin-only booking management IIFE
 
 
   /* ==============================
@@ -2284,6 +2348,7 @@ if (document.readyState !== 'loading') {
 
       resultsList.appendChild(item);
     });
+
   }
 
   async function applyAllBookingsFilters() {
@@ -2773,3 +2838,45 @@ if (document.readyState !== 'loading') {
   });
   editCancelObserver.observe(document.body, { childList: true, subtree: true });
 })();
+/* ==============================
+   Maintenance - Cleanup Old Bookings
+============================== */
+document.addEventListener("DOMContentLoaded", function () {
+  const cleanupBtn = document.getElementById("cleanupBookingsBtn");
+  const cleanupMsg = document.getElementById("cleanupBookingsMessage");
+
+  console.log("[admin] DOM ready, cleanupBtn =", cleanupBtn);
+
+  if (!cleanupBtn || !cleanupMsg) {
+    return; // Not on admin page or elements missing
+  }
+
+  cleanupBtn.addEventListener("click", async () => {
+    console.log("[admin] cleanupBookingsBtn clicked");
+    cleanupMsg.textContent = "Running cleanup…";
+
+    try {
+      const res = await fetch("/admin/cleanup-bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (_) {
+        data = {};
+      }
+
+      if (res.ok && data.success) {
+        const count = data.deleted ?? 0;
+        cleanupMsg.textContent = `Deleted ${count} old booking${count === 1 ? "" : "s"}.`;
+      } else {
+        cleanupMsg.textContent = `Error: ${data.error || "Unknown error"}`;
+      }
+    } catch (err) {
+      console.error("cleanup-bookings error:", err);
+      cleanupMsg.textContent = `Request failed: ${err.message}`;
+    }
+  });
+});

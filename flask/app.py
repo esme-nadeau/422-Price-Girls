@@ -1195,25 +1195,7 @@ def bookings():
     except Exception as e:
         print(f"[bookings] Error fetching bookings: {e}")
         return jsonify({"bookings": [], "error": str(e)}), 500
-
-@app.post("/admin/cleanup-bookings")
-def admin_cleanup_bookings():
-    """
-    Admin-only endpoint to delete bookings and pending bookings older than 30 days.
-    """
-    session_data = get_current_session_data()
-    role = (session_data.get("role") if session_data else "student") or "student"
-    role = str(role).strip().lower()
-
-    if role != "admin":
-        return jsonify({"success": False, "error": "forbidden"}), 403
-
-    try:
-        deleted = cleanup_bookings_older_than(days=30)
-        return jsonify({"success": True, "deleted": deleted})
-    except Exception as e:
-        print(f"[admin_cleanup_bookings] Error: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
+    
 
 # ----------------------------
 # Email confirmation endpoint
@@ -1733,36 +1715,37 @@ def auth_logout():
     return resp
 
 
-def cleanup_sessions_older_than(days=30):
-    if db is None:
-        raise RuntimeError("Firestore is not initialized.")
 
-    cutoff = datetime.utcnow() - timedelta(days=days)
-    deleted = 0
+
+
+def get_current_session_data():
+    """Return the current session document from Firestore, or None.
+
+    The document contains at least email, role, and name keys when available.
+    Roles are stored in the users collection (admin, faculty, student) and
+    copied into sessions when a user logs in.
+    """
+    if db is None:
+        return None
+
+    session_id = request.cookies.get("sessionId")
+    if not session_id:
+        return None
 
     try:
-        query = db.collection("sessions").where("createdAt", "<", cutoff)
-        for doc in query.stream():
-            doc.reference.delete()
-            deleted += 1
+        snap = db.collection("sessions").document(session_id).get()
+        if not snap.exists:
+            return None
+        data = snap.to_dict() or {}
+        data.setdefault("email", "")
+        data.setdefault("role", "student")
+        data.setdefault("name", "")
+        return data
     except Exception as e:
-        print(f"[session_cleanup] Query by createdAt failed: {e}")
-        fallback_docs = db.collection("sessions").stream()
-        for doc in fallback_docs:
-            data = doc.to_dict() or {}
-            created_at = data.get("createdAt")
-            created_dt = None
-            if hasattr(created_at, "to_datetime"):
-                created_dt = created_at.to_datetime()
-            elif isinstance(created_at, datetime):
-                created_dt = created_at
-            if created_dt and created_dt < cutoff:
-                doc.reference.delete()
-                deleted += 1
-
-    print(f"[session_cleanup] Deleted {deleted} sessions older than {days} days.")
-    return deleted
-
+        print(f"[session_helper] Failed to load session: {e}")
+        return None
+        
+    
 def cleanup_bookings_older_than(days=30):
     """
     Delete bookings and pending_bookings that are older than `days`
@@ -1822,39 +1805,33 @@ def cleanup_bookings_older_than(days=30):
     print(f"[booking_cleanup] Deleted {deleted} bookings older than {days} days.")
     return deleted
 
-
-def get_current_session_data():
-    """Return the current session document from Firestore, or None.
-
-    The document contains at least email, role, and name keys when available.
-    Roles are stored in the users collection (admin, faculty, student) and
-    copied into sessions when a user logs in.
+@app.post("/admin/cleanup-bookings")
+def admin_cleanup_bookings():
+    """
+    Admin-only endpoint to delete bookings and pending bookings older than 30 days.
     """
     if db is None:
-        return None
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
 
-    session_id = request.cookies.get("sessionId")
-    if not session_id:
-        return None
+    session_data = get_current_session_data()
+    role = (session_data.get("role") if session_data else "student") or "student"
+    role = str(role).strip().lower()
+
+    if role != "admin":
+        return jsonify({"success": False, "error": "forbidden"}), 403
 
     try:
-        snap = db.collection("sessions").document(session_id).get()
-        if not snap.exists:
-            return None
-        data = snap.to_dict() or {}
-        data.setdefault("email", "")
-        data.setdefault("role", "student")
-        data.setdefault("name", "")
-        return data
+        deleted = cleanup_bookings_older_than(days=30)
+        return jsonify({"success": True, "deleted": deleted})
     except Exception as e:
-        print(f"[session_helper] Failed to load session: {e}")
-        return None
+        print(f"[admin_cleanup_bookings] Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.post("/auth/cleanup-sessions")
 def auth_cleanup_sessions():
     try:
-        deleted = cleanup_sessions_older_than(30)
+        deleted = cleanup_bookings_older_than(30)
         return jsonify({"success": True, "deleted": deleted})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
