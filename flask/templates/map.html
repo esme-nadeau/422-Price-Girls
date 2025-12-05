@@ -268,7 +268,7 @@
       <div class="mb-3">
         <label class="form-label mb-1">Does this booking repeat?</label>
         <div class="dropdown mb-1">
-          <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="repeatDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+          <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button" id="repeatDropdown" data-repeat-dropdown data-bs-toggle="dropdown" aria-expanded="false">
             Never
           </button>
           <ul class="dropdown-menu w-100">
@@ -281,7 +281,7 @@
         
         <!-- Comment button on its own line -->
         <div class="text-end">
-          <button id="repeatNotesIcon" class="btn btn-outline-secondary btn-sm d-none" type="button" 
+          <button id="repeatNotesIcon" data-repeat-notes-icon class="btn btn-outline-secondary btn-sm d-none" type="button" 
                   title="View repeat details" onclick="openRepeatModal(null, event)">
             <i class="bi bi-pencil-square"></i>
           </button>

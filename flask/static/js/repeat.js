@@ -29,10 +29,9 @@ function getRepeatContextFromEvent(ev) {
 
   // Always scope lookups to the container; avoid falling back to the first
   // matching ID in the whole document, since multiple tabs reuse IDs.
-  const repeatDropdown = container.querySelector('#repeatDropdown') || 
-                          container.querySelector('#allBookingsRepeatDropdown');
-  const notesIcon = container.querySelector('#repeatNotesIcon') ||
-                    container.querySelector('#allBookingsRepeatNotesIcon');
+  // Use attribute selectors to find the repeat dropdown and notes icon.
+  const repeatDropdown = container.querySelector('[data-repeat-dropdown]');
+  const notesIcon = container.querySelector('[data-repeat-notes-icon]');
 
   if (!repeatDropdown) return null;
   return { dropdownEl: repeatDropdown, notesIconEl: notesIcon, containerEl: container };
@@ -41,13 +40,14 @@ function getRepeatContextFromEvent(ev) {
 // Function to open modal with given type (Daily/Weekly/Monthly)
 // ev should be the click event from the dropdown item or pencil icon
 window.openRepeatModal = function(type, ev) {
+  // Resolve context early and set it immediately
   const ctx = getRepeatContextFromEvent(ev) || currentRepeatContext;
   if (!ctx || !ctx.dropdownEl) return;
 
   const repeatDropdown = ctx.dropdownEl;
   const notesIcon = ctx.notesIconEl;
   const container = ctx.containerEl || document;
-  currentRepeatContext = { dropdownEl: repeatDropdown, notesIconEl: notesIcon, containerEl: container };
+  currentRepeatContext = ctx; // Set immediately
 
   // Determine type if not explicitly provided (e.g., edit icon)
   if (!type) {
@@ -60,27 +60,34 @@ window.openRepeatModal = function(type, ev) {
     type = 'Never';
   }
 
-  // Hide all option sections globally (single shared modal)
-  document.querySelectorAll('.repeat-option').forEach(el => {
+  // Get modal element at the top
+  const modalEl = document.getElementById('repeatModal');
+  if (!modalEl) {
+    console.warn('Repeat modal not found in DOM');
+    return;
+  }
+
+  // Hide all option sections - scoped to modalEl
+  modalEl.querySelectorAll('.repeat-option').forEach(el => {
     el.classList.add('d-none');
     el.style.display = 'none';
   });
 
   // Show the chosen type - do this synchronously before showing modal
   if (type === 'Daily') {
-    const dailyOptions = document.getElementById('dailyOptions');
+    const dailyOptions = modalEl.querySelector('#dailyOptions');
     if (dailyOptions) {
       dailyOptions.classList.remove('d-none');
       dailyOptions.style.display = 'block';
     }
   } else if (type === 'Weekly') {
-    const weeklyOptions = document.getElementById('weeklyOptions');
+    const weeklyOptions = modalEl.querySelector('#weeklyOptions');
     if (weeklyOptions) {
       weeklyOptions.classList.remove('d-none');
       weeklyOptions.style.display = 'block';
     }
   } else if (type === 'Monthly') {
-    const monthlyOptions = document.getElementById('monthlyOptions');
+    const monthlyOptions = modalEl.querySelector('#monthlyOptions');
     if (monthlyOptions) {
       monthlyOptions.classList.remove('d-none');
       monthlyOptions.style.display = 'block';
@@ -90,30 +97,20 @@ window.openRepeatModal = function(type, ev) {
   // Store type in dataset so we can read it later
   repeatDropdown.dataset.repeatType = type;
 
-  // Show modal (prefer the one in the same container; fall back only if needed)
-  let modalEl = (container && container.querySelector('#repeatModal')) ||
-                document.getElementById('repeatModal');
-  if (modalEl) {
-    if (modalEl.parentElement !== document.body) {
-      document.body.appendChild(modalEl);
-    }
-
-    // Ensure the Save button for the active modal has a listener BEFORE showing
-    // Call initSaveButton immediately and also after a short delay to ensure it's attached
-    initSaveButton();
-    
-    // Use a small delay to ensure DOM updates are complete and content is visible
-    setTimeout(() => {
-      // Re-initialize save button to ensure it's attached (in case modal was recreated)
-      initSaveButton();
-      
-      let modalInstance = bootstrap.Modal.getInstance(modalEl);
-      if (!modalInstance) {
-        modalInstance = new bootstrap.Modal(modalEl);
-      }
-      modalInstance.show();
-    }, 50);
+  // Move modal to body if needed (but don't repeatedly add it)
+  if (modalEl.parentElement !== document.body) {
+    document.body.appendChild(modalEl);
   }
+
+  // Initialize save button handler synchronously (scoped to modalEl)
+  initSaveButton(modalEl);
+
+  // Show modal
+  let modalInstance = bootstrap.Modal.getInstance(modalEl);
+  if (!modalInstance) {
+    modalInstance = new bootstrap.Modal(modalEl);
+  }
+  modalInstance.show();
 };
 
 // Helper: set repeat to Never for the appropriate widget (no modal)
@@ -128,116 +125,120 @@ window.setRepeatToNever = function(ev) {
   if (notesIcon) notesIcon.classList.add('d-none');
 };
 
-// Initialize save button listener
-function initSaveButton() {
-  const buttons = document.querySelectorAll('#saveRepeatOptions');
-  if (!buttons.length) return;
+// Initialize save button listener - scoped to modalEl
+function initSaveButton(modalEl) {
+  if (!modalEl) {
+    console.warn('initSaveButton called without modalEl');
+    return;
+  }
 
-  buttons.forEach((saveBtn) => {
-    // Remove any existing listener first to avoid duplicates
-    const existingHandler = saveBtn._repeatSaveHandler;
-    if (existingHandler) {
-      saveBtn.removeEventListener('click', existingHandler);
+  const saveBtn = modalEl.querySelector('#saveRepeatOptions');
+  if (!saveBtn) return;
+
+  // Guard: only attach handler once per button
+  if (saveBtn.dataset.handlerAttached === 'true') {
+    return;
+  }
+
+  // Create new handler
+  const handler = function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Use currentRepeatContext which was set when modal opened
+    const ctx = currentRepeatContext;
+    if (!ctx || !ctx.dropdownEl) {
+      console.warn('Repeat context not set when saving');
+      return;
     }
 
-    // Create new handler
-    const handler = function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      // Get context - use currentRepeatContext which should be set when modal opens
-      const ctx = currentRepeatContext || getRepeatContextFromEvent();
-      const repeatDropdown = ctx && ctx.dropdownEl ? ctx.dropdownEl : null;
-      const notesIcon = ctx && ctx.notesIconEl ? ctx.notesIconEl : null;
-      const container = ctx && ctx.containerEl ? ctx.containerEl : document;
-      if (!repeatDropdown) {
-        console.warn('Repeat dropdown not found in context');
-        return;
-      }
+    const repeatDropdown = ctx.dropdownEl;
+    const notesIcon = ctx.notesIconEl;
 
-      const type = repeatDropdown.dataset.repeatType || 'Never';
-      let label = type;
+    const type = repeatDropdown.dataset.repeatType || 'Never';
+    let label = type;
 
-      // Read values directly from the DOM - ensure inputs are accessible
-      if (type === 'Daily') {
-        const endDateEl = document.getElementById('dailyEndDate');
-        if (endDateEl) {
-          const endDate = (endDateEl.value || '').trim();
-          if (endDate) {
-            label += ` until ${endDate}`;
-          }
-        }
-      } else if (type === 'Weekly') {
-        const days = [];
-        ['Mon','Tue','Wed','Thu','Fri'].forEach(d => {
-          const cb = document.getElementById('day' + d);
-          if (cb && cb.checked) days.push(d);
-        });
-        const endDateEl = document.getElementById('weeklyEndDate');
-        const endDate = endDateEl ? (endDateEl.value || '').trim() : '';
-        
-        // Only add "on" if there are days selected
-        if (days.length > 0) {
-          label += ` on ${days.join(', ')}`;
-          // Add end date if provided
-          if (endDate) {
-            label += ` until ${endDate}`;
-          }
-        } else if (endDate) {
-          // If no days but there's an end date, just show the end date
+    // Read values from modalEl using querySelector
+    if (type === 'Daily') {
+      const endDateEl = modalEl.querySelector('#dailyEndDate');
+      if (endDateEl && endDateEl.value) {
+        const endDate = endDateEl.value.trim();
+        if (endDate) {
           label += ` until ${endDate}`;
         }
-        // If neither days nor end date, just show "Weekly"
-      } else if (type === 'Monthly') {
-        const endDateEl = document.getElementById('monthlyEndDate');
-        if (endDateEl) {
-          const endDate = (endDateEl.value || '').trim();
-          if (endDate) {
-            label += ` until ${endDate}`;
-          }
+      }
+    } else if (type === 'Weekly') {
+      const days = [];
+      ['Mon','Tue','Wed','Thu','Fri'].forEach(d => {
+        const cb = modalEl.querySelector('#day' + d);
+        if (cb && cb.checked) days.push(d);
+      });
+      const endDateEl = modalEl.querySelector('#weeklyEndDate');
+      const endDate = (endDateEl && endDateEl.value) ? endDateEl.value.trim() : '';
+      
+      // Only add "on" if there are days selected
+      if (days.length > 0) {
+        label += ` on ${days.join(', ')}`;
+        // Add end date if provided
+        if (endDate) {
+          label += ` until ${endDate}`;
+        }
+      } else if (endDate) {
+        // If no days but there's an end date, just show the end date
+        label += ` until ${endDate}`;
+      }
+      // If neither days nor end date, just show "Weekly"
+    } else if (type === 'Monthly') {
+      const endDateEl = modalEl.querySelector('#monthlyEndDate');
+      if (endDateEl && endDateEl.value) {
+        const endDate = endDateEl.value.trim();
+        if (endDate) {
+          label += ` until ${endDate}`;
         }
       }
+    }
 
-      // Update dropdown display
-      repeatDropdown.textContent = label;
+    // Update dropdown display
+    repeatDropdown.textContent = label;
 
-      // Show the notes icon if type is not Never
-      if (type !== 'Never') {
-        if (notesIcon) notesIcon.classList.remove('d-none');
-      } else if (notesIcon) {
-        notesIcon.classList.add('d-none');
-      }
+    // Show the notes icon if type is not Never
+    if (type !== 'Never') {
+      if (notesIcon) notesIcon.classList.remove('d-none');
+    } else if (notesIcon) {
+      notesIcon.classList.add('d-none');
+    }
 
-      // Close the modal in the same container (or the first as fallback)
-      const modalEl = container.querySelector('#repeatModal') ||
-                      document.getElementById('repeatModal');
-      if (modalEl) {
-        let modalInstance = bootstrap.Modal.getInstance(modalEl);
-        if (!modalInstance) {
-          modalInstance = new bootstrap.Modal(modalEl);
-        }
-        modalInstance.hide();
-      }
-    };
-    
-    // Store handler reference and attach
-    saveBtn._repeatSaveHandler = handler;
-    saveBtn.addEventListener('click', handler);
-  });
+    // Close the modal
+    let modalInstance = bootstrap.Modal.getInstance(modalEl);
+    if (modalInstance) {
+      modalInstance.hide();
+    }
+  };
+  
+  // Attach handler and mark as attached
+  saveBtn.addEventListener('click', handler);
+  saveBtn.dataset.handlerAttached = 'true';
 }
 
-// Try to initialize when DOM is ready
+// Initialize globally when DOM is ready (for pages that dynamically add the modal)
+function initGlobalModal() {
+  const modalEl = document.getElementById('repeatModal');
+  if (modalEl) {
+    // Just ensure the structure exists; handlers will be attached on first open
+  }
+}
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initSaveButton);
+  document.addEventListener('DOMContentLoaded', initGlobalModal);
 } else {
-  initSaveButton();
+  initGlobalModal();
 }
 
 // Also set up a MutationObserver to catch when the modal is added dynamically
 if (typeof MutationObserver !== 'undefined') {
   const observer = new MutationObserver(function() {
-    if (document.getElementById('saveRepeatOptions')) {
-      initSaveButton();
+    if (document.getElementById('repeatModal')) {
+      initGlobalModal();
     }
   });
 
