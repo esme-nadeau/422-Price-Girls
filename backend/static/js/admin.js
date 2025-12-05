@@ -3114,7 +3114,7 @@ if (document.readyState !== 'loading') {
             alert("Error canceling booking: " + (result.error || "unknown error"));
           }
         } catch (err) {
-          console.error("❌ Error deleting booking:", err);
+          console.error("Error deleting booking:", err);
           alert("Failed to cancel booking.");
         }
       });

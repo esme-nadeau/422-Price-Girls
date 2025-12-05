@@ -193,3 +193,37 @@
   font-weight: 500;
   font-style: italic;
 }
+
+/* ==============================
+   Input Fields & Dropdowns
+============================== */
+.calendar-page .form-control,
+.calendar-page select.form-select,
+.calendar-page .dropdown-toggle {
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  color: #333;
+  background-color: #fff;
+  font-weight: 400;
+  font-family: 'EB Garamond', serif;
+  box-shadow: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Focus effect for all fields and dropdowns */
+.calendar-page .form-control:focus,
+.calendar-page select.form-select:focus,
+.calendar-page .dropdown-toggle:focus {
+  border-color: #a3c4a1;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(163, 196, 161, 0.2);
+}
+
+/* Ensure dropdown text matches input text */
+.calendar-page .dropdown-toggle {
+  font-weight: 400;
+  color: #333;
+  text-align: left;
+}
