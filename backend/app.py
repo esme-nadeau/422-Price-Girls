@@ -472,7 +472,7 @@ def api_deny_pending_booking(booking_id):
                 repeat_rule = data.get("repeat") or None
                 purpose = data.get("purpose") or None
 
-                manage_url = f"{SITE_URL}/mybookings"
+                manage_url = f"{SITE_URL}"
                 site_url = SITE_URL
                 year = datetime.now().year
 
@@ -572,7 +572,7 @@ def delete_booking(booking_id):
                 repeat_rule = booking.get("repeat") or None
                 purpose = booking.get("purpose") or None
 
-                manage_url = f"{SITE_URL}/mybookings"
+                manage_url = f"{SITE_URL}"
                 site_url = SITE_URL
                 current_year = datetime.now().year
 
@@ -1264,7 +1264,7 @@ def send_booking_confirmation():
     purpose = booking.get("purpose") or None
 
     site_url = SITE_URL
-    manage_url = f"{SITE_URL}/mybookings?bookingId={booking_id}"
+    manage_url = f"{SITE_URL}"
 
     # Use template flag for pending vs confirmed
     email_status = "pending" if status == "pending" else "confirmed"
