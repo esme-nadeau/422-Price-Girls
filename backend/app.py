@@ -372,7 +372,7 @@ def api_approve_pending_booking(booking_id):
             to_email = confirmed.get("email")
             if to_email:
                 booking_id_str = booking_id
-                manage_url = f"test"
+                manage_url = f"{SITE_URL}"
                 user_name = confirmed.get("userId") or "Guest"
                 room_name = confirmed.get("roomId") or "Unknown Room"
                 date = confirmed.get("date") or ""
