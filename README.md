@@ -166,3 +166,65 @@ To add / delete closures
 ## How to set up .env file
 
 ## How to deploy to hosting
+
+&nbsp;
+# Project directory structure
+```text
+├── .gitignore
+├── README.md
+├── backend/
+│   ├── app.py
+│   ├── auth_guard.py
+│   ├── mailer_smtp.py
+│   ├── serviceAccount.json
+│   ├── config.py
+│   │
+│   ├── templates/
+│   │   ├── index.html
+│   │   ├── admin.html
+│   │   ├── allbookings.html
+│   │   ├── booking_confirmation_email.html
+│   │   ├── calendar.html
+│   │   ├── login.html
+│   │   ├── map.html
+│   │   ├── mybookings.html
+│   │   └── _repeat_modal.html
+│   │
+│   ├── static/
+│   │   ├── css/
+│   │   │   ├── admin.css
+│   │   │   ├── calendar.css
+│   │   │   ├── login.css
+│   │   │   ├── map.css
+│   │   │   ├── mybookings.css
+│   │   │   └── style.css
+│   │   │
+│   │   ├── js/
+│   │   │   ├── admin.js
+│   │   │   ├── allbookings.js
+│   │   │   ├── bookings.js
+│   │   │   ├── calendar.js
+│   │   │   ├── esme_auth.js
+│   │   │   ├── map.js
+│   │   │   ├── mybookings.js
+│   │   │   ├── repeat.js
+│   │   │   ├── rooms.js
+│   │   │   ├── script.js
+│   │   │   ├── session-debug.js
+│   │   │   └── timeSelect.js
+│   │   │
+│   │   ├── map_images/
+│   │   │   ├── DESC_1.svg
+│   │   │   ├── DESC_2.svg
+│   │   │   └── DESC_3.svg
+│   │   │
+│   │   └── room_images/
+│   │       ├── 127.JPG
+│   │       ├── 160.JPG
+│   │       ├── 200.JPG
+│   │       ├── 220.JPG
+│   │       ├── 258.JPG
+│   │       ├── 260.JPG
+│   │       └── 360.JPG
+└── 
+```
