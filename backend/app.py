@@ -367,12 +367,12 @@ def api_approve_pending_booking(booking_id):
         # Remove from pending queue
         pending_ref.delete()
 
-        # --- Send confirmation email (best-effort) ---
+        # --- Send confirmation email ---
         try:
             to_email = confirmed.get("email")
             if to_email:
                 booking_id_str = booking_id
-                manage_url = f"{SITE_URL}/mybookings?bookingId={booking_id_str}"
+                manage_url = f"{SITE_URL}"
                 user_name = confirmed.get("userId") or "Guest"
                 room_name = confirmed.get("roomId") or "Unknown Room"
                 date = confirmed.get("date") or ""
@@ -690,7 +690,7 @@ def update_booking(booking_id):
                 else:
                     actor = "you"
 
-                manage_url = f"{SITE_URL}/mybookings?bookingId={booking_id}"
+                manage_url = f"{SITE_URL}"
                 site_url = SITE_URL
                 current_year = datetime.now().year
 
