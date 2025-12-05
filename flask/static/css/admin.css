@@ -123,3 +123,37 @@
   font-size: 0.75rem;
   font-weight: 500;
 }
+
+/* ==============================
+   Input Fields & Dropdowns
+============================== */
+#mybookings-tab-content .form-control,
+#mybookings-tab-content select.form-select,
+#mybookings-tab-content .dropdown-toggle {
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 0.95rem;
+  color: #333;
+  background-color: #fff;
+  font-weight: 400;
+  font-family: 'EB Garamond', serif;
+  box-shadow: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Focus effect for all fields and dropdowns */
+#mybookings-tab-content .form-control:focus,
+#mybookings-tab-content select.form-select:focus,
+#mybookings-tab-content .dropdown-toggle:focus {
+  border-color: #a3c4a1;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(163, 196, 161, 0.2);
+}
+
+/* Ensure dropdown text matches input text */
+#mybookings-tab-content .dropdown-toggle {
+  font-weight: 400;
+  color: #333;
+  text-align: left;
+}
