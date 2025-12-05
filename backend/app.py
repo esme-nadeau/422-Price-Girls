@@ -24,29 +24,31 @@ app = Flask(__name__)
 # ----------------------------
 # Firebase Admin initialization (robust)
 # ----------------------------
+
 def init_firebase():
-    cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "serviceAccount.json")
     try:
-        if not os.path.exists(cred_path):
-            raise FileNotFoundError(f"Missing service account file: {cred_path}")
-        # Validate JSON before using it
-        with open(cred_path, "r", encoding="utf-8") as f:
-            json.load(f)
-        cred = credentials.Certificate(cred_path)
+        # Get the secret JSON string from the environment variable
+        service_account_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        if not service_account_json:
+            raise RuntimeError("GOOGLE_APPLICATION_CREDENTIALS env var is missing!")
+
+        # Parse the JSON string
+        service_account_info = json.loads(service_account_json)
+
+        # Initialize Firebase
+        cred = credentials.Certificate(service_account_info)
         firebase_admin.initialize_app(cred)
-        print(f"[firebase] Initialized with service account at {cred_path}")
-        return cred  # return credentials for Firestore
+        print("[firebase] Initialized from secret JSON")
+        return cred
+
     except Exception as e:
         raise RuntimeError(
             "Firebase Admin initialization failed. "
-            "Check GOOGLE_APPLICATION_CREDENTIALS in .env and verify serviceAccount.json exists and is valid."
+            "Make sure the secret JSON is valid and GOOGLE_APPLICATION_CREDENTIALS is set."
         ) from e
 
 # Initialize Firebase Admin
 if not firebase_admin._apps:
-    # Ensure env var points to bundled serviceAccount.json if not already set
-    if not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = os.path.join(os.path.dirname(__file__), "serviceAccount.json")
     cred = init_firebase()
 
 # ----------------------------
@@ -1882,4 +1884,4 @@ def auth_cleanup_sessions():
 # Run app
 # ----------------------------
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
