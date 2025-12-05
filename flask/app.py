@@ -563,7 +563,7 @@ def delete_booking(booking_id):
         try:
             to_email = booking_email
             if to_email:
-                user_name = booking.get("userId") or booking.get("name") or "Guest"
+                user_name = booking.get("name") or booking.get("userId") or "Guest"
                 room_name = booking.get("roomId") or "Unknown Room"
                 date = booking.get("date") or ""
                 time_range = booking.get("timeRange") or booking.get("time") or ""
@@ -662,6 +662,7 @@ def update_booking(booking_id):
             "timeRange": data.get("timeRange", ""),
             "repeat": data.get("repeat", "Never"),
             "userId": data.get("userId", ""),
+            "name": data.get("name", ""),
             "email": data.get("email", ""),
             "purpose": data.get("purpose", ""),
             "roomId": data.get("roomId", ""),
@@ -675,7 +676,7 @@ def update_booking(booking_id):
                 # Merge existing + updated for email display
                 merged = {**existing_booking, **update_fields}
 
-                user_name = merged.get("userId") or merged.get("name") or "Guest"
+                user_name = merged.get("name") or merged.get("userId") or "Guest"
                 room_name = merged.get("roomId") or "Unknown Room"
                 date_val = merged.get("date") or ""
                 time_val = merged.get("timeRange") or merged.get("time") or ""
