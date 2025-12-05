@@ -69,7 +69,9 @@ The application consists of five main screens:
 | **Calendar**     | ✓ (read-only)    | ✓                            | ✓                            | ✓     |
 | **My Bookings**  | ✗                | ✓                            | ✓                            | ✗     |
 | **Admin Tools**  | ✗                | ✗                            | ✗                            | ✓     |
+
 &nbsp;
+
 # Common User Tasks
 ## Create a Booking
 1. Log in and authenticate with your uoreogn.edu account.
@@ -121,8 +123,6 @@ To add / delete closures
 
 <!-- ## Misc Notes: -->
 
-
----
 &nbsp;
 # How to install
 1. Clone the repository
