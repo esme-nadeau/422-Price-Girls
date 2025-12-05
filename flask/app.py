@@ -1805,6 +1805,40 @@ def cleanup_bookings_older_than(days=30):
     print(f"[booking_cleanup] Deleted {deleted} bookings older than {days} days.")
     return deleted
 
+def cleanup_sessions_older_than(days=30):
+    """
+    Delete sessions that are older than `days` based on their createdAt timestamp.
+    """
+    if db is None:
+        raise RuntimeError("Firestore is not initialized.")
+
+    cutoff_dt = datetime.utcnow() - timedelta(days=days)
+    deleted = 0
+
+    try:
+        docs = db.collection("sessions").stream()
+        for doc in docs:
+            data = doc.to_dict() or {}
+            created_at = data.get("createdAt")
+
+            created_dt = None
+            # Firestore Timestamp
+            if hasattr(created_at, "to_datetime"):
+                created_dt = created_at.to_datetime()
+            elif isinstance(created_at, datetime):
+                created_dt = created_at
+
+            if created_dt and created_dt < cutoff_dt:
+                print(f"[session_cleanup] Deleting sessions/{doc.id}")
+                doc.reference.delete()
+                deleted += 1
+
+    except Exception as e:
+        print(f"[session_cleanup] Error cleaning sessions: {e}")
+
+    print(f"[session_cleanup] Deleted {deleted} sessions older than {days} days.")
+    return deleted
+
 @app.post("/admin/cleanup-bookings")
 def admin_cleanup_bookings():
     """
@@ -1830,11 +1864,16 @@ def admin_cleanup_bookings():
 
 @app.post("/auth/cleanup-sessions")
 def auth_cleanup_sessions():
+    if db is None:
+        return jsonify({"success": False, "error": "firestore_unavailable"}), 500
+
     try:
-        deleted = cleanup_bookings_older_than(30)
+        deleted = cleanup_sessions_older_than(days=30)
         return jsonify({"success": True, "deleted": deleted})
     except Exception as e:
+        print(f"[auth_cleanup_sessions] Error: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
+
 
 
 
