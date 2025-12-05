@@ -35,10 +35,133 @@ function initMyBookingsElements() {
 
 // Helper to switch between display and edit mode
 function setBookingFormEditable(editable) {
+  // Handle repeat field separately (using repeat modal system)
+  // Scope lookups to bookingForm if available to avoid conflicts
+  const container = bookingForm || document;
+  const repeatDisplay = container.querySelector('#repeatDisplay') || document.getElementById('repeatDisplay');
+  const repeatEdit = container.querySelector('#repeatEdit') || document.getElementById('repeatEdit');
+  const repeatDropdown = container.querySelector('#repeatDropdown') || document.getElementById('repeatDropdown');
+  const repeatNotesIcon = container.querySelector('#repeatNotesIcon') || document.getElementById('repeatNotesIcon');
+  const repeatSpan = container.querySelector('#repeat') || document.getElementById('repeat');
+  
+  if (editable) {
+    // Show edit mode, hide display mode
+    if (repeatDisplay) repeatDisplay.classList.add('d-none');
+    if (repeatEdit) repeatEdit.classList.remove('d-none');
+    
+    // Get current repeat value from span - make sure we get the actual text content
+    let repeatVal = 'Never';
+    if (repeatSpan) {
+      // Get text content, handling whitespace and empty strings
+      const spanText = repeatSpan.textContent || repeatSpan.innerText || '';
+      repeatVal = spanText.trim() || 'Never';
+      
+      // If span is empty, try to get from booking card as fallback
+      if (!repeatVal || repeatVal === 'Never') {
+        const bookingId = bookingForm ? bookingForm.dataset.id : '';
+        if (bookingId) {
+          const card = document.querySelector(`.booking-card[data-id="${bookingId}"]`);
+          if (card) {
+            try {
+              const bookingData = card.dataset.booking ? JSON.parse(card.dataset.booking) : {};
+              const cardRepeat = bookingData.repeat || card.dataset.repeat || '';
+              if (cardRepeat && cardRepeat !== 'Never') {
+                repeatVal = cardRepeat;
+                // Also update the span so it's correct
+                repeatSpan.textContent = repeatVal;
+              }
+            } catch (e) {
+              const cardRepeat = card.dataset.repeat || '';
+              if (cardRepeat && cardRepeat !== 'Never') {
+                repeatVal = cardRepeat;
+                repeatSpan.textContent = repeatVal;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Debug: log the repeat value we're reading
+    console.log('[mybookings] Entering edit mode, repeat value:', repeatVal);
+    
+    if (repeatDropdown) {
+      repeatDropdown.textContent = repeatVal;
+      repeatDropdown.disabled = false;
+      repeatDropdown.style.pointerEvents = '';
+      repeatDropdown.style.opacity = '';
+      repeatDropdown.style.cursor = '';
+      repeatDropdown.removeAttribute('data-disabled');
+      
+      // Remove all click prevention handlers
+      if (repeatDropdown._clickHandlers) {
+        repeatDropdown._clickHandlers.forEach(handler => {
+          repeatDropdown.removeEventListener('click', handler, true);
+        });
+        repeatDropdown._clickHandlers = [];
+      }
+      
+      // Also ensure the dropdown menu items are clickable
+      const dropdownMenu = repeatDropdown.nextElementSibling;
+      if (dropdownMenu && dropdownMenu.classList.contains('dropdown-menu')) {
+        dropdownMenu.style.pointerEvents = '';
+        dropdownMenu.style.opacity = '';
+      }
+      
+      // Parse repeat value to determine type
+      let type = 'Never';
+      if (repeatVal.startsWith('Daily')) type = 'Daily';
+      else if (repeatVal.startsWith('Weekly')) type = 'Weekly';
+      else if (repeatVal.startsWith('Monthly')) type = 'Monthly';
+      else if (repeatVal && repeatVal !== 'Never') type = 'Custom';
+      repeatDropdown.dataset.repeatType = type;
+      
+      // Show notes icon if not Never
+      if (repeatNotesIcon) {
+        if (type !== 'Never') {
+          repeatNotesIcon.classList.remove('d-none');
+        } else {
+          repeatNotesIcon.classList.add('d-none');
+        }
+      }
+    }
+  } else {
+    // Show display mode, hide edit mode
+    if (repeatDisplay) repeatDisplay.classList.remove('d-none');
+    if (repeatEdit) repeatEdit.classList.add('d-none');
+    
+    // Get repeat value from dropdown
+    if (repeatDropdown && repeatSpan) {
+      const repeatVal = repeatDropdown.textContent || 'Never';
+      repeatSpan.textContent = repeatVal;
+    }
+    
+    // Disable dropdown using CSS instead of disabled attribute (so Bootstrap dropdown still works)
+    if (repeatDropdown) {
+      repeatDropdown.style.pointerEvents = 'none';
+      repeatDropdown.style.opacity = '0.6';
+      repeatDropdown.style.cursor = 'not-allowed';
+      repeatDropdown.dataset.disabled = 'true';
+      
+      // Prevent dropdown button from opening when disabled
+      const clickHandler = function(e) {
+        if (this.dataset.disabled === 'true') {
+          e.preventDefault();
+          e.stopPropagation();
+          return false;
+        }
+      };
+      if (!repeatDropdown._clickHandlers) {
+        repeatDropdown._clickHandlers = [];
+      }
+      repeatDropdown._clickHandlers.push(clickHandler);
+      repeatDropdown.addEventListener('click', clickHandler, true);
+    }
+  }
+
   const fields = [
     { id: 'date', type: 'date' },
     { id: 'time', type: 'custom-time' },
-    { id: 'repeat', type: 'select' },
     { id: 'name', type: 'text' },
     { id: 'email', type: 'email' },
     { id: 'purpose', type: 'text' },
@@ -49,20 +172,7 @@ function setBookingFormEditable(editable) {
     if (!el) return;
     if (editable) {
       let newEl;
-      if (f.type === 'select') {
-        newEl = document.createElement('select');
-        newEl.className = 'form-select';
-        newEl.id = f.id;
-        ['Never', 'Weekly', 'Monthly'].forEach(opt => {
-          const o = document.createElement('option');
-          o.textContent = opt;
-          o.value = opt;
-          newEl.appendChild(o);
-        });
-        newEl.value = el.textContent || 'Never';
-        el.replaceWith(newEl);
-        return;
-      } else if (f.type === 'dropdown') {
+      if (f.type === 'dropdown') {
         newEl = document.createElement('select');
         newEl.className = 'form-select';
         newEl.id = f.id;
@@ -241,6 +351,32 @@ function initMyBookingsButtons() {
     editBtn.addEventListener('click', async () => {
     if (!isEditing) {
       // Enter edit mode
+      // Before entering edit mode, ensure we have the current repeat value
+      // Try to get it from the span, or fall back to the booking card data
+      const repeatSpan = document.getElementById('repeat');
+      const bookingId = bookingForm ? bookingForm.dataset.id : '';
+      let currentRepeat = 'Never';
+      
+      if (repeatSpan && repeatSpan.textContent && repeatSpan.textContent.trim()) {
+        currentRepeat = repeatSpan.textContent.trim();
+      } else if (bookingId) {
+        // Fallback: get from the booking card
+        const card = document.querySelector(`.booking-card[data-id="${bookingId}"]`);
+        if (card) {
+          try {
+            const bookingData = card.dataset.booking ? JSON.parse(card.dataset.booking) : {};
+            currentRepeat = bookingData.repeat || card.dataset.repeat || 'Never';
+          } catch (e) {
+            currentRepeat = card.dataset.repeat || 'Never';
+          }
+        }
+      }
+      
+      // Ensure the span has the value before entering edit mode
+      if (repeatSpan && (!repeatSpan.textContent || !repeatSpan.textContent.trim())) {
+        repeatSpan.textContent = currentRepeat;
+      }
+      
       setBookingFormEditable(true);
       editBtn.textContent = 'Save';
       isEditing = true;
@@ -274,10 +410,24 @@ function initMyBookingsButtons() {
         const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
         return el ? (el.tagName === 'SELECT' ? el.value : el.value) : '';
       };
+      
+      // Get repeat value from dropdown (like allbookings does)
+      // Make sure we're getting it from the correct dropdown in the booking form
+      const repeatDropdown = bookingForm ? bookingForm.querySelector('#repeatDropdown') : document.getElementById('repeatDropdown');
+      let repeatText = 'Never';
+      if (repeatDropdown) {
+        // Get the actual text content from the button
+        // The textContent should have been updated by repeat.js when the modal was saved
+        repeatText = (repeatDropdown.textContent || repeatDropdown.innerText || 'Never').trim();
+        console.log('[mybookings] Saving, repeat value from dropdown:', repeatText);
+      } else {
+        console.warn('[mybookings] Repeat dropdown not found when saving!');
+      }
+      
       const updated = {
         date: getVal('date'),
         timeRange: getVal('time'),
-        repeat: getVal('repeat'),
+        repeat: repeatText,
         email: getVal('email'),
         purpose: getVal('purpose'),
         roomId: getVal('roomId'),
@@ -296,8 +446,10 @@ function initMyBookingsButtons() {
         if (result.success) {
           // Notify user
           alert('Your reservation was updated successfully.');
-          // Update display
+          
+          // Update display - call setBookingFormEditable(false) first (like admin page does)
           setBookingFormEditable(false);
+          
           // Forcefully replace time dropdowns with span
           const timeWrapper = bookingForm.querySelector('.d-flex');
           if (timeWrapper) {
@@ -317,6 +469,20 @@ function initMyBookingsButtons() {
             span.textContent = startVal && endVal ? `${startVal} - ${endVal}` : '';
             timeWrapper.replaceWith(span);
           }
+          
+          // Update form display with saved values (like admin page does)
+          const setSpan = (id, value) => {
+            const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
+            if (el) el.textContent = value || '';
+          };
+          setSpan('date', updated.date);
+          setSpan('time', updated.timeRange);
+          setSpan('repeat', updated.repeat);
+          setSpan('name', updated.name || updated.userId);
+          setSpan('email', updated.email);
+          setSpan('purpose', updated.purpose);
+          setSpan('roomId', updated.roomId);
+          
           editBtn.textContent = 'Edit Reservation';
           isEditing = false;
           setBookingCardsClickable(true); // Re-enable clicking other bookings

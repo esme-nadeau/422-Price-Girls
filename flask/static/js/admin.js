@@ -2415,7 +2415,6 @@ if (document.readyState !== 'loading') {
         // Get the all bookings info card and form
         const allBookingsInfoCard = document.getElementById("allBookingsInfoCard");
         const allBookingsForm = document.getElementById("allBookingsForm");
-        const allBookingsEditBtn = document.getElementById("allBookingsEditBtn");
         const approveBookingsCard = document.getElementById("bookingInfoCard");
         
         if (!allBookingsInfoCard || !allBookingsForm) return;
@@ -2470,7 +2469,52 @@ if (document.readyState !== 'loading') {
         if (emailEl) emailEl.textContent = booking.email || booking.userEmail || '';
         if (purposeEl) purposeEl.textContent = booking.purpose || '';
         if (roomEl) roomEl.textContent = booking.roomId || '';
-        if (repeatEl) repeatEl.textContent = booking.repeat || 'Never';
+        const repeatVal = booking.repeat || 'Never';
+        if (repeatEl) repeatEl.textContent = repeatVal;
+        
+        // Also update the repeat dropdown (if in edit mode, it will be shown when edit is clicked)
+        const repeatDropdownEl = document.getElementById('allBookingsRepeatDropdown');
+        if (repeatDropdownEl) {
+          repeatDropdownEl.textContent = repeatVal;
+          repeatDropdownEl.disabled = true; // Disabled when not in edit mode
+          let type = 'Never';
+          if (repeatVal.startsWith('Daily')) type = 'Daily';
+          else if (repeatVal.startsWith('Weekly')) type = 'Weekly';
+          else if (repeatVal.startsWith('Monthly')) type = 'Monthly';
+          else if (repeatVal && repeatVal !== 'Never') type = 'Custom';
+          repeatDropdownEl.dataset.repeatType = type;
+        }
+        
+        // Ensure edit mode is reset when a new booking is selected
+        const editBtn = document.getElementById('allBookingsEditBtn');
+        if (editBtn && editBtn.textContent === 'Save') {
+          // Exit edit mode - trigger a click on the edit button to reset it properly
+          // This ensures all state is properly reset
+          editBtn.click();
+        }
+        
+        // Ensure repeat dropdown is disabled and display is shown
+        const repeatDisplay = document.getElementById('allBookingsRepeatDisplay');
+        const repeatEdit = document.getElementById('allBookingsRepeatEdit');
+        if (repeatDisplay) repeatDisplay.classList.remove('d-none');
+        if (repeatEdit) repeatEdit.classList.add('d-none');
+        if (repeatDropdownEl) {
+          // Disable using CSS instead of disabled attribute
+          repeatDropdownEl.style.pointerEvents = 'none';
+          repeatDropdownEl.style.opacity = '0.6';
+          repeatDropdownEl.style.cursor = 'not-allowed';
+          repeatDropdownEl.dataset.disabled = 'true';
+          
+          // Prevent dropdown from opening when disabled
+          const existingHandler = repeatDropdownEl.onclick;
+          repeatDropdownEl.addEventListener('click', function(e) {
+            if (this.dataset.disabled === 'true') {
+              e.preventDefault();
+              e.stopPropagation();
+              return false;
+            }
+          });
+        }
         
         // Make sure form is in display mode (not edit mode)
         // This will be handled by the setAllBookingsFormEditable function if needed
@@ -2659,13 +2703,127 @@ if (document.readyState !== 'loading') {
       return false;
     }
 
+    // Helper to enable/disable booking card clicks
+    function setBookingCardsClickable(clickable) {
+      // Only affect cards in the admin page (not mybookings-root)
+      const myBookingsRoot = document.getElementById('mybookings-root');
+      
+      // Disable clicks on all booking cards (both pending and all bookings results) in admin page
+      const allCards = document.querySelectorAll('.booking-card, #allBookingsResultsList .list-group-item');
+      allCards.forEach(card => {
+        // Skip cards that are in mybookings-root (those are handled by mybookings.js)
+        if (myBookingsRoot && myBookingsRoot.contains(card)) {
+          return;
+        }
+        
+        if (clickable) {
+          card.style.pointerEvents = '';
+          card.style.opacity = '';
+          card.style.cursor = '';
+        } else {
+          card.style.pointerEvents = 'none';
+          card.style.opacity = '0.6';
+          card.style.cursor = 'not-allowed';
+        }
+      });
+    }
+
     // Helper to switch between display and edit mode for all bookings form
     function setAllBookingsFormEditable(editable) {
       if (!allBookingsForm) return;
+      
+      // Handle repeat dropdown separately
+      const repeatDisplay = document.getElementById('allBookingsRepeatDisplay');
+      const repeatEdit = document.getElementById('allBookingsRepeatEdit');
+      const repeatDropdown = document.getElementById('allBookingsRepeatDropdown');
+      const repeatNotesIcon = document.getElementById('allBookingsRepeatNotesIcon');
+      const repeatSpan = document.getElementById('allBookingsRepeat');
+      
+      if (editable) {
+        // Show edit mode, hide display mode
+        if (repeatDisplay) repeatDisplay.classList.add('d-none');
+        if (repeatEdit) repeatEdit.classList.remove('d-none');
+        
+        // Get current repeat value from span
+        const repeatVal = repeatSpan ? (repeatSpan.textContent || 'Never').trim() : 'Never';
+        if (repeatDropdown) {
+          repeatDropdown.textContent = repeatVal;
+          repeatDropdown.disabled = false;
+          repeatDropdown.style.pointerEvents = '';
+          repeatDropdown.style.opacity = '';
+          repeatDropdown.style.cursor = '';
+          repeatDropdown.removeAttribute('data-disabled');
+          
+          // Remove all click prevention handlers
+          if (repeatDropdown._clickHandlers) {
+            repeatDropdown._clickHandlers.forEach(handler => {
+              repeatDropdown.removeEventListener('click', handler, true);
+            });
+            repeatDropdown._clickHandlers = [];
+          }
+          
+          // Also ensure the dropdown menu items are clickable
+          const dropdownMenu = repeatDropdown.nextElementSibling;
+          if (dropdownMenu && dropdownMenu.classList.contains('dropdown-menu')) {
+            dropdownMenu.style.pointerEvents = '';
+            dropdownMenu.style.opacity = '';
+          }
+          
+          // Parse repeat type
+          let type = 'Never';
+          if (repeatVal.startsWith('Daily')) type = 'Daily';
+          else if (repeatVal.startsWith('Weekly')) type = 'Weekly';
+          else if (repeatVal.startsWith('Monthly')) type = 'Monthly';
+          else if (repeatVal && repeatVal !== 'Never') type = 'Custom';
+          repeatDropdown.dataset.repeatType = type;
+          
+          // Show notes icon if not Never
+          if (repeatNotesIcon) {
+            if (type !== 'Never') {
+              repeatNotesIcon.classList.remove('d-none');
+            } else {
+              repeatNotesIcon.classList.add('d-none');
+            }
+          }
+        }
+      } else {
+        // Show display mode, hide edit mode
+        if (repeatDisplay) repeatDisplay.classList.remove('d-none');
+        if (repeatEdit) repeatEdit.classList.add('d-none');
+        
+        // Get repeat value from dropdown
+        if (repeatDropdown && repeatSpan) {
+          const repeatVal = repeatDropdown.textContent || 'Never';
+          repeatSpan.textContent = repeatVal;
+        }
+        
+        // Disable dropdown using CSS instead of disabled attribute (so Bootstrap dropdown still works)
+        if (repeatDropdown) {
+          repeatDropdown.style.pointerEvents = 'none';
+          repeatDropdown.style.opacity = '0.6';
+          repeatDropdown.style.cursor = 'not-allowed';
+          repeatDropdown.dataset.disabled = 'true';
+          
+          // Prevent dropdown button from opening when disabled
+          const clickHandler = function(e) {
+            if (this.dataset.disabled === 'true') {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              return false;
+            }
+          };
+          if (!repeatDropdown._clickHandlers) {
+            repeatDropdown._clickHandlers = [];
+          }
+          repeatDropdown._clickHandlers.push(clickHandler);
+          repeatDropdown.addEventListener('click', clickHandler, true);
+        }
+      }
+      
       const fields = [
         { id: 'allBookingsDate', type: 'date' },
         { id: 'allBookingsTime', type: 'custom-time' },
-        { id: 'allBookingsRepeat', type: 'select' },
         { id: 'allBookingsName', type: 'text' },
         { id: 'allBookingsEmail', type: 'email' },
         { id: 'allBookingsPurpose', type: 'text' },
@@ -2674,22 +2832,11 @@ if (document.readyState !== 'loading') {
       fields.forEach(async f => {
         const el = allBookingsForm.querySelector(`#${f.id}`) || document.getElementById(f.id);
         if (!el) return;
+        // Skip repeat field - handled separately above
+        if (f.id === 'allBookingsRepeat') return;
         if (editable) {
           let newEl;
-          if (f.type === 'select') {
-            newEl = document.createElement('select');
-            newEl.className = 'form-select';
-            newEl.id = f.id;
-            ['Never', 'Weekly', 'Monthly'].forEach(opt => {
-              const o = document.createElement('option');
-              o.textContent = opt;
-              o.value = opt;
-              newEl.appendChild(o);
-            });
-            newEl.value = el.textContent || 'Never';
-            el.replaceWith(newEl);
-            return;
-          } else if (f.type === 'dropdown') {
+          if (f.type === 'dropdown') {
             newEl = document.createElement('select');
             newEl.className = 'form-select';
             newEl.id = f.id;
@@ -2824,6 +2971,7 @@ if (document.readyState !== 'loading') {
         if (!isEditingAllBookings) {
           // Enter edit mode
           setAllBookingsFormEditable(true);
+          setBookingCardsClickable(false); // Disable clicking other bookings
           allBookingsEditBtn.textContent = 'Save';
           isEditingAllBookings = true;
         } else {
@@ -2854,10 +3002,14 @@ if (document.readyState !== 'loading') {
             const el = allBookingsForm.querySelector(`#${id}`);
             return el ? (el.tagName === 'SELECT' ? el.value : el.value) : '';
           };
+          // Get repeat value from dropdown
+          const repeatDropdown = document.getElementById('allBookingsRepeatDropdown');
+          const repeatText = repeatDropdown ? (repeatDropdown.textContent || 'Never').trim() : 'Never';
+          
           const updated = {
             date: getVal('allBookingsDate'),
             timeRange: getVal('allBookingsTime'),
-            repeat: getVal('allBookingsRepeat'),
+            repeat: repeatText,
             email: getVal('allBookingsEmail'),
             purpose: getVal('allBookingsPurpose'),
             roomId: getVal('allBookingsRoomId'),
@@ -2894,6 +3046,7 @@ if (document.readyState !== 'loading') {
               }
               allBookingsEditBtn.textContent = 'Edit Reservation';
               isEditingAllBookings = false;
+              setBookingCardsClickable(true); // Re-enable clicking other bookings
               // Update the booking in the results list
               const allBookingsItem = document.querySelector(`#allBookingsResultsList .list-group-item[data-booking-id="${bookingId}"]`);
               if (allBookingsItem) {

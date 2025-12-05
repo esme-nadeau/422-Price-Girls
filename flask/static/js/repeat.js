@@ -14,19 +14,25 @@ function getRepeatContextFromEvent(ev) {
                 trigger.closest('#mapContainer') ||
                 trigger.closest('.calendar-page') ||
                 trigger.closest('#allbookings-tab-content') ||
+                trigger.closest('#mybookings-root') ||
+                trigger.closest('#mybookings-tab-content') ||
                 document;
   } else {
     container = document.querySelector('.tab-pane.show.active') ||
                 document.getElementById('mapContainer') ||
                 document.querySelector('.calendar-page') ||
                 document.getElementById('allbookings-tab-content') ||
+                document.getElementById('mybookings-root') ||
+                document.getElementById('mybookings-tab-content') ||
                 document;
   }
 
   // Always scope lookups to the container; avoid falling back to the first
   // matching ID in the whole document, since multiple tabs reuse IDs.
-  const repeatDropdown = container.querySelector('#repeatDropdown');
-  const notesIcon = container.querySelector('#repeatNotesIcon');
+  const repeatDropdown = container.querySelector('#repeatDropdown') || 
+                          container.querySelector('#allBookingsRepeatDropdown');
+  const notesIcon = container.querySelector('#repeatNotesIcon') ||
+                    container.querySelector('#allBookingsRepeatNotesIcon');
 
   if (!repeatDropdown) return null;
   return { dropdownEl: repeatDropdown, notesIconEl: notesIcon, containerEl: container };
@@ -55,12 +61,31 @@ window.openRepeatModal = function(type, ev) {
   }
 
   // Hide all option sections globally (single shared modal)
-  document.querySelectorAll('.repeat-option').forEach(el => el.classList.add('d-none'));
+  document.querySelectorAll('.repeat-option').forEach(el => {
+    el.classList.add('d-none');
+    el.style.display = 'none';
+  });
 
-  // Show the chosen type
-  if (type === 'Daily') document.getElementById('dailyOptions')?.classList.remove('d-none');
-  if (type === 'Weekly') document.getElementById('weeklyOptions')?.classList.remove('d-none');
-  if (type === 'Monthly') document.getElementById('monthlyOptions')?.classList.remove('d-none');
+  // Show the chosen type - do this synchronously before showing modal
+  if (type === 'Daily') {
+    const dailyOptions = document.getElementById('dailyOptions');
+    if (dailyOptions) {
+      dailyOptions.classList.remove('d-none');
+      dailyOptions.style.display = 'block';
+    }
+  } else if (type === 'Weekly') {
+    const weeklyOptions = document.getElementById('weeklyOptions');
+    if (weeklyOptions) {
+      weeklyOptions.classList.remove('d-none');
+      weeklyOptions.style.display = 'block';
+    }
+  } else if (type === 'Monthly') {
+    const monthlyOptions = document.getElementById('monthlyOptions');
+    if (monthlyOptions) {
+      monthlyOptions.classList.remove('d-none');
+      monthlyOptions.style.display = 'block';
+    }
+  }
 
   // Store type in dataset so we can read it later
   repeatDropdown.dataset.repeatType = type;
@@ -73,13 +98,21 @@ window.openRepeatModal = function(type, ev) {
       document.body.appendChild(modalEl);
     }
 
-    let modalInstance = bootstrap.Modal.getInstance(modalEl);
-    if (!modalInstance) {
-      modalInstance = new bootstrap.Modal(modalEl);
-    }
-    // Ensure the Save button for the active modal has a listener
+    // Ensure the Save button for the active modal has a listener BEFORE showing
+    // Call initSaveButton immediately and also after a short delay to ensure it's attached
     initSaveButton();
-    modalInstance.show();
+    
+    // Use a small delay to ensure DOM updates are complete and content is visible
+    setTimeout(() => {
+      // Re-initialize save button to ensure it's attached (in case modal was recreated)
+      initSaveButton();
+      
+      let modalInstance = bootstrap.Modal.getInstance(modalEl);
+      if (!modalInstance) {
+        modalInstance = new bootstrap.Modal(modalEl);
+      }
+      modalInstance.show();
+    }, 50);
   }
 };
 
@@ -101,33 +134,68 @@ function initSaveButton() {
   if (!buttons.length) return;
 
   buttons.forEach((saveBtn) => {
-    if (saveBtn.dataset.listenerAdded) return;
-    saveBtn.dataset.listenerAdded = 'true';
+    // Remove any existing listener first to avoid duplicates
+    const existingHandler = saveBtn._repeatSaveHandler;
+    if (existingHandler) {
+      saveBtn.removeEventListener('click', existingHandler);
+    }
 
-    saveBtn.addEventListener('click', function() {
+    // Create new handler
+    const handler = function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Get context - use currentRepeatContext which should be set when modal opens
       const ctx = currentRepeatContext || getRepeatContextFromEvent();
       const repeatDropdown = ctx && ctx.dropdownEl ? ctx.dropdownEl : null;
       const notesIcon = ctx && ctx.notesIconEl ? ctx.notesIconEl : null;
       const container = ctx && ctx.containerEl ? ctx.containerEl : document;
-      if (!repeatDropdown) return;
+      if (!repeatDropdown) {
+        console.warn('Repeat dropdown not found in context');
+        return;
+      }
 
       const type = repeatDropdown.dataset.repeatType || 'Never';
       let label = type;
 
+      // Read values directly from the DOM - ensure inputs are accessible
       if (type === 'Daily') {
-        const endDate = document.getElementById('dailyEndDate')?.value || '';
-        if (endDate) label += ` until ${endDate}`;
+        const endDateEl = document.getElementById('dailyEndDate');
+        if (endDateEl) {
+          const endDate = (endDateEl.value || '').trim();
+          if (endDate) {
+            label += ` until ${endDate}`;
+          }
+        }
       } else if (type === 'Weekly') {
         const days = [];
         ['Mon','Tue','Wed','Thu','Fri'].forEach(d => {
           const cb = document.getElementById('day' + d);
           if (cb && cb.checked) days.push(d);
         });
-        const endDate = document.getElementById('weeklyEndDate')?.value || '';
-        label += ` on ${days.join(', ')}${endDate ? ' until ' + endDate : ''}`;
+        const endDateEl = document.getElementById('weeklyEndDate');
+        const endDate = endDateEl ? (endDateEl.value || '').trim() : '';
+        
+        // Only add "on" if there are days selected
+        if (days.length > 0) {
+          label += ` on ${days.join(', ')}`;
+          // Add end date if provided
+          if (endDate) {
+            label += ` until ${endDate}`;
+          }
+        } else if (endDate) {
+          // If no days but there's an end date, just show the end date
+          label += ` until ${endDate}`;
+        }
+        // If neither days nor end date, just show "Weekly"
       } else if (type === 'Monthly') {
-        const endDate = document.getElementById('monthlyEndDate')?.value || '';
-        if (endDate) label += ` until ${endDate}`;
+        const endDateEl = document.getElementById('monthlyEndDate');
+        if (endDateEl) {
+          const endDate = (endDateEl.value || '').trim();
+          if (endDate) {
+            label += ` until ${endDate}`;
+          }
+        }
       }
 
       // Update dropdown display
@@ -143,11 +211,18 @@ function initSaveButton() {
       // Close the modal in the same container (or the first as fallback)
       const modalEl = container.querySelector('#repeatModal') ||
                       document.getElementById('repeatModal');
-      const modalInstance = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
-      if (modalInstance) {
+      if (modalEl) {
+        let modalInstance = bootstrap.Modal.getInstance(modalEl);
+        if (!modalInstance) {
+          modalInstance = new bootstrap.Modal(modalEl);
+        }
         modalInstance.hide();
       }
-    });
+    };
+    
+    // Store handler reference and attach
+    saveBtn._repeatSaveHandler = handler;
+    saveBtn.addEventListener('click', handler);
   });
 }
 
