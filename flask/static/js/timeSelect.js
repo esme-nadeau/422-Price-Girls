@@ -66,11 +66,24 @@ function getMinAllowedTime() {
   const now = new Date();
   const currentMinutes = now.getHours() * 60 + now.getMinutes();
   
-  // Round up to next 30-minute slot
-  const roundedMinutes = Math.ceil(currentMinutes / 30) * 30;
+  // If we're at exactly a 30-minute boundary, allow that slot
+  // Otherwise, round up to the next 30-minute slot
+  const roundedMinutes = (currentMinutes % 30 === 0) 
+    ? currentMinutes 
+    : Math.ceil(currentMinutes / 30) * 30;
   
-  // If we're past 7:00 PM (19:00), return null (no times available today)
-  if (roundedMinutes >= 19 * 60) {
+  // If we're past 6:30 PM (18:30), return null (no times available today)
+  // The last slot is 6:30-7:00 PM, so bookings can be made up until 6:29:59 PM
+  const lastSlotStart = 18 * 60 + 30; // 6:30 PM
+  
+  // If rounded time is past 6:30 PM, no slots available
+  if (roundedMinutes > lastSlotStart) {
+    return null;
+  }
+  
+  // If rounded time is exactly 6:30 PM, check if we're at or past that time
+  // (if we rounded up to 6:30 PM from earlier, that's fine; if we're at/past 6:30 PM, too late)
+  if (roundedMinutes === lastSlotStart && currentMinutes >= lastSlotStart) {
     return null;
   }
   

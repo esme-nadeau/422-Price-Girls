@@ -180,8 +180,30 @@
           </div>
 
           <div class="mb-3">
-            <label class="form-label">Does this booking repeat?</label>
-            <span id="allBookingsRepeat" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+            <label class="form-label mb-1">Does this booking repeat?</label>
+            <div id="allBookingsRepeatDisplay" class="mb-1">
+              <span id="allBookingsRepeat" class="form-control" style="background:#eee;pointer-events:none;user-select:text;"> </span>
+            </div>
+            <div id="allBookingsRepeatEdit" class="mb-1 d-none">
+              <div class="dropdown mb-1">
+                <button class="btn btn-outline-secondary dropdown-toggle w-100" type="button"
+                        id="allBookingsRepeatDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                  Never
+                </button>
+                <ul class="dropdown-menu w-100">
+                  <li><a class="dropdown-item" href="#" onclick="setRepeatToNever(event)">Never</a></li>
+                  <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Daily', event)">Daily</a></li>
+                  <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Weekly', event)">Weekly</a></li>
+                  <li><a class="dropdown-item" href="#" onclick="openRepeatModal('Monthly', event)">Monthly</a></li>
+                </ul>
+              </div>
+              <div class="text-end">
+                <button id="allBookingsRepeatNotesIcon" class="btn btn-outline-secondary btn-sm d-none" type="button"
+                        title="View repeat details" onclick="openRepeatModal(null, event)">
+                  <i class="bi bi-pencil-square"></i>
+                </button>
+              </div>
+            </div>
           </div>
 
           <div class="mb-3">
@@ -556,6 +578,61 @@
 
 
 
+<!-- Shared booking error modal (matches Calendar / Map styling) -->
+<div class="modal fade" id="bookingErrorModal" tabindex="-1" aria-labelledby="bookingErrorModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="bookingErrorModalLabel">Booking Not Possible</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-start fs-5" id="bookingErrorModalBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Repeat Options Modal (shared, matches Map/Calendar) -->
+<div class="modal fade" id="repeatModal" tabindex="-1" aria-labelledby="repeatModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="repeatModalLabel">Repeat Booking Options</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="dailyOptions" class="repeat-option d-none">
+          <label for="dailyEndDate" class="form-label">End Date</label>
+          <input type="date" id="dailyEndDate" class="form-control">
+        </div>
+        <div id="weeklyOptions" class="repeat-option d-none">
+          <label class="form-label text-center w-100">Days of the Week</label>
+          <div class="d-flex flex-wrap gap-2 mb-2 justify-content-center">
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="Mon" id="dayMon"><label class="form-check-label" for="dayMon">Mon</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="Tue" id="dayTue"><label class="form-check-label" for="dayTue">Tue</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="Wed" id="dayWed"><label class="form-check-label" for="dayWed">Wed</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="Thu" id="dayThu"><label class="form-check-label" for="dayThu">Thu</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="Fri" id="dayFri"><label class="form-check-label" for="dayFri">Fri</label></div>
+          </div>
+          <label for="weeklyEndDate" class="form-label w-100 mt-2">End Date</label>
+          <input type="date" id="weeklyEndDate" class="form-control">
+        </div>
+        <div id="monthlyOptions" class="repeat-option d-none">
+          <label for="monthlyEndDate" class="form-label">End Date</label>
+          <input type="date" id="monthlyEndDate" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-green" id="saveRepeatOptions">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<script src="{{ url_for('static', filename='js/repeat.js') }}"></script>
 <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 <script src="{{ url_for('static', filename='js/session-debug.js') }}"></script>
