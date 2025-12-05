@@ -367,7 +367,7 @@ def api_approve_pending_booking(booking_id):
         # Remove from pending queue
         pending_ref.delete()
 
-        # --- Send confirmation email (best-effort) ---
+        # --- Send confirmation email ---
         try:
             to_email = confirmed.get("email")
             if to_email:
