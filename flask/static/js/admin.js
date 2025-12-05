@@ -72,8 +72,26 @@ function wireCleanupButton() {
 ============================== */
 (function() {
   function initAdminBookingManagement() {
-    // Check if elements exist
-    const bookingForm = document.getElementById('bookingForm');
+    // Find the admin page's bookingForm - it should be within mybookings-tab-content but NOT within mybookings-root
+    const myBookingsRoot = document.getElementById('mybookings-root');
+    const myBookingsTabContent = document.getElementById('mybookings-tab-content');
+    
+    // Find bookingForm that's NOT in mybookings-root
+    let bookingForm = null;
+    if (myBookingsTabContent && (!myBookingsRoot || !myBookingsRoot.contains(myBookingsTabContent))) {
+      // This is the admin page's mybookings-tab-content
+      bookingForm = myBookingsTabContent.querySelector('#bookingForm');
+    } else {
+      // Fallback: find all bookingForm elements and pick the one NOT in mybookings-root
+      const allBookingForms = document.querySelectorAll('#bookingForm');
+      for (const form of allBookingForms) {
+        if (!myBookingsRoot || !myBookingsRoot.contains(form)) {
+          bookingForm = form;
+          break;
+        }
+      }
+    }
+    
     const cancelBtn = document.getElementById('cancelBookingBtn');
     const editBtn = document.getElementById('editBookingBtn');
     
@@ -82,16 +100,37 @@ function wireCleanupButton() {
     }
 
     // Initialize Flatpickr on the date field (only if flatpickr is loaded)
-    const dateInput = document.getElementById('date');
+    // Find date input within the admin bookingForm
+    const dateInput = bookingForm.querySelector('#date') || document.getElementById('date');
     let datePicker = null;
     if (dateInput && typeof flatpickr !== 'undefined') {
       datePicker = flatpickr(dateInput, { dateFormat: "m/d/Y" });
     }
+    
+    // Find bookingInfoCard - should be within the same container as bookingForm
+    const bookingInfoCard = bookingForm.closest('#bookingInfoWidget')?.querySelector('#bookingInfoCard') 
+      || document.getElementById('bookingInfoCard');
 
-    // Grab booking cards
-    const bookingCards = document.querySelectorAll('.booking-card');
+    // Grab booking cards - only from the admin page's bookingsList, not My Bookings
+    // Find all bookingsList elements and pick the one NOT in mybookings-root
+    const allBookingsLists = document.querySelectorAll('#bookingsList');
+    let adminBookingsList = null;
+    
+    for (const list of allBookingsLists) {
+      // Check if this bookingsList is NOT within mybookings-root
+      if (!myBookingsRoot || !myBookingsRoot.contains(list)) {
+        adminBookingsList = list;
+        break;
+      }
+    }
+    
+    if (!adminBookingsList) {
+      return false;
+    }
+    
+    const bookingCards = adminBookingsList.querySelectorAll('.booking-card');
         // Elements for the info card in the middle column (admin.html)
-        const bookingInfoCard = document.getElementById("bookingInfoCard");
+        // bookingInfoCard already found above
         const confirmBtn = document.getElementById("confirmBookingBtn");
         const denyBtn = document.getElementById("denyBookingBtn");
     
@@ -149,6 +188,7 @@ function wireCleanupButton() {
     
         function populateBookingInfo(booking) {
           if (!bookingInfoCard) return;
+          if (!bookingForm) return;
     
           // Save ID for approve/deny
           bookingForm.dataset.id = booking.id || "";
@@ -156,9 +196,10 @@ function wireCleanupButton() {
           // Populate <span> fields for non-editable display (matching mybookings styling)
           const setSpan = (id, value) => {
             const el = bookingForm.querySelector(`#${id}`) || document.getElementById(id);
-            if (el) el.textContent = value || '';
+            if (el) {
+              el.textContent = value || '';
+            }
           };
-    
           setSpan('date', booking.date || '');
           setSpan('time', booking.time || booking.timeRange || '');
           setSpan('repeat', booking.repeat || 'Never');
@@ -178,10 +219,14 @@ function wireCleanupButton() {
           }
           card.dataset.adminClickBound = 'true';
           
-          card.addEventListener("click", () => {
+          card.addEventListener("click", (e) => {
+            // Ensure this card is within the admin page's bookingsList (not My Bookings)
+            if (adminBookingsList && !adminBookingsList.contains(card)) {
+              return;
+            }
+            
             if (!bookingInfoCard) return;
             const booking = getBookingFromCard(card);
-            console.log("Admin: Clicked booking", card.dataset.id);
             
             const currentBookingId = bookingForm.dataset.id;
             const clickedBookingId = card.dataset.id;
@@ -193,12 +238,13 @@ function wireCleanupButton() {
             if (currentBookingId === clickedBookingId && bookingInfoCard && bookingInfoCard.style.display === 'block') {
               // Hide the booking information card
               bookingInfoCard.style.display = 'none';
-              // Remove selection highlight
-              document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+              // Remove selection highlight (only from admin page's booking cards)
+              if (adminBookingsList) {
+                adminBookingsList.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+              }
               document.querySelectorAll('#allBookingsResultsList .list-group-item').forEach(c => c.classList.remove('selected'));
               // Clear the form ID
               bookingForm.dataset.id = '';
-              console.log('Admin: Booking card hidden');
               return;
             }
             
@@ -207,8 +253,10 @@ function wireCleanupButton() {
             
             // Remove selection from all bookings results
             document.querySelectorAll('#allBookingsResultsList .list-group-item').forEach(c => c.classList.remove('selected'));
-            // Highlight selected
-            document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+            // Highlight selected (only from admin page's booking cards)
+            if (adminBookingsList) {
+              adminBookingsList.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+            }
             card.classList.add('selected');
             populateBookingInfo(booking);
           });
@@ -240,7 +288,19 @@ function wireCleanupButton() {
     
         // Helper to check if bookings list is empty and show message
         function checkAndShowEmptyMessage() {
-          const bookingsList = document.getElementById('bookingsList');
+          // Find the admin page's bookingsList (not My Bookings)
+          const myBookingsRoot = document.getElementById('mybookings-root');
+          const allBookingsLists = document.querySelectorAll('#bookingsList');
+          let bookingsList = null;
+          
+          for (const list of allBookingsLists) {
+            // Check if this bookingsList is NOT within mybookings-root
+            if (!myBookingsRoot || !myBookingsRoot.contains(list)) {
+              bookingsList = list;
+              break;
+            }
+          }
+          
           const bookingsListCollapse = document.getElementById('bookingsListCollapse');
           const bookingsToggleIcon = document.getElementById('bookingsToggleIcon');
           if (!bookingsList) return;
@@ -287,7 +347,6 @@ function wireCleanupButton() {
             }
     
             try {
-              console.log(`Admin: approving pending booking ${id}`);
               await postJSON(
                 `/api/pending-bookings/${encodeURIComponent(id)}/approve`
               );
@@ -321,7 +380,6 @@ function wireCleanupButton() {
             }
     
             try {
-              console.log(`Admin: denying pending booking ${id}`);
               await postJSON(
                 `/api/pending-bookings/${encodeURIComponent(id)}/deny`
               );
@@ -923,6 +981,9 @@ function wireCleanupButton() {
     }
 
 
+  // Expose function globally so it can be called when admin tab is shown
+  window.initAdminBookingManagement = initAdminBookingManagement;
+
   // Try to initialize immediately
   if (initAdminBookingManagement()) {
     wireCleanupButton();
@@ -932,20 +993,13 @@ function wireCleanupButton() {
   // If not ready, wait for content to load
   [100, 300, 500, 1000, 2000].forEach(delay => {
     setTimeout(() => {
-      if (!document.getElementById('mybookings-root')) {
-        initAdminBookingManagement();
-        wireCleanupButton();
-      }
+      initAdminBookingManagement();
+      wireCleanupButton();
     }, delay);
   });
 
   // Also watch for content to load
   function tryInitAdmin() {
-    // Only run on the admin page, not on the React / mybookings root
-    if (document.getElementById('mybookings-root')) {
-      return false;
-    }
-
     if (initAdminBookingManagement()) {
       wireCleanupButton();
       return true;
@@ -2088,13 +2142,27 @@ if (document.readyState !== 'loading') {
     Admin Page Booking Card Clicks (Same as MyBookings)
 ============================== */
 (function() {
-  // Don't run if on mybookings page
-  if (document.getElementById('mybookings-root')) {
-    return;
-  }
-
   function setupAdminBookingClicks() {
-    const bookingCards = document.querySelectorAll('.booking-card');
+    // Find the admin page's bookingsList - it should be within mybookings-tab-content but NOT within mybookings-root
+    const myBookingsRoot = document.getElementById('mybookings-root');
+    
+    // Find all bookingsList elements and pick the one NOT in mybookings-root
+    const allBookingsLists = document.querySelectorAll('#bookingsList');
+    let adminBookingsList = null;
+    
+    for (const list of allBookingsLists) {
+      // Check if this bookingsList is NOT within mybookings-root
+      if (!myBookingsRoot || !myBookingsRoot.contains(list)) {
+        adminBookingsList = list;
+        break;
+      }
+    }
+    
+    if (!adminBookingsList) {
+      return false; // Admin bookingsList not found
+    }
+    
+    const bookingCards = adminBookingsList.querySelectorAll('.booking-card');
     const bookingForm = document.getElementById('bookingForm');
     
     if (!bookingForm) {
@@ -2102,11 +2170,8 @@ if (document.readyState !== 'loading') {
     }
 
     if (!bookingCards.length) {
-      console.warn("Admin: No booking cards found");
       return true;
     }
-
-    console.log(`Admin: Found ${bookingCards.length} booking cards`);
 
     // Add click listeners to booking cards (same as mybookings)
     bookingCards.forEach(card => {
@@ -2117,28 +2182,39 @@ if (document.readyState !== 'loading') {
       card.dataset.adminClickBound = 'true';
       
       card.addEventListener('click', () => {
-        console.log(`Admin: Clicked booking ${card.dataset.id}`);
+        // Ensure this card is within the admin page's bookingsList (not My Bookings)
+        if (adminBookingsList && !adminBookingsList.contains(card)) {
+          return;
+        }
 
         const bookingInfoCard = document.getElementById('bookingInfoCard');
         const currentBookingId = bookingForm.dataset.id;
         const clickedBookingId = card.dataset.id;
 
+        // Ensure this card is within the admin page's bookingsList (not My Bookings)
+        if (adminBookingsList && !adminBookingsList.contains(card)) {
+          return;
+        }
+        
         // Check if the same booking is clicked again
         if (currentBookingId === clickedBookingId && bookingInfoCard && bookingInfoCard.style.display === 'block') {
           // Hide the booking information card
           bookingInfoCard.style.display = 'none';
-          // Remove selection highlight
-          document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+          // Remove selection highlight (only from admin page's booking cards)
+          if (adminBookingsList) {
+            adminBookingsList.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+          }
           // Clear the form ID
           bookingForm.dataset.id = '';
-          console.log('Admin: Booking card hidden');
           return;
         }
 
         // Remove selection from all bookings results
         document.querySelectorAll('#allBookingsResultsList .list-group-item').forEach(c => c.classList.remove('selected'));
-        // Highlight selected
-        document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+        // Highlight selected (only from admin page's booking cards)
+        if (adminBookingsList) {
+          adminBookingsList.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+        }
         card.classList.add('selected');
 
         // Parse structured booking data
@@ -2182,21 +2258,14 @@ if (document.readyState !== 'loading') {
         if (bookingInfoCard) {
           bookingInfoCard.style.display = 'block';
         }
-
-        console.log('Admin: Form populated with:', {
-          id: bookingForm.dataset.id,
-          date: bookingData.date || card.dataset.date,
-          time: bookingData.time || card.dataset.time,
-          repeat: bookingData.repeat || card.dataset.repeat,
-          email: bookingData.email || card.dataset.email,
-          purpose: bookingData.purpose || card.dataset.purpose,
-          roomId: bookingData.roomId || card.dataset.roomid
-        });
       });
     });
 
     return true;
   }
+
+  // Expose function so it can be called when admin tab is shown
+  window.setupAdminBookingClicks = setupAdminBookingClicks;
 
   // Try to set up immediately
   if (setupAdminBookingClicks()) {
@@ -2206,9 +2275,7 @@ if (document.readyState !== 'loading') {
   // If not ready, wait for content to load
   [100, 300, 500, 1000, 2000].forEach(delay => {
     setTimeout(() => {
-      if (!document.getElementById('mybookings-root')) {
-        setupAdminBookingClicks();
-      }
+      setupAdminBookingClicks();
     }, delay);
   });
 

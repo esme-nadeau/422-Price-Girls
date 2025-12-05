@@ -91,6 +91,20 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
                 loadTabContent(target, url, init);
+                
+                // Re-bind admin booking card clicks when admin tab is shown
+                if (tabId === 'nav-admin-tab') {
+                    setTimeout(() => {
+                        // Re-initialize admin booking management (binds pending bookings handlers)
+                        if (typeof window.initAdminBookingManagement === 'function') {
+                            window.initAdminBookingManagement();
+                        }
+                        // Also call setupAdminBookingClicks as backup
+                        if (typeof window.setupAdminBookingClicks === 'function') {
+                            window.setupAdminBookingClicks();
+                        }
+                    }, 100);
+                }
 
                 // Show/hide instructions button in header based on active tab
                 const headerInstrBtn = document.getElementById('headerInstructionsToggle');

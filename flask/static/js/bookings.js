@@ -646,6 +646,17 @@ window.initBookingButton = function(containerId) {
                     const purposeInput = getElement('purpose');
                     if (emailInput) emailInput.value = '';
                     if (purposeInput) purposeInput.value = '';
+                    
+                    // Re-autofill email and name after clearing (if user is logged in)
+                    // Use getElement instead of autofill function to avoid context issues
+                    const nameInput = getElement('name');
+                    const session = await fetchSessionInfoForBooking();
+                    if (emailInput && session.email) {
+                        emailInput.value = session.email;
+                    }
+                    if (nameInput && session.name) {
+                        nameInput.value = session.name;
+                    }
                 }
 
                 if (failures.length > 0) {

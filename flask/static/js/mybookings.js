@@ -406,9 +406,15 @@ let bookingCardClickHandler = null;
 
 // Use event delegation to handle clicks on booking cards (works even if cards are added dynamically)
 function bindBookingCardClicks() {
-  const bookingsList = document.getElementById('bookingsList');
+  // Only run on My Bookings page (check for mybookings-root)
+  const myBookingsRoot = document.getElementById('mybookings-root');
+  if (!myBookingsRoot) {
+    return;
+  }
+
+  // Find bookingsList WITHIN mybookings-root, not just any bookingsList on the page
+  const bookingsList = myBookingsRoot.querySelector('#bookingsList');
   if (!bookingsList) {
-    console.warn("⚠️ bookingsList container not found - will retry");
     // Retry after a short delay
     setTimeout(bindBookingCardClicks, 200);
     return;
@@ -416,11 +422,9 @@ function bindBookingCardClicks() {
 
   // Remove old handler if it exists
   if (bookingsList.dataset.clickBound === 'true' && bookingCardClickHandler) {
-    console.log("🔄 Removing old click handler before re-binding");
     bookingsList.removeEventListener('click', bookingCardClickHandler);
   }
   
-  console.log("🔗 Binding click handler to bookingsList container");
   bookingsList.dataset.clickBound = 'true';
 
   // Create the handler function
@@ -431,6 +435,12 @@ function bindBookingCardClicks() {
       console.log("   (not on a booking card, ignoring)");
       return;
     }
+    
+    // Ensure the card is within the My Bookings container
+    if (!myBookingsRoot.contains(card)) {
+      return;
+    }
+    
     console.log("✅ Clicked on booking card:", card.dataset.id);
 
     // Prevent clicking other bookings while in edit mode
@@ -445,8 +455,8 @@ function bindBookingCardClicks() {
 
     // If clicking the same booking again, deselect and clear the Booking Information
     if (currentBookingId && currentBookingId === clickedBookingId) {
-      // Remove selection highlight
-      document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+      // Remove selection highlight (only within My Bookings container)
+      bookingsList.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
       // Clear stored id
       bookingForm.dataset.id = '';
       // Clear all info fields
@@ -465,8 +475,8 @@ function bindBookingCardClicks() {
       return;
     }
 
-    // Highlight selected
-    document.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
+    // Highlight selected (only within My Bookings container)
+    bookingsList.querySelectorAll('.booking-card').forEach(c => c.classList.remove('selected'));
     card.classList.add('selected');
 
     // Show and enable actions when a booking is selected
@@ -519,16 +529,6 @@ function bindBookingCardClicks() {
     setSpan('email', bookingData.email || card.dataset.email || '');
     setSpan('purpose', bookingData.purpose || card.dataset.purpose || '');
     setSpan('roomId', bookingData.roomId || card.dataset.roomid || '');
-
-    console.log('📋 Form populated with:', {
-      id: bookingForm ? bookingForm.dataset.id : '',
-      date: bookingData.date || card.dataset.date,
-      time: bookingData.time || card.dataset.time,
-      repeat: bookingData.repeat || card.dataset.repeat,
-      email: bookingData.email || card.dataset.email,
-      purpose: bookingData.purpose || card.dataset.purpose,
-      roomId: bookingData.roomId || card.dataset.roomid
-    });
   };
   
   // Attach the handler
