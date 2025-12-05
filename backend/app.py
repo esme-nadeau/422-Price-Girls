@@ -690,7 +690,7 @@ def update_booking(booking_id):
                 else:
                     actor = "you"
 
-                manage_url = f"{SITE_URL}/mybookings?bookingId={booking_id}"
+                manage_url = f"{SITE_URL}"
                 site_url = SITE_URL
                 current_year = datetime.now().year
 
