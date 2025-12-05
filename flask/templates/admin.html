@@ -556,6 +556,44 @@
 
 
 
+<!-- Repeat Options Modal (shared, matches Map/Calendar) -->
+<div class="modal fade" id="repeatModal" tabindex="-1" aria-labelledby="repeatModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="repeatModalLabel">Repeat Booking Options</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="dailyOptions" class="repeat-option d-none">
+          <label for="dailyEndDate" class="form-label">End Date</label>
+          <input type="date" id="dailyEndDate" class="form-control">
+        </div>
+        <div id="weeklyOptions" class="repeat-option d-none">
+          <label class="form-label text-center w-100">Days of the Week</label>
+          <div class="d-flex flex-wrap gap-2 mb-2 justify-content-center">
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="Mon" id="dayMon"><label class="form-check-label" for="dayMon">Mon</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="Tue" id="dayTue"><label class="form-check-label" for="dayTue">Tue</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="Wed" id="dayWed"><label class="form-check-label" for="dayWed">Wed</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="Thu" id="dayThu"><label class="form-check-label" for="dayThu">Thu</label></div>
+            <div class="form-check"><input class="form-check-input" type="checkbox" value="Fri" id="dayFri"><label class="form-check-label" for="dayFri">Fri</label></div>
+          </div>
+          <label for="weeklyEndDate" class="form-label w-100 mt-2">End Date</label>
+          <input type="date" id="weeklyEndDate" class="form-control">
+        </div>
+        <div id="monthlyOptions" class="repeat-option d-none">
+          <label for="monthlyEndDate" class="form-label">End Date</label>
+          <input type="date" id="monthlyEndDate" class="form-control">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-green" id="saveRepeatOptions">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 <script src="{{ url_for('static', filename='js/session-debug.js') }}"></script>
