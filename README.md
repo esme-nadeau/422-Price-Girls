@@ -55,11 +55,12 @@ The application supports four distinct user roles, each with specific permission
 
 ## Pages in the System
 The application consists of five main screens:
-    - All Bookings – View bookings across all rooms.
-    - Map View – Browse room availability through a clickable map.
-    - Calendar View – See weekly schedules in a calendar layout (inspired by the old system).
-    - My Bookings – View, edit, or delete personal reservations.
-    - Admin Tools – Administrative interfaces for managing the system.
+- **All Bookings** - View bookings across all rooms.
+- **Map View** – Browse room availability through a clickable map.
+- **Calendar View** – See weekly schedules in a calendar layout (inspired by the old system).
+- **My Bookings** – View, edit, or delete personal reservations.
+- **Admin Tools** – Administrative interfaces for managing the system.
+	
 
 ## Page Access by User Mode
 | Page / Role      | Guest            | Student                      | Faculty                      | Admin |
@@ -67,7 +68,7 @@ The application consists of five main screens:
 | **All Bookings** | ✓ (read-only)    | ✓ (view all, edit own)       | ✓ (view all, edit own)       | ✓     |
 | **Map View**     | ✓ (read-only)    | ✓                            | ✓                            | ✓     |
 | **Calendar**     | ✓ (read-only)    | ✓                            | ✓                            | ✓     |
-| **My Bookings**  | ✗                | ✓                            | ✓                            | ✗     |
+| **My Bookings**  | ✗                | ✓                            | ✓                            | ✓     |
 | **Admin Tools**  | ✗                | ✗                            | ✗                            | ✓     |
 
 &nbsp;
