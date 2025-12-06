@@ -1,3 +1,5 @@
+# ⚠️ Deprecated REACT functionality. Run on "main" branch or a development branch. ⚠️
+
 # Descutes Hall Room Reservation Website
 
 🎉 Our deployed project can be found here:  [CS Room Reservation System](https://uocs-room-reservation-769919579184.us-west1.run.app/#) 🎉
