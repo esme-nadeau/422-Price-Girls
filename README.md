@@ -74,53 +74,86 @@ The application consists of five main screens:
 &nbsp;
 
 # Common User Tasks
+
+## User Authentication
+### Logging In
+1. Click **Login** at the top right-hand side of the page. This will redirect you to the Login page.
+2. Enter your **uoregon.edu** email and click **Send Code**.
+   - An authentication code will be sent to your email inbox (this may take a few minutes).
+   - The code expires after 10 minutes; you will need to request a new one after that time.
+3. Enter the verification code into the **Verification Code** field.
+4. Click **Verify Code** to complete the login process.
+
+### Logging Out
+- Click the **Logout** button at the top right of the screen.
+
 ## Create a Booking
-1. Log in and authenticate with your uoreogn.edu account.
-    - When you click **Login**, this will redirect you to the Login page.
-    - You will be prompted to enter your uoregon.edu email and then be sent a verification code (this may take a few minutes and the code expires after 10 minutes).
-    - Enter the verification code into the Verification Code field to complete the login process.
-2. Navigate either to the Map or Calendar page.
+1. Log in and authenticate with your uoregon.edu account.
+2. Navigate either to the **Map** or **Calendar** page.
     - Select the desired room and date.
-    - Complete all required fields.
+    - Complete all required fields; if you are logged in, your name and email will autofill.
     - For more detailed guidance, click the **Instructions** button in the upper-right corner for a step-by-step walkthrough.
     - Click **Book Room**:
         - If no conflicts exist, a confirmation email will be sent verifying your booking.
-        - If a conflict exists, you will receive a prompt suggesting the next available time. If no suitable slots are available, you will be directed to select a different room or date.
+        - If a conflict exists, you will receive a prompt suggesting the next available time.  
+          If no suitable slots are available, you will be directed to select a different room or date.
+        - If you are a student, your booking will be sent to **pending bookings**, and an administrator must approve it.
 
 ## Modify or Delete a Booking
-If you want to modify or delete your booking
-- Navigate to the My Bookings page.
+If you want to modify or delete your booking:
+- Navigate to the **My Bookings** page.
 - Select the booking you wish to modify or delete.
-- To edit: Click **Edit Reservation**, modify the fields, and **Save**
-- To delete: Simply click **Cancel Reservation** and **Ok** to confirm
+- To edit: Click **Edit Reservation**, modify the fields, and click **Save**. You will receive an email confirming the booking changes.
+- To delete: Click **Cancel Reservation** and **Ok** to confirm. You will receive an email confirming the booking deletion.
+
+## View All Bookings
+- Navigate to the **All Bookings** tab (default on first visit/refresh).
+- Use the arrows at the top of the calendar widget to navigate dates, or click **Today** to jump to the current week.
+- On your desired date, click the grey cells to view booking information.
+  - Logged-out and student users can only see date, time, and room information.
+  - Faculty users can see all booking information.
+  - Admin users can see all booking information *and* edit bookings (see Admin Tools > Search & Manage All Bookings).
 
 ## Administrator Tools
-To approve/deny bookings
-- While logged in as an admin, navigate to the Admin Tools page.
-- Go to the "Approve Bookings" card.
+
+### Approve or Deny Bookings
+- While logged in as an admin, navigate to the **Admin Tools** page.
+- Go to the **Approve Bookings** card.
+    - If no bookings exist, the card will show *"No bookings to approve."*
 - Select the booking you wish to approve or deny.
-- Click **Approve Reservation** or **Deny Reservation**
+- Click **Approve Reservation** or **Deny Reservation**.  
+  The student user will receive an email notification.
 
-To search and manage all bookings
-- While logged in as an admin, navigate to the Admin Tools page.
-- Go to the "All Bookings" card.
-- Search for bookings with name, email, time, date, and/or room.
+### Search and Manage All Bookings
+
+#### From the All Bookings Tab:
+- While logged in as an admin, navigate to the **All Bookings** tab.
+- Navigate to the **All Bookings** card.
+- Use the search bar to search by name, email, time, date, and/or room.
 - Select the booking you wish to view.
-- To edit: Click **Edit Reservation**, modify the fields, and **Save**
-- To delete: Simply click **Cancel Reservation** and **Ok** to confirm
+- To edit: Click **Edit Reservation**, modify fields, and **Save**.
+- To delete: Click **Cancel Reservation** and **Ok**.
 
-To manage users and rooms
-- While logged in as an admin, navigate to the Admin Tools page.
-- Go to the "Users" card or the "Room Management" card.
+#### From the Admin Tools Tab:
+- Navigate to the **Admin Tools** page.
+- Go to the **All Bookings** card.
+- Search for bookings via name, email, time, date, and/or room.
+- Select the booking you wish to view.
+- To edit: Click **Edit Reservation**, modify fields, and **Save**.
+- To delete: Click **Cancel Reservation** and **Ok**.
+
+### Manage Users and Rooms
+- While logged in as an admin, navigate to the **Admin Tools** page.
+- Go to the **Users** card or the **Room Management** card.
 - To manage, click the **Edit** button on the right-hand side.
-- This will open a popup. Modify the fields, and click **Save**
-- To delete: Simply click **Delete** within the popup
+- A pop-up will open; modify the fields and click **Save**.
+- To delete a user or room: Click **Delete** within the pop-up, then click **Confirm**.
 
-To add / delete closures
-- While logged in as an admin, navigate to the Admin Tools page.
-- Go to the "Closures" card.
-- To add: Click **Add a closure**, set a date duration and display name, and click **Save**
-- To delete: Simply click **Delete** to the right of the closure name
+### Manage Closures
+- While logged in as an admin, navigate to the **Admin Tools** page.
+- Go to the **Closures** card.
+- To add: Click **Add a closure**, set a date duration and display name, and click **Save**.
+- To delete: Click **Delete** to the right of the closure name, then **Confirm**.
 
 <!-- ## Misc Notes: -->
 
