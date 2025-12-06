@@ -166,7 +166,52 @@ To add / delete closures
 ## How to set up .env file
 
 ## How to deploy to hosting
+This project is deployed on Google Cloud Run, with automatic builds triggered from GitHub whenever changes are pushed to the main branch. Below are the steps for future maintainers to redeploy, manage secrets, and add new project owners.
 
+**Automatic Deployment (recommended)**
+Whenever code is merged into the main branch:
+- GitHub triggers Cloud Build.
+- Cloud Build creates a new container image.
+- Cloud Run deploys the updated service.
+- Traffic automatically switches to the new revision (if healthy).
+No manual steps are required unless:
+- Secrets are updated
+- New Python dependencies are added
+- Service accounts or permissions are changed
+- Cloud Build fails
+
+**Manual Deployment (if needed)**
+Redeployment can usually be done directly from the Services tab in Cloud Run by clicking "Edit & Deploy New Version."
+If you need to force a redeployment, you can do it from the command line:
+    ```bash
+    >>> gcloud run deploy uocs-room-reservation --source .
+Cloud Run will use the Procfile
+    ```bash
+    >>> web: gunicorn -b 0.0.0.0:$PORT backend.app:app
+
+**Secrets and Environment Variables**
+All production secrets are stored in Google Secret Manager and mounted into Cloud Run.
+Updating a Secret:
+- Go to Google Cloud Console → Security → Secret Manager.
+- Click the secret.
+- Add a New Version with updated content.
+- Redeploy service (automatic if pushing to main, manual otherwise).
+Cloud Run loads secrets via environment variables, which you can edit at:
+- Cloud Run → uocs-room-reservation → Edit & Deploy → Variables & Secrets
+  
+**Managing Owners and Permissions**
+Add a New Owner:
+1. Go to Google Cloud Console → IAM
+2. Add their email
+3. Grant:
+- Owner (recommended for simplicity)
+- OR Cloud Run Admin, Cloud Build Editor, Secret Manager Admin, Service Account User
+  
+**Redeployment Checklist**
+If you modify:
+- Secrets → update in Secret Manager → redeploy
+- Dependencies → update requirements.txt → push to main
+- Start command → update Procfile → redeploy
 &nbsp;
 # Project directory structure
 ```text
