@@ -90,14 +90,14 @@ The application consists of five main screens:
 ## Create a Booking
 1. Log in and authenticate with your uoregon.edu account.
 2. Navigate either to the **Map** or **Calendar** page.
-    - Select the desired room and date.
-    - Complete all required fields; if you are logged in, your name and email will autofill.
-    - For more detailed guidance, click the **Instructions** button in the upper-right corner for a step-by-step walkthrough.
-    - Click **Book Room**:
-        - If no conflicts exist, a confirmation email will be sent verifying your booking.
-        - If a conflict exists, you will receive a prompt suggesting the next available time.  
-          If no suitable slots are available, you will be directed to select a different room or date.
-        - If you are a student, your booking will be sent to **pending bookings**, and an administrator must approve it.
+3. Select the desired room and date.
+4. Complete all required fields; if you are logged in, your name and email will autofill.
+5. For more detailed guidance, click the **Instructions** button in the upper-right corner for a step-by-step walkthrough.
+6. Click **Book Room**:
+	- If no conflicts exist, a confirmation email will be sent verifying your booking.
+	- If a conflict exists, you will receive a prompt suggesting the next available time.  
+	  If no suitable slots are available, you will be directed to select a different room or date.
+	- If you are a student, your booking will be sent to **pending bookings**, and an administrator must approve it.
 
 ## Modify or Delete a Booking
 If you want to modify or delete your booking:
