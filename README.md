@@ -183,11 +183,16 @@ No manual steps are required unless:
 **Manual Deployment (if needed)**
 Redeployment can usually be done directly from the Services tab in Cloud Run by clicking "Edit & Deploy New Version."
 If you need to force a redeployment, you can do it from the command line:
+
     ```bash
     >>> gcloud run deploy uocs-room-reservation --source .
+	```
+
 Cloud Run will use the Procfile
+
     ```bash
     >>> web: gunicorn -b 0.0.0.0:$PORT backend.app:app
+	```
 
 **Secrets and Environment Variables**
 All production secrets are stored in Google Secret Manager and mounted into Cloud Run.
