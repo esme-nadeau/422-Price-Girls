@@ -193,8 +193,7 @@ In the backend directory create a file called .env and add the following (you wi
 	# Optional logging/debug
 	# ----------------------------
 	LOG_LEVEL=INFO
-	FIREBASE_CONFIG='{"apiKey":"AIzaSyA4pzsOgHxZyNQ0oVMAtNAgCEqR5LdVfos","authDomain":"deschutes-room-reservation.firebaseapp.com","projectId":"deschutes-room-		reservation","storageBucket":"deschutes-room reservation.firebasestorage.app","messagingSenderId":"813605344323","appId":"1:813605344323:web:ecad3610e5ee99b2eff0f6","measurementId":"G-5PGERSRX34"}'
-
+	FIREBASE_CONFIG=
 
 ## How to deploy to hosting
 This project is deployed to Google Cloud Run, with automatic builds triggered whenever changes are pushed to the main branch on GitHub. Below are the steps for future maintainers to redeploy, manage secrets, and add new project owners.
