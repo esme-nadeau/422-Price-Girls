@@ -165,6 +165,36 @@ To add / delete closures
 4. Paste private key information into serviceAccount.json
 
 ## How to set up .env file
+In the backend directory create a file called .env and add the following (you will have to add the SMTP password from the deschutesroomreservation@gmail.com settings):
+
+	# ----------------------------
+	# Flask environment config
+	# ----------------------------
+	FLASK_ENV=development
+	FLASK_APP=app.py
+	
+	# ----------------------------
+	# Firebase Admin credentials
+	# ----------------------------
+	GOOGLE_APPLICATION_CREDENTIALS=serviceAccount.json
+	FIREBASE_PROJECT_ID=deschutes-room-reservation
+	
+	# ----------------------------
+	# Email / SMTP settings (Gmail)
+	# ----------------------------
+	SMTP_HOST=smtp.gmail.com
+	SMTP_PORT=465
+	SMTP_USER=Deschutesroomreservation@gmail.com
+	SMTP_PASS=     				# 16-character Gmail App Password (Not the login password, get the password from settings)
+	MAIL_FROM_ADDRESS=Deschutesroomreservation@gmail.com
+	MAIL_FROM_NAME=Deschutes Hall Reservations
+	
+	# ----------------------------
+	# Optional logging/debug
+	# ----------------------------
+	LOG_LEVEL=INFO
+	FIREBASE_CONFIG='{"apiKey":"AIzaSyA4pzsOgHxZyNQ0oVMAtNAgCEqR5LdVfos","authDomain":"deschutes-room-reservation.firebaseapp.com","projectId":"deschutes-room-		reservation","storageBucket":"deschutes-room reservation.firebasestorage.app","messagingSenderId":"813605344323","appId":"1:813605344323:web:ecad3610e5ee99b2eff0f6","measurementId":"G-5PGERSRX34"}'
+
 
 ## How to deploy to hosting
 This project is deployed to Google Cloud Run, with automatic builds triggered whenever changes are pushed to the main branch on GitHub. Below are the steps for future maintainers to redeploy, manage secrets, and add new project owners.
